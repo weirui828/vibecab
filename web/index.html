@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light" />
+    <title>VibeCab · A place for your next idea</title>
+    <link rel="stylesheet" href="/assets/style.css" />
+    <script src="/assets/app.js" defer></script>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to workspace</a>
+    <aside class="sidebar">
+      <a class="brand" href="/" aria-label="VibeCab home"
+        ><span class="brand-icon">v<span>c</span></span
+        ><span>vibecab<span class="brand-dot">.</span></span></a
+      >
+      <div class="workspace-label">
+        YOUR WORKSPACE <span class="local-tag">LOCAL</span>
+      </div>
+      <div class="side-heading">
+        <h2>Projects</h2>
+        <button
+          class="icon-button"
+          id="new-project"
+          aria-label="Create project"
+        >
+          +
+        </button>
+      </div>
+      <nav id="projects" aria-label="Projects"></nav>
+      <div class="sidebar-note">
+        <span class="note-star">✳</span>
+        <p>Big ideas.<br />Small, doable steps.</p>
+        <span
+          >Capture the thought.<br />Let your agents take it from here.</span
+        >
+      </div>
+      <div class="connection">
+        <span id="connection-dot" class="online-dot"></span>
+        <div id="connection">Connecting…</div>
+        <span class="version">v0.2</span>
+      </div>
+    </aside>
+    <main id="main">
+      <header class="topbar">
+        <div class="breadcrumb">
+          Workspace <span>/</span>
+          <strong id="breadcrumb">Your projects</strong>
+        </div>
+        <button id="refresh" class="quiet">↻ Refresh</button>
+      </header>
+      <section class="page-heading">
+        <div>
+          <div class="eyebrow">A LITTLE STRUCTURE. A LOT OF POSSIBILITY.</div>
+          <h1 id="project-title">Your next idea starts here.</h1>
+          <p id="project-subtitle">
+            A quiet place to organize the work. A clear path for your agents.
+          </p>
+        </div>
+        <button id="capture" class="primary" disabled>
+          <span>+</span> Capture ideas <kbd>N</kbd>
+        </button>
+      </section>
+      <div id="notice" role="status" aria-live="polite"></div>
+      <section
+        class="metrics"
+        aria-label="Project overview"
+        id="metrics"
+      ></section>
+      <section id="workspace" hidden>
+        <div class="toolbar">
+          <div class="views" role="group" aria-label="Workspace view">
+            <button class="view active" id="board-view" aria-pressed="true">
+              ▦ Board</button
+            ><button class="view" id="plan-view" aria-pressed="false">
+              ⤴ Dependency plan
+            </button>
+          </div>
+          <div class="filters">
+            <label class="search"
+              ><span aria-hidden="true">⌕</span
+              ><input
+                id="search"
+                type="search"
+                placeholder="Search tasks…"
+                aria-label="Search tasks"
+              /><kbd>/</kbd></label
+            ><select id="priority-filter" aria-label="Filter priority">
+              <option value="">All priorities</option>
+              <option value="0">Urgent</option>
+              <option value="1">High</option>
+              <option value="2">Normal</option>
+              <option value="3">Low</option>
+            </select>
+          </div>
+        </div>
+        <div id="board" class="board"></div>
+        <div id="plan" class="plan" hidden></div>
+        <footer class="board-footer">
+          <span id="result-count"></span
+          ><span>Dependencies first. One owner per task.</span>
+        </footer>
+      </section>
+      <section id="empty-workspace" class="empty-workspace">
+        <div class="empty-symbol">✳</div>
+        <h2>Less remembering.<br />More making.</h2>
+        <p>
+          Create a project, unload your ideas, and give your agents a shared
+          place to work.
+        </p>
+        <button class="primary" id="first-project">
+          Create your first project <span>↗</span>
+        </button>
+        <div class="empty-steps">
+          <span>01 &nbsp; Capture</span><span>02 &nbsp; Connect</span
+          ><span>03 &nbsp; Create</span>
+        </div>
+      </section>
+    </main>
+    <dialog id="project-dialog" aria-labelledby="project-dialog-title">
+      <form id="project-form">
+        <div class="dialog-heading">
+          <div>
+            <div class="eyebrow">A NEW BEGINNING</div>
+            <h2 id="project-dialog-title">Create a project</h2>
+          </div>
+          <button
+            type="button"
+            class="icon-button close-dialog"
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+        <label
+          >Project name<input
+            name="name"
+            required
+            maxlength="160"
+            placeholder="The next thing you want to build"
+            autofocus /></label
+        ><label
+          >Repository path <span class="optional">optional</span
+          ><input name="repo_path" placeholder="/path/to/your/project"
+        /></label>
+        <p class="form-error" role="alert"></p>
+        <div class="dialog-actions">
+          <button type="button" class="secondary close-dialog">Cancel</button
+          ><button class="primary" type="submit">Create project</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="capture-dialog" aria-labelledby="capture-dialog-title">
+      <form id="capture-form">
+        <div class="dialog-heading">
+          <div>
+            <div class="eyebrow">GET IT OUT OF YOUR HEAD</div>
+            <h2 id="capture-dialog-title">Capture your ideas</h2>
+          </div>
+          <button
+            type="button"
+            class="icon-button close-dialog"
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+        <label
+          >One idea per line<textarea
+            name="ideas"
+            rows="7"
+            required
+            placeholder="Add a quick search&#10;Make onboarding simpler&#10;Explore a new integration"
+            autofocus
+          ></textarea></label
+        ><label
+          >Context <span class="optional">shared across these tasks</span
+          ><textarea
+            name="description"
+            rows="3"
+            placeholder="Anything your agents should know…"
+          ></textarea>
+        </label>
+        <div class="form-row">
+          <label
+            >Start in<select name="backlog">
+              <option value="true">Inbox · refine it later</option>
+              <option value="false">Ready · available to agents</option>
+            </select></label
+          ><label
+            >Priority<select name="priority">
+              <option value="2">Normal</option>
+              <option value="0">Urgent</option>
+              <option value="1">High</option>
+              <option value="3">Low</option>
+            </select></label
+          >
+        </div>
+        <p class="form-error" role="alert"></p>
+        <div class="dialog-actions">
+          <span class="subtle">You can connect dependencies afterward.</span
+          ><button class="primary" type="submit">Save ideas</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog
+      id="task-dialog"
+      class="task-dialog"
+      aria-labelledby="task-dialog-title"
+    >
+      <div class="dialog-heading sticky">
+        <div>
+          <div class="eyebrow" id="task-short-id"></div>
+          <h2 id="task-dialog-title">Task details</h2>
+        </div>
+        <button
+          type="button"
+          class="icon-button close-dialog"
+          aria-label="Close task"
+        >
+          ×
+        </button>
+      </div>
+      <div id="task-detail"></div>
+    </dialog>
+    <div id="toast" role="status" aria-live="polite" hidden></div>
+  </body>
+</html>

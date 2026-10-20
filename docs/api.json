@@ -1,0 +1,159 @@
+{
+  "name": "VibeCab",
+  "version": "0.2.0",
+  "transport": "HTTP JSON on loopback",
+  "workflow": [
+    "Capture ideas as BACKLOG or executable tasks as TODO",
+    "Fetch the project graph and task context",
+    "Preview and apply a dependency plan using its revision",
+    "Claim eligible work before starting",
+    "Renew your claim; complete or release using its token"
+  ],
+  "endpoints": [
+    { "method": "GET", "path": "/projects", "description": "List projects" },
+    {
+      "method": "POST",
+      "path": "/projects",
+      "body": { "name": "Example", "repo_path": "/path/to/repo" }
+    },
+    {
+      "method": "GET",
+      "path": "/projects/{id}/tasks",
+      "description": "List tasks without claim tokens or vectors"
+    },
+    {
+      "method": "POST",
+      "path": "/projects/{id}/tasks",
+      "body": {
+        "title": "Build API",
+        "description": "Context",
+        "dependencies": [],
+        "backlog": false,
+        "priority": 2
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/projects/{id}/capture",
+      "description": "Atomic, retry-safe batch. Reuse request_id with identical content on retry. Dependencies may be batch keys or existing task UUIDs.",
+      "body": {
+        "request_id": "unique-operation-id",
+        "tasks": [
+          { "key": "api", "title": "Build API" },
+          { "key": "ui", "title": "Build UI", "dependencies": ["api"] }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/projects/{id}/graph",
+      "description": "Full context, directed edges with rationale, graph revision, per-task direct blockers, ancestors, descendants, and prerequisite-first execution_layers. Layers are structural, not current claim eligibility."
+    },
+    {
+      "method": "GET",
+      "path": "/tasks/{id}/dependencies",
+      "description": "Focused dependency analysis with related task context"
+    },
+    {
+      "method": "PUT",
+      "path": "/projects/{id}/dependencies",
+      "description": "Atomic replacement of prerequisites for selected tasks. Preview with dry_run=true; apply with false. Stale revision, cycles, cross-project edges, and edits to claimed/completed tasks are rejected.",
+      "body": {
+        "expected_revision": 1,
+        "dry_run": true,
+        "changes": [
+          {
+            "task_id": "UUID",
+            "dependencies": ["prerequisite UUID"],
+            "rationale": "Why these tasks depend on one another"
+          }
+        ]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/projects/{id}/ready",
+      "description": "Eligible tasks sorted by priority, creation time, ID"
+    },
+    {
+      "method": "POST",
+      "path": "/projects/{id}/claim-next",
+      "description": "Atomically select and claim highest-priority eligible task. Returns {task:null} when no work is available.",
+      "body": { "agent_id": "unique-agent-session", "lease_seconds": 300 }
+    },
+    {
+      "method": "POST",
+      "path": "/tasks/{id}/claim",
+      "body": { "agent_id": "unique-agent-session", "lease_seconds": 300 }
+    },
+    {
+      "method": "POST",
+      "path": "/tasks/{id}/heartbeat",
+      "body": { "claim_token": "UUID", "lease_seconds": 300 }
+    },
+    {
+      "method": "POST",
+      "path": "/tasks/{id}/complete",
+      "body": { "claim_token": "UUID", "result": "Implementation summary" }
+    },
+    {
+      "method": "POST",
+      "path": "/tasks/{id}/release",
+      "body": { "claim_token": "UUID", "result": "Handoff notes" }
+    },
+    {
+      "method": "GET",
+      "path": "/tasks/{id}",
+      "description": "Fetch task and version"
+    },
+    {
+      "method": "PATCH",
+      "path": "/tasks/{id}",
+      "body": {
+        "title": "Revised title",
+        "description": "Revised context",
+        "status": "TODO",
+        "priority": 1,
+        "expected_version": 1
+      },
+      "description": "Optional fields; include expected_version to reject stale edits. Direct lifecycle edits allow BACKLOG, TODO, CANCELED only. Claimed and completed tasks cannot be edited."
+    },
+    {
+      "method": "DELETE",
+      "path": "/tasks/{id}",
+      "description": "Deletes an unclaimed, unfinished task with no dependents"
+    },
+    {
+      "method": "GET",
+      "path": "/tasks/{id}/history",
+      "description": "Most recent 100 events, including dependency rationale; no ownership tokens"
+    },
+    {
+      "method": "PUT",
+      "path": "/tasks/{id}/embedding",
+      "body": {
+        "model": "your-model-and-version",
+        "embedding": [0.1, 0.2, 0.3],
+        "expected_version": 1
+      },
+      "description": "Supply embeddings from your own model. Title/context edits invalidate stored embeddings."
+    },
+    {
+      "method": "POST",
+      "path": "/projects/{id}/search",
+      "body": {
+        "model": "your-model-and-version",
+        "embedding": [0.1, 0.2, 0.3],
+        "limit": 10
+      },
+      "description": "Cosine-distance search within the same project, model and vector dimension. Lower distance is more similar. No external model calls."
+    }
+  ],
+  "rules": {
+    "priority": "0 urgent, 1 high, 2 normal, 3 low",
+    "leases": "1..3600 seconds; renew before expiration. Tokens fence stale workers and are returned only when claiming.",
+    "dependencies": "task_id depends on depends_on. Every prerequisite must be DONE. CANCELED prerequisites still block work.",
+    "conflicts": "409: refresh the relevant task/graph before deciding whether to retry.",
+    "idempotency": "Only batch capture provides persisted idempotency. Claim/complete/release are token-gated, not replay-idempotent."
+  }
+}
