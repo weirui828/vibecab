@@ -8,7 +8,7 @@ use axum::{
 };
 use serde::Deserialize;
 use serde_json::{Value, json};
-use sqlx::{PgPool, postgres::PgPoolOptions};
+use sqlx::{AssertSqlSafe, PgPool, postgres::PgPoolOptions};
 use uuid::Uuid;
 
 type ApiResult = Result<Json<Value>, (StatusCode, Json<Value>)>;
@@ -101,19 +101,22 @@ async fn create_task(
     Ok(Json(json!({"id":id})))
 }
 // Claim tokens are capabilities: never include them in general task listings.
+// AssertSqlSafe queries only interpolate TASK_JSON and ELIGIBLE, both constants.
 const TASK_JSON: &str = "to_jsonb(t) - 'claim_token' - 'embedding'";
 async fn tasks(State(pool): State<PgPool>, Path(project): Path<Uuid>) -> ApiResult {
-    let rows = sqlx::query_scalar::<_, Value>(&format!("SELECT {TASK_JSON} || jsonb_build_object('dependencies',COALESCE((SELECT jsonb_agg(d.depends_on) FROM task_dependencies d WHERE d.task_id=t.id),'[]'::jsonb)) FROM tasks t WHERE project_id=$1 ORDER BY created_at,id")).bind(project).fetch_all(&pool).await.map_err(db_error)?;
+    let rows = sqlx::query_scalar::<_, Value>(AssertSqlSafe(format!("SELECT {TASK_JSON} || jsonb_build_object('dependencies',COALESCE((SELECT jsonb_agg(d.depends_on) FROM task_dependencies d WHERE d.task_id=t.id),'[]'::jsonb)) FROM tasks t WHERE project_id=$1 ORDER BY created_at,id"))).bind(project).fetch_all(&pool).await.map_err(db_error)?;
     Ok(Json(json!(rows)))
 }
 async fn task(State(pool): State<PgPool>, Path(id): Path<Uuid>) -> ApiResult {
-    sqlx::query_scalar::<_, Value>(&format!("SELECT {TASK_JSON} FROM tasks t WHERE id=$1"))
-        .bind(id)
-        .fetch_optional(&pool)
-        .await
-        .map_err(db_error)?
-        .map(Json)
-        .ok_or_else(|| error(StatusCode::NOT_FOUND, "task not found"))
+    sqlx::query_scalar::<_, Value>(AssertSqlSafe(format!(
+        "SELECT {TASK_JSON} FROM tasks t WHERE id=$1"
+    )))
+    .bind(id)
+    .fetch_optional(&pool)
+    .await
+    .map_err(db_error)?
+    .map(Json)
+    .ok_or_else(|| error(StatusCode::NOT_FOUND, "task not found"))
 }
 #[derive(Deserialize)]
 struct EditTask {
@@ -184,9 +187,9 @@ async fn delete_task(State(pool): State<PgPool>, Path(id): Path<Uuid>) -> ApiRes
 }
 const ELIGIBLE: &str = "(t.status='TODO' OR (t.status='IN_PROGRESS' AND t.lease_until<=clock_timestamp())) AND NOT EXISTS (SELECT 1 FROM task_dependencies d JOIN tasks prerequisite ON prerequisite.id=d.depends_on WHERE d.task_id=t.id AND prerequisite.status<>'DONE')";
 async fn ready(State(pool): State<PgPool>, Path(project): Path<Uuid>) -> ApiResult {
-    let rows = sqlx::query_scalar::<_, Value>(&format!(
+    let rows = sqlx::query_scalar::<_, Value>(AssertSqlSafe(format!(
         "SELECT {TASK_JSON} FROM tasks t WHERE project_id=$1 AND {ELIGIBLE} ORDER BY priority,created_at,id"
-    ))
+    )))
     .bind(project)
     .fetch_all(&pool)
     .await
@@ -223,7 +226,7 @@ async fn claim(
     let mut tx = pool.begin().await.map_err(db_error)?;
     planning::lock_task(&mut tx, id).await?;
     let token = Uuid::new_v4();
-    let row = sqlx::query_scalar::<_, Value>(&format!("UPDATE tasks t SET status='IN_PROGRESS',version=version+1,claim_token=$2,claimed_by=$3,lease_until=clock_timestamp()+make_interval(secs=>$4),updated_at=clock_timestamp() WHERE id=$1 AND {ELIGIBLE} RETURNING to_jsonb(t)-'embedding'"))
+    let row = sqlx::query_scalar::<_, Value>(AssertSqlSafe(format!("UPDATE tasks t SET status='IN_PROGRESS',version=version+1,claim_token=$2,claimed_by=$3,lease_until=clock_timestamp()+make_interval(secs=>$4),updated_at=clock_timestamp() WHERE id=$1 AND {ELIGIBLE} RETURNING to_jsonb(t)-'embedding'")))
         .bind(id).bind(token).bind(c.agent_id).bind(c.lease_seconds as f64).fetch_optional(&mut *tx).await.map_err(db_error)?;
     tx.commit().await.map_err(db_error)?;
     row.map(Json).ok_or_else(|| {

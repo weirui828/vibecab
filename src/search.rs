@@ -71,7 +71,7 @@ pub async fn search(
     if !(1..=100).contains(&s.limit) {
         return Err(error(StatusCode::BAD_REQUEST, "limit must be 1..100"));
     }
-    let results=sqlx::query_scalar::<_,Value>(&format!("SELECT jsonb_build_object('task',{TASK_JSON},'cosine_distance',embedding <=> $2::vector) FROM tasks t WHERE project_id=$1 AND embedding_model=$3 AND vector_dims(embedding)=$4 ORDER BY embedding <=> $2::vector,id LIMIT $5"))
+    let results=sqlx::query_scalar::<_,Value>(AssertSqlSafe(format!("SELECT jsonb_build_object('task',{TASK_JSON},'cosine_distance',embedding <=> $2::vector) FROM tasks t WHERE project_id=$1 AND embedding_model=$3 AND vector_dims(embedding)=$4 ORDER BY embedding <=> $2::vector,id LIMIT $5")))
         .bind(project).bind(value).bind(s.model).bind(s.embedding.len() as i32).bind(s.limit).fetch_all(&pool).await.map_err(db_error)?;
     Ok(Json(json!({"results":results})))
 }

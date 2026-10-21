@@ -2,14 +2,14 @@
 
 A local, agent-first project workspace. Capture ideas, connect prerequisites, and let
 multiple agents claim independent work safely. Rust + Axum + SQLx, native PostgreSQL
-17, and pgvector. No Docker or Python backend.
+18, and pgvector. No Docker or Python backend.
 
 The Rust executable serves both the JSON API and the bundled web interface. There
 is no frontend development server or runtime dependency on Node.js.
 
 ## Run locally
 
-Install the Rust toolchain specified in `rust-toolchain.toml`, native PostgreSQL 17,
+Install the Rust toolchain specified in `rust-toolchain.toml`, native PostgreSQL 18,
 and pgvector 0.8 or newer. Start PostgreSQL using your operating system's service
 manager. Create a UTF-8 database owned by your local database role:
 
