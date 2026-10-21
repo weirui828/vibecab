@@ -344,7 +344,7 @@ pub async fn claim_next(
     }
     let mut tx = pool.begin().await.map_err(db_error)?;
     lock_project(&mut tx, project).await?;
-    let id=sqlx::query_scalar::<_,Uuid>(&format!("SELECT id FROM tasks t WHERE project_id=$1 AND {ELIGIBLE} ORDER BY priority,created_at,id LIMIT 1"))
+    let id=sqlx::query_scalar::<_,Uuid>(AssertSqlSafe(format!("SELECT id FROM tasks t WHERE project_id=$1 AND {ELIGIBLE} ORDER BY priority,created_at,id LIMIT 1")))
         .bind(project).fetch_optional(&mut *tx).await.map_err(db_error)?;
     let Some(id) = id else {
         return Ok(Json(json!({"task":null})));
