@@ -289,6 +289,24 @@ async fn health(State(pool): State<PgPool>) -> ApiResult {
         .map_err(db_error)?;
     Ok(Json(json!({"ok":true})))
 }
+// Tundra typefaces (SIL OFL 1.1, licenses in web/fonts), embedded so the UI needs no external assets.
+async fn font(Path(name): Path<String>) -> axum::response::Response {
+    use axum::response::IntoResponse;
+    let bytes: &'static [u8] = match name.as_str() {
+        "Fraunces.woff2" => include_bytes!("../web/fonts/Fraunces.woff2"),
+        "InstrumentSans.woff2" => include_bytes!("../web/fonts/InstrumentSans.woff2"),
+        "JetBrainsMono.woff2" => include_bytes!("../web/fonts/JetBrainsMono.woff2"),
+        _ => return StatusCode::NOT_FOUND.into_response(),
+    };
+    (
+        [
+            (axum::http::header::CONTENT_TYPE, "font/woff2"),
+            (axum::http::header::CACHE_CONTROL, "public, max-age=86400"),
+        ],
+        bytes,
+    )
+        .into_response()
+}
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pool = PgPoolOptions::new()
@@ -322,6 +340,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 )
             }),
         )
+        .route("/assets/fonts/{name}", get(font))
         .route(
             "/api",
             get(|| async {

@@ -181,6 +181,25 @@ if (!base)
       "Accessibility violations:",
       audit.violations.map((v) => ({ id: v.id, count: v.nodes.length })),
     );
+    assert.equal(await page.locator("#metrics .mound-col").count(), 5);
+    await page.emulateMedia({ colorScheme: "dark" });
+    await page.screenshot({ path: "artifacts/board-dark.png", fullPage: true });
+    await auditView("board-dark");
+    await page.emulateMedia({ colorScheme: "light" });
+    await page
+      .getByRole("button", { name: "Polar night", exact: true })
+      .click();
+    assert.equal(
+      await page
+        .evaluate(() => [
+          document.documentElement.dataset.theme,
+          localStorage.getItem("vcab-theme"),
+        ])
+        .then((v) => v.join()),
+      "dark,dark",
+    );
+    await auditView("board-polar-night");
+    await page.getByRole("button", { name: "Auto", exact: true }).click();
     await page.keyboard.press("/");
     assert.equal(
       await page
