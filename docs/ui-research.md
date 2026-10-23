@@ -20,6 +20,23 @@ imitation of another product.
 The W3C website was unavailable from the cloud network; the authoritative source
 files were retrieved from the W3C GitHub repository instead.
 
+## Visual language
+
+The interface uses Wei's Tundra design system: Icelandic tundra colors (moss on
+basalt, lichen, glacier meltwater, rust, sedge), low saturation with contrast carried
+by lightness, hairlines instead of shadows (only overlays float), generous space, and
+the þúfa (tussock) half-ellipse as the one decorative shape. Fraunces sets headings,
+Instrument Sans the body, JetBrains Mono IDs and numbers. The three typefaces are SIL
+OFL 1.1, bundled in `web/fonts` with their licenses and served by the binary.
+
+- The horizon draws one tussock per task state, its height proportional to the count.
+- The dependency plan is drawn as strata: foundations first, one band per layer.
+- Task details open as a full-height sheet on the right (a bottom sheet on phones).
+- Both Tundra themes are supported: Summer tundra (light) and Polar night (dark). The
+  rail switch offers Auto, Summer and Polar night and remembers the choice locally.
+- Copy follows Tundra's voice: short, plain, like field notes; no exclamation marks.
+- The wordmark is plain text until a logo is chosen.
+
 ## Applied design choices
 
 - A persistent project rail and five stable columns distinguish Inbox, Ready,
@@ -43,7 +60,8 @@ files were retrieved from the W3C GitHub repository instead.
 
 `tests/ui.cjs` exercises project creation, batch capture, dependency preview/apply,
 claiming, completion and downstream unblocking, search, plan navigation, mobile
-layout, escaping of untrusted task text, and an axe WCAG A/AA scan. Screenshots in
+layout, escaping of untrusted task text, the theme switch, and axe WCAG A/AA scans
+in both themes. Screenshots in
 `artifacts/` are generated from a disposable test project, never seeded into the
 personal workspace. Automated checks supplement visual and keyboard inspection;
 they do not establish complete accessibility conformance.

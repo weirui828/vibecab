@@ -10,12 +10,15 @@ const state = {
 };
 const priorityNames = ["Urgent", "High", "Normal", "Low"];
 const columns = [
-  ["inbox", "Inbox", "Ideas waiting for a little clarity."],
-  ["ready", "Ready", "All clear. Your next task goes here."],
-  ["blocked", "Blocked", "No roadblocks right now."],
-  ["active", "In progress", "A little quiet. Ready when you are."],
-  ["done", "Finished", "Good work will find its way here."],
+  ["inbox", "Inbox", "No loose ideas."],
+  ["ready", "Ready", "Nothing ready. Finish a prerequisite to free one."],
+  ["blocked", "Blocked", "Nothing is waiting on prerequisites."],
+  ["active", "In progress", "No agent is out on a task."],
+  ["done", "Finished", "Finished work settles here."],
 ];
+const stateNames = Object.fromEntries(
+  columns.map(([key, title]) => [key, title]),
+);
 function el(tag, cls, text) {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
@@ -27,6 +30,12 @@ function button(text, cls, fn) {
   e.type = "button";
   if (fn) e.addEventListener("click", fn);
   return e;
+}
+function clock(time) {
+  return new Date(time).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 function notify(message) {
   $("#toast").textContent = message;
@@ -133,10 +142,8 @@ function renderProjects() {
       `project-item${p.id === state.project ? " active" : ""}`,
       () => selectProject(p.id),
     );
-    b.append(
-      el("span", "project-initial", p.name.slice(0, 1).toUpperCase()),
-      el("span", "", p.name),
-    );
+    b.append(el("span", "project-mound"), el("span", "project-name", p.name));
+    if (p.repo_path) b.append(el("span", "project-path", p.repo_path));
     b.dataset.projectId = p.id;
     b.setAttribute("aria-current", p.id === state.project ? "page" : "false");
     root.append(b);
@@ -155,7 +162,7 @@ function card(t) {
     el(
       "span",
       `priority p${t.priority}`,
-      `${["▰", "▥", "▤", "▱"][t.priority]} ${priorityNames[t.priority]}`,
+      `P${t.priority} · ${priorityNames[t.priority]}`,
     ),
   );
   c.append(top, el("h3", "", t.title));
@@ -167,27 +174,33 @@ function card(t) {
       el(
         "span",
         "dependency-badge",
-        `↳ ${a.blockers.length} blocker${a.blockers.length === 1 ? "" : "s"}`,
+        `Waiting on ${a.blockers.length} prerequisite${a.blockers.length === 1 ? "" : "s"}`,
       ),
     );
-  else if (a.dependencies.length)
+  else if (a.dependencies.length && t.status !== "DONE")
     bottom.append(
       el(
         "span",
         "",
-        `✓ ${a.dependencies.length} prerequisite${a.dependencies.length === 1 ? "" : "s"}`,
+        `${a.dependencies.length} prerequisite${a.dependencies.length === 1 ? "" : "s"} met`,
       ),
     );
   if (taskState(t) === "active")
-    bottom.append(el("span", "owner-badge", `◉ ${t.claimed_by}`));
+    bottom.append(
+      el(
+        "span",
+        "owner-badge",
+        `${t.claimed_by} · until ${clock(t.lease_until)}`,
+      ),
+    );
   else if (t.status === "IN_PROGRESS")
     bottom.append(
-      el("span", "expired-badge", "Lease expired · ready to reclaim"),
+      el("span", "expired-badge", "Lease expired · claimable again"),
     );
-  if (t.status === "DONE") bottom.append(el("span", "", "✓ Completed"));
-  if (t.status === "CANCELED") bottom.append(el("span", "", "— Canceled"));
+  if (t.status === "DONE") bottom.append(el("span", "done-badge", "Completed"));
+  if (t.status === "CANCELED") bottom.append(el("span", "", "Canceled"));
   if (!bottom.childNodes.length && a.unblocks_count)
-    bottom.append(el("span", "", `↗ Unlocks ${a.unblocks_count} downstream`));
+    bottom.append(el("span", "", `Unlocks ${a.unblocks_count} downstream`));
   if (bottom.childNodes.length) c.append(bottom);
   return c;
 }
@@ -200,42 +213,54 @@ function render() {
   if (focusedProject)
     document.querySelector(`[data-project-id="${focusedProject}"]`)?.focus();
   const p = currentProject();
-  $("#breadcrumb").textContent = p?.name || "Your projects";
-  $("#project-title").textContent = p?.name || "Your next idea starts here.";
-  $("#project-subtitle").textContent = p
-    ? "Your ideas, connected. Your agents, moving forward."
-    : "A quiet place to organize the work. A clear path for your agents.";
+  $("#breadcrumb").textContent = p ? "Project" : "Your projects";
+  $("#project-title").textContent = p?.name || "VibeCab";
   $("#capture").disabled = !p;
+  $("#capture").hidden = !p;
   $("#empty-workspace").hidden = !!p;
   $("#workspace").hidden = !p;
   const metrics = $("#metrics");
   metrics.replaceChildren();
-  if (!p || !state.graph) return;
+  if (!p) {
+    $("#project-subtitle").textContent =
+      "Local task coordinator for your agents.";
+    return;
+  }
+  if (!state.graph) return;
   const all = graphTasks();
-  const ready = all.filter((t) => taskState(t) === "ready").length;
-  const blocked = all.filter((t) => taskState(t) === "blocked").length;
+  const counts = Object.fromEntries(columns.map(([key]) => [key, 0]));
+  all.forEach((t) => counts[taskState(t)]++);
   const agents = new Set(
     all.filter((t) => taskState(t) === "active").map((t) => t.claimed_by),
   ).size;
-  for (const [value, label, sub, cls] of [
-    [all.length, "Ideas & tasks", "Everything in one place", ""],
-    [ready, "Ready to pick up", "A clear path ahead", ""],
-    [blocked, "Waiting on dependencies", "Connect the next step", "blocked"],
-    [agents, "Agents at work", "Making things happen", "active"],
-  ]) {
-    const m = el("div", "metric");
-    const l = el("div", "metric-label");
-    l.append(el("strong", "", label), el("span", "", sub));
-    m.append(
-      el("div", "metric-value", String(value)),
-      l,
-      el("span", `metric-dot ${cls}`),
+  $("#project-subtitle").textContent = [
+    `rev ${state.graph.revision}`,
+    `${all.length} task${all.length === 1 ? "" : "s"}`,
+    `${agents} agent${agents === 1 ? "" : "s"} out`,
+    p.repo_path,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  // Horizon: one tussock per state; height is proportional to its count.
+  const tallest = Math.max(1, ...Object.values(counts));
+  for (const [key, title] of columns) {
+    const col = el("div", "mound-col");
+    col.dataset.state = key;
+    const ground = el("div", "mound-ground");
+    const mound = el("div", "mound");
+    mound.style.setProperty("--h", `${(counts[key] / tallest) * 64}px`);
+    ground.append(mound);
+    const label = el("div", "mound-label");
+    label.append(
+      el("span", "mound-count", String(counts[key])),
+      el("span", "label", title),
     );
-    metrics.append(m);
+    col.append(ground, label);
+    metrics.append(col);
   }
   const visible = all.filter(matches);
   $("#result-count").textContent =
-    `${visible.length} of ${all.length} tasks · Updated ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+    `${visible.length} of ${all.length} tasks · updated ${clock(new Date())}`;
   const board = $("#board");
   board.replaceChildren();
   board.hidden = state.view !== "board";
@@ -275,7 +300,7 @@ function render() {
     el(
       "p",
       "plan-intro",
-      "Prerequisites come first. Each layer contains tasks with no dependencies on one another. These are structural layers—not a schedule: inbox items, unfinished prerequisites, and active leases still control what agents can claim.",
+      "Prerequisites come first, like layers of rock. Tasks in one layer do not depend on each other. Layers show structure, not a schedule: inbox items, unfinished prerequisites and active leases still decide what agents can claim.",
     ),
   );
   state.graph.execution_layers.forEach((layer, i) => {
@@ -285,7 +310,7 @@ function render() {
     if (!tasks.length) return;
     const row = el("section", "plan-layer");
     const label = el("h2", "layer-label", `Layer ${i + 1}`);
-    label.append(el("span", "", i ? "After prerequisites" : "Foundations"));
+    label.append(el("span", "", i ? `After layer ${i}` : "Foundations"));
     const items = el("div", "layer-tasks");
     tasks.forEach((t) => items.append(card(t)));
     row.append(label, items);
@@ -357,8 +382,30 @@ function showCapture(backlog = true) {
   form.elements.backlog.value = String(backlog);
   form.dataset.requestId = crypto.randomUUID();
   delete form.dataset.payload;
+  $("#capture-project").textContent = currentProject()?.name || "";
   openDialog($("#capture-dialog"));
 }
+// Theme: Auto follows the system; Summer and Polar night are Tundra's two themes.
+function applyTheme(choice) {
+  if (choice) document.documentElement.dataset.theme = choice;
+  else delete document.documentElement.dataset.theme;
+  document
+    .querySelectorAll("[data-theme-choice]")
+    .forEach((b) =>
+      b.setAttribute("aria-pressed", String(b.dataset.themeChoice === choice)),
+    );
+}
+applyTheme(document.documentElement.dataset.theme || "");
+document.querySelectorAll("[data-theme-choice]").forEach((b) =>
+  b.addEventListener("click", () => {
+    applyTheme(b.dataset.themeChoice);
+    try {
+      if (b.dataset.themeChoice)
+        localStorage.setItem("vcab-theme", b.dataset.themeChoice);
+      else localStorage.removeItem("vcab-theme");
+    } catch {}
+  }),
+);
 $("#capture").onclick = () => showCapture();
 $("#new-project").onclick = $("#first-project").onclick = () => {
   $("#project-form").reset();
@@ -491,7 +538,7 @@ async function openTask(id) {
   const root = $("#task-detail");
   root.replaceChildren();
   $("#task-short-id").textContent =
-    `VC-${id.slice(0, 5).toUpperCase()} · ${taskState(task).replace("inbox", "Inbox")}`;
+    `VC-${id.slice(0, 5).toUpperCase()} · ${stateNames[taskState(task)]}`;
   const dialog = $("#task-dialog");
   if (!dialog.open) dialog.showModal();
   const form = el("form");
