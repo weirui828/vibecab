@@ -46,11 +46,7 @@ export class JobRunner {
     const leased = await this.mutate(() => {
       if (this.stopped) return [];
       for (const job of this.store.jobs()) {
-        if (
-          job.state === "leased" &&
-          job.leaseUntil !== null &&
-          job.leaseUntil <= this.clock.now()
-        ) {
+        if (job.state === "leased" && job.leaseUntil !== null && job.leaseUntil <= this.clock.now()) {
           const state = this.recoverState(job);
           if (state === "uncertain") this.options.onUncertain?.(job);
           if (state === "interrupted") this.options.onInterrupted?.(job);
@@ -59,24 +55,15 @@ export class JobRunner {
       }
       const due = this.store
         .jobs()
-        .filter(
-          (job) =>
-            job.state === "pending" &&
-            this.options.handlers[job.kind] &&
-            jobDue(job, this.clock.now()),
-        );
-      let replyLeased = this.store
-        .jobs()
-        .some((job) => job.kind === "agent.reply" && job.state === "leased");
+        .filter((job) => job.state === "pending" && this.options.handlers[job.kind] && jobDue(job, this.clock.now()));
+      let replyLeased = this.store.jobs().some((job) => job.kind === "agent.reply" && job.state === "leased");
       const jobs = due.filter((job) => {
         if (job.kind !== "agent.reply") return true;
         if (replyLeased) return false;
         replyLeased = true;
         return true;
       });
-      const until = new Date(
-        Date.parse(this.clock.now()) + this.options.leaseMs,
-      ).toISOString();
+      const until = new Date(Date.parse(this.clock.now()) + this.options.leaseMs).toISOString();
       for (const job of jobs) this.store.lease(job.id, until);
       return jobs.map(
         (job) =>
@@ -108,14 +95,8 @@ export class JobRunner {
     // An expired or drained attempt has no authority over a later lease.
     if (!this.finishingAllowed) return;
     await this.mutate(() => {
-      const current = this.store
-        .jobs()
-        .find((candidate) => candidate.id === job.id);
-      if (
-        this.finishingAllowed &&
-        current?.state === "leased" &&
-        current.attempts === job.attempts
-      )
+      const current = this.store.jobs().find((candidate) => candidate.id === job.id);
+      if (this.finishingAllowed && current?.state === "leased" && current.attempts === job.attempts)
         this.store.jobState(job.id, state);
     });
   }
@@ -149,10 +130,7 @@ export class JobRunner {
 }
 function jobDue(job: Job, now: string): boolean {
   const payload = job.payload;
-  if (typeof payload !== "object" || payload === null || Array.isArray(payload))
-    return true;
+  if (typeof payload !== "object" || payload === null || Array.isArray(payload)) return true;
   const notBefore = Reflect.get(payload, "notBefore");
-  return (
-    typeof notBefore !== "string" || Date.parse(notBefore) <= Date.parse(now)
-  );
+  return typeof notBefore !== "string" || Date.parse(notBefore) <= Date.parse(now);
 }

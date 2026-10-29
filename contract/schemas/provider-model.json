@@ -17,13 +17,7 @@
         "maxContextTokens": { "type": "integer", "minimum": 1 },
         "reportsUsage": { "type": "boolean" }
       },
-      "required": [
-        "tools",
-        "jsonSchemaOutput",
-        "streaming",
-        "maxContextTokens",
-        "reportsUsage"
-      ],
+      "required": ["tools", "jsonSchemaOutput", "streaming", "maxContextTokens", "reportsUsage"],
       "additionalProperties": false
     },
     "pricing": {

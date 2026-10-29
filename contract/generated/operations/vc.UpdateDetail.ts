@@ -21,6 +21,10 @@ export interface Update {
   artifactId: string;
   baseVersion: number;
   itemIds: string[];
+  onBehalfOf?: {
+    itemId: string;
+    kind: "human";
+  }[];
   status:
     | "queued"
     | "planning"

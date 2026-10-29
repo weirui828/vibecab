@@ -62,9 +62,7 @@ describe("anchors and diff", () => {
       });
       f.commit({
         baseVersion: 4,
-        changes: [
-          { op: "update", elementId: id, element: paragraph("quote quote") },
-        ],
+        changes: [{ op: "update", elementId: id, element: paragraph("quote quote") }],
       });
       expect(resolveAnchors(f.store, [anchor])[0]).toEqual({
         anchor,
@@ -111,9 +109,7 @@ describe("anchors and diff", () => {
       });
       f.commit({
         baseVersion: 3,
-        changes: [
-          { op: "update", elementId: id, element: paragraph("one three") },
-        ],
+        changes: [{ op: "update", elementId: id, element: paragraph("one three") }],
       });
       const d = diffVersions(f.store, f.artifactId, 3, 4);
       expect(d.changed).toEqual([id]);
@@ -134,8 +130,7 @@ describe("doc schemas and Markdown import", () => {
     const markdown =
       "# Heading\n\nText **bold** and *italic* and `code` and [link](https://example.com)\n\n- Item\n  - Nested\n\n> Quote\n\n```js\n<script>raw</script>\n```\n\n| A | B |\n|---|---|\n| C | D |\n\n---\n\n![Alt](https://example.com/image.png)\n\n<b>HTML</b>\n\n~~deleted~~";
     const nodes = importContent(markdown, "markdown");
-    for (const n of nodes)
-      expect(() => contract.read("element-draft", n.element)).not.toThrow();
+    for (const n of nodes) expect(() => contract.read("element-draft", n.element)).not.toThrow();
     expect(nodes.map((n) => n.element.type)).toEqual(
       expect.arrayContaining([
         "heading",
@@ -151,22 +146,11 @@ describe("doc schemas and Markdown import", () => {
       ]),
     );
     expect(
-      nodes.some(
-        (n) =>
-          n.element.type === "paragraph" &&
-          n.element.text === "[Alt](https://example.com/image.png)",
-      ),
+      nodes.some((n) => n.element.type === "paragraph" && n.element.text === "[Alt](https://example.com/image.png)"),
     ).toBe(true);
   });
   it("rejects illegal formatting and structural relationships", () => {
-    for (const text of [
-      "# Heading",
-      "<b>html</b>",
-      "![alt](url)",
-      "~~strike~~",
-      "**unclosed",
-      "[broken]",
-    ])
+    for (const text of ["# Heading", "<b>html</b>", "![alt](url)", "~~strike~~", "**unclosed", "[broken]"])
       expect(inlineText(text)).toBe(false);
     const element = {
       elementId: "el_00000000000000000000000001",
@@ -196,28 +180,22 @@ describe("doc schemas and Markdown import", () => {
       expect(inlineText(text), text).toBe(true);
   });
   it("hashes canonical JSON independent of property insertion order", () => {
-    const a = contract.read<import("../../contract/src/index.js").Element>(
-      "element",
-      {
-        elementId: "el_00000000000000000000000001",
-        parentId: null,
-        order: "a0",
-        type: "paragraph",
-        props: {},
-        text: "Text",
-      },
-    );
-    const b = contract.read<import("../../contract/src/index.js").Element>(
-      "element",
-      {
-        text: "Text",
-        props: {},
-        type: "paragraph",
-        order: "a0",
-        parentId: null,
-        elementId: a.elementId,
-      },
-    );
+    const a = contract.read<import("../../contract/src/index.js").Element>("element", {
+      elementId: "el_00000000000000000000000001",
+      parentId: null,
+      order: "a0",
+      type: "paragraph",
+      props: {},
+      text: "Text",
+    });
+    const b = contract.read<import("../../contract/src/index.js").Element>("element", {
+      text: "Text",
+      props: {},
+      type: "paragraph",
+      order: "a0",
+      parentId: null,
+      elementId: a.elementId,
+    });
     expect(revisionHash(a)).toBe(revisionHash(b));
   });
 });

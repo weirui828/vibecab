@@ -15,8 +15,7 @@ it("fences expired job attempts so an old handler cannot complete a new lease", 
   const gates = [deferred(), deferred()],
     starts = [deferred(), deferred()];
   let count = 0;
-  const mutate = <T>(action: () => T) =>
-    Promise.resolve(store.transaction(action));
+  const mutate = <T>(action: () => T) => Promise.resolve(store.transaction(action));
   const runner = new JobRunner(store, { now: () => now }, mutate, {
     leaseMs: 1000,
     handlers: {
@@ -51,20 +50,15 @@ it("does not write after drain interrupts an unfinished handler and storage clos
     gate = deferred(),
     started = deferred(),
     now = "2026-10-28T00:00:00.000Z";
-  const runner = new JobRunner(
-    store,
-    { now: () => now },
-    async (action) => store.transaction(action),
-    {
-      leaseMs: 1000,
-      handlers: {
-        "test.noop": async () => {
-          started.resolve();
-          await gate.promise;
-        },
+  const runner = new JobRunner(store, { now: () => now }, async (action) => store.transaction(action), {
+    leaseMs: 1000,
+    handlers: {
+      "test.noop": async () => {
+        started.resolve();
+        await gate.promise;
       },
     },
-  );
+  });
   store.transaction(() => store.enqueue("test.noop", "one", {}, now));
   const tick = runner.tick();
   await started.promise;
@@ -79,20 +73,15 @@ it("lets handlers finish during the drain grace period", async () => {
     gate = deferred(),
     started = deferred(),
     now = "2026-10-28T00:00:00.000Z";
-  const runner = new JobRunner(
-    store,
-    { now: () => now },
-    async (action) => store.transaction(action),
-    {
-      leaseMs: 1000,
-      handlers: {
-        "test.noop": async () => {
-          started.resolve();
-          await gate.promise;
-        },
+  const runner = new JobRunner(store, { now: () => now }, async (action) => store.transaction(action), {
+    leaseMs: 1000,
+    handlers: {
+      "test.noop": async () => {
+        started.resolve();
+        await gate.promise;
       },
     },
-  );
+  });
   store.transaction(() => store.enqueue("test.noop", "one", {}, now));
   const tick = runner.tick();
   await started.promise;

@@ -3,12 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { randomBytes, timingSafeEqual, createHash } from "node:crypto";
 import { readFile, open, chmod } from "node:fs/promises";
 import { join } from "node:path";
-import {
-  Contract,
-  CONTRACT_VERSION,
-  errorOf,
-  fail,
-} from "../../../contract/src/index.js";
+import { Contract, CONTRACT_VERSION, errorOf, fail } from "../../../contract/src/index.js";
 import type {
   CallContext,
   CommandEnvelope,
@@ -61,10 +56,7 @@ function isTokens(value: unknown): value is Tokens {
     [value.read, value.collaborate, value.admin].every((s) => s.length >= 16)
   );
 }
-async function tokensAt(
-  dir: string,
-  factory = () => randomBytes(32).toString("hex"),
-): Promise<Tokens> {
+async function tokensAt(dir: string, factory = () => randomBytes(32).toString("hex")): Promise<Tokens> {
   const path = join(dir, "access-tokens.json");
   try {
     const parsed: unknown = JSON.parse(await readFile(path, "utf8"));
@@ -72,17 +64,10 @@ async function tokensAt(
     await chmod(path, 0o600);
     return parsed;
   } catch (error) {
-    if (!(
-      typeof error === "object" &&
-      error !== null &&
-      "code" in error &&
-      error.code === "ENOENT"
-    ))
-      throw error;
+    if (!(typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT")) throw error;
   }
   const tokens = { read: factory(), collaborate: factory(), admin: factory() };
-  if (!isTokens(tokens))
-    fail("invalid", "Token factory produced invalid credentials");
+  if (!isTokens(tokens)) fail("invalid", "Token factory produced invalid credentials");
   const file = await open(path, "wx", 0o600);
   try {
     await file.writeFile(JSON.stringify(tokens));
@@ -120,8 +105,7 @@ function send(res: ServerResponse, status: number, value: unknown) {
   res.end(JSON.stringify(value));
 }
 export async function startHttp(engine: Engine, options: HttpOptions) {
-  if (options.host !== undefined && options.host !== "127.0.0.1")
-    fail("invalid", "HTTP must bind to 127.0.0.1");
+  if (options.host !== undefined && options.host !== "127.0.0.1") fail("invalid", "HTTP must bind to 127.0.0.1");
   const tokens = await tokensAt(options.workspaceDir, options.tokenFactory),
     contract = new Contract();
   let port = 0,
@@ -134,38 +118,20 @@ export async function startHttp(engine: Engine, options: HttpOptions) {
     });
   });
   async function handle(req: IncomingMessage, res: ServerResponse) {
-    if (
-      !["127.0.0.1:" + port, "localhost:" + port].includes(
-        req.headers.host ?? "",
-      )
-    )
-      fail("forbidden", "Invalid Host");
-    if (
-      req.headers.origin !== undefined &&
-      req.headers.origin !== options.appOrigin
-    )
+    if (!["127.0.0.1:" + port, "localhost:" + port].includes(req.headers.host ?? "")) fail("forbidden", "Invalid Host");
+    if (req.headers.origin !== undefined && req.headers.origin !== options.appOrigin)
       fail("forbidden", "Origin is not permitted");
     const auth = req.headers.authorization;
-    if (!auth?.startsWith("Bearer "))
-      fail("unauthenticated", "Access token required");
+    if (!auth?.startsWith("Bearer ")) fail("unauthenticated", "Access token required");
     const supplied = Buffer.from(auth.slice(7));
     let scope: CallContext["scope"] | undefined;
-    for (const name of [
-      "read",
-      "collaborate",
-      "admin",
-    ] satisfies CallContext["scope"][]) {
+    for (const name of ["read", "collaborate", "admin"] satisfies CallContext["scope"][]) {
       const secret = Buffer.from(tokens[name]);
-      if (
-        secret.length === supplied.length &&
-        timingSafeEqual(secret, supplied)
-      )
-        scope = name;
+      if (secret.length === supplied.length && timingSafeEqual(secret, supplied)) scope = name;
     }
     if (!scope) fail("unauthenticated", "Invalid access token");
     const ctx: CallContext = {
-      contractVersion:
-        req.headers["x-contract-version"]?.toString() ?? CONTRACT_VERSION,
+      contractVersion: req.headers["x-contract-version"]?.toString() ?? CONTRACT_VERSION,
       principal: { kind: "human" },
       channel: "http",
       scope,
@@ -174,18 +140,13 @@ export async function startHttp(engine: Engine, options: HttpOptions) {
     const url = new URL(req.url ?? "/", "http://127.0.0.1:" + port),
       path = url.pathname;
     if (req.method === "GET" && path === "/v1/capabilities") {
-      send(
-        res,
-        200,
-        await engine.query(ctx, { name: "sys.Capabilities", args: {} }),
-      );
+      send(res, 200, await engine.query(ctx, { name: "sys.Capabilities", args: {} }));
       return;
     }
     if (req.method === "POST" && path.startsWith("/v1/commands/")) {
       const type = decodeURIComponent(path.slice("/v1/commands/".length)),
         input = parseJson(await body(req));
-      if (!input || typeof input !== "object" || Array.isArray(input))
-        fail("invalid", "Invalid command body");
+      if (!input || typeof input !== "object" || Array.isArray(input)) fail("invalid", "Invalid command body");
       const cmd = contract.read<CommandEnvelope>("command-envelope", {
         ...input,
         type,
@@ -198,8 +159,7 @@ export async function startHttp(engine: Engine, options: HttpOptions) {
     if (req.method === "POST" && path.startsWith("/v1/queries/")) {
       const name = decodeURIComponent(path.slice("/v1/queries/".length)),
         input = parseJson(await body(req));
-      if (!input || typeof input !== "object" || Array.isArray(input))
-        fail("invalid", "Invalid query body");
+      if (!input || typeof input !== "object" || Array.isArray(input)) fail("invalid", "Invalid query body");
       const q = contract.read<QueryEnvelope>("query-envelope", {
         ...input,
         name,
@@ -208,16 +168,12 @@ export async function startHttp(engine: Engine, options: HttpOptions) {
       return;
     }
     if (req.method === "GET" && path === "/v1/events") {
-      const raw =
-        req.headers["last-event-id"] ?? url.searchParams.get("after") ?? "0";
-      if (typeof raw !== "string" || !/^\d+$/.test(raw))
-        fail("invalid", "Invalid event cursor");
+      const raw = req.headers["last-event-id"] ?? url.searchParams.get("after") ?? "0";
+      if (typeof raw !== "string" || !/^\d+$/.test(raw)) fail("invalid", "Invalid event cursor");
       const filter = url.searchParams.get("filter");
       const subscription = contract.read<Subscription>("subscription", {
           afterSeq: Number(raw),
-          ...(filter === null
-            ? {}
-            : { filter: parseJson(Buffer.from(filter)) }),
+          ...(filter === null ? {} : { filter: parseJson(Buffer.from(filter)) }),
         }),
         iterator = engine.subscribe(ctx, subscription)[Symbol.asyncIterator]();
       streams.add(iterator);
@@ -265,11 +221,7 @@ export async function startHttp(engine: Engine, options: HttpOptions) {
         const bytes = await body(req);
         if (createHash("sha256").update(bytes).digest("hex") !== hash)
           fail("invalid", "Blob hash does not match content");
-        const stored = await engine.putBlob(
-          ctx,
-          bytes,
-          req.headers["content-type"] ?? "application/octet-stream",
-        );
+        const stored = await engine.putBlob(ctx, bytes, req.headers["content-type"] ?? "application/octet-stream");
         send(res, 200, { hash: stored });
         return;
       }
@@ -293,8 +245,7 @@ export async function startHttp(engine: Engine, options: HttpOptions) {
     });
   });
   const address = server.address();
-  if (!address || typeof address === "string")
-    throw Error("Missing server address");
+  if (!address || typeof address === "string") throw Error("Missing server address");
   port = address.port;
   return {
     url: "http://127.0.0.1:" + port,
@@ -302,9 +253,7 @@ export async function startHttp(engine: Engine, options: HttpOptions) {
     close: async () => {
       for (const stream of streams) await stream.return?.();
       server.closeAllConnections();
-      await new Promise<void>((resolve, reject) =>
-        server.close((error) => (error ? reject(error) : resolve())),
-      );
+      await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
     },
   };
 }
@@ -315,11 +264,7 @@ export function httpClient(base: string, tokens: Tokens) {
     Authorization: "Bearer " + tokens[ctx.scope],
     "X-Contract-Version": ctx.contractVersion,
   });
-  async function json(
-    ctx: CallContext,
-    path: string,
-    body?: unknown,
-  ): Promise<unknown> {
+  async function json(ctx: CallContext, path: string, body?: unknown): Promise<unknown> {
     const res = await fetch(base + path, {
       method: body === undefined ? "GET" : "POST",
       headers: { ...headers(ctx), "Content-Type": "application/json" },
@@ -333,10 +278,7 @@ export function httpClient(base: string, tokens: Tokens) {
     return value;
   }
   return {
-    async command(
-      ctx: CallContext,
-      cmd: CommandEnvelope,
-    ): Promise<CommandResult> {
+    async command(ctx: CallContext, cmd: CommandEnvelope): Promise<CommandResult> {
       try {
         return contract.read<CommandResult>(
           "command-result",
@@ -358,30 +300,20 @@ export function httpClient(base: string, tokens: Tokens) {
         "#/properties/result",
       );
     },
-    subscribe(
-      ctx: CallContext,
-      sub: Subscription,
-    ): AsyncIterable<EventEnvelope> {
+    subscribe(ctx: CallContext, sub: Subscription): AsyncIterable<EventEnvelope> {
       const abort = new AbortController();
       let iterator: AsyncIterator<EventEnvelope> | undefined;
       async function* events() {
         // Send Last-Event-ID on reconnect; the server must give it precedence over the query cursor.
         const res = await fetch(
-          base +
-            "/v1/events?after=0" +
-            (sub.filter
-              ? "&filter=" + encodeURIComponent(JSON.stringify(sub.filter))
-              : ""),
+          base + "/v1/events?after=0" + (sub.filter ? "&filter=" + encodeURIComponent(JSON.stringify(sub.filter)) : ""),
           {
             headers: { ...headers(ctx), "Last-Event-ID": String(sub.afterSeq) },
             signal: abort.signal,
           },
         );
         if (!res.ok) {
-          const e = contract.read<ContractError>(
-            "contract-error",
-            await res.json(),
-          );
+          const e = contract.read<ContractError>("contract-error", await res.json());
           fail(e.code, e.message, e.details);
         }
         if (!res.body) fail("unavailable", "Event stream is unavailable");
@@ -397,14 +329,8 @@ export function httpClient(base: string, tokens: Tokens) {
             while ((at = buffer.indexOf("\n\n")) >= 0) {
               const frame = buffer.slice(0, at);
               buffer = buffer.slice(at + 2);
-              const data = frame
-                .split("\n")
-                .find((line) => line.startsWith("data: "));
-              if (data)
-                yield contract.read<EventEnvelope>(
-                  "event-envelope",
-                  JSON.parse(data.slice(6)),
-                );
+              const data = frame.split("\n").find((line) => line.startsWith("data: "));
+              if (data) yield contract.read<EventEnvelope>("event-envelope", JSON.parse(data.slice(6)));
             }
           }
         } finally {
@@ -419,19 +345,13 @@ export function httpClient(base: string, tokens: Tokens) {
             next: () => iterator!.next(),
             return: async () => {
               abort.abort();
-              return iterator!.return
-                ? await iterator!.return()
-                : { done: true, value: undefined };
+              return iterator!.return ? await iterator!.return() : { done: true, value: undefined };
             },
           };
         },
       };
     },
-    async putBlob(
-      ctx: CallContext,
-      bytes: Uint8Array,
-      mediaType: string,
-    ): Promise<string> {
+    async putBlob(ctx: CallContext, bytes: Uint8Array, mediaType: string): Promise<string> {
       const hash = createHash("sha256").update(bytes).digest("hex");
       const res = await fetch(base + "/v1/blobs/" + hash, {
         method: "PUT",
@@ -439,10 +359,7 @@ export function httpClient(base: string, tokens: Tokens) {
         body: Buffer.from(bytes),
       });
       if (!res.ok) {
-        const e = contract.read<ContractError>(
-          "contract-error",
-          await res.json(),
-        );
+        const e = contract.read<ContractError>("contract-error", await res.json());
         fail(e.code, e.message, e.details);
       }
       return hash;
@@ -452,10 +369,7 @@ export function httpClient(base: string, tokens: Tokens) {
         headers: headers(ctx),
       });
       if (!res.ok) {
-        const e = contract.read<ContractError>(
-          "contract-error",
-          await res.json(),
-        );
+        const e = contract.read<ContractError>("contract-error", await res.json());
         fail(e.code, e.message, e.details);
       }
       return new Uint8Array(await res.arrayBuffer());

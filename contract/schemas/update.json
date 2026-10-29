@@ -8,6 +8,18 @@
     "artifactId": { "type": "string" },
     "baseVersion": { "type": "integer", "minimum": 1 },
     "itemIds": { "type": "array", "items": { "type": "string" } },
+    "onBehalfOf": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "itemId": { "type": "string" },
+          "kind": { "const": "human" }
+        },
+        "required": ["itemId", "kind"],
+        "additionalProperties": false
+      }
+    },
     "status": {
       "enum": [
         "queued",
@@ -39,14 +51,6 @@
     },
     "createdAt": { "type": "string", "format": "date-time" }
   },
-  "required": [
-    "updateId",
-    "artifactId",
-    "baseVersion",
-    "itemIds",
-    "status",
-    "itemResults",
-    "createdAt"
-  ],
+  "required": ["updateId", "artifactId", "baseVersion", "itemIds", "status", "itemResults", "createdAt"],
   "additionalProperties": false
 }

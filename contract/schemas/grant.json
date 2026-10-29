@@ -22,11 +22,7 @@
     "capabilities": {
       "type": "array",
       "items": {
-        "enum": [
-          "auto_agree_own_proposals",
-          "start_review",
-          "create_output_set"
-        ]
+        "enum": ["auto_agree_own_proposals", "start_review", "create_output_set"]
       },
       "uniqueItems": true
     },

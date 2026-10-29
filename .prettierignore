@@ -1,0 +1,4 @@
+.review/**
+contract/generated/**
+docs/**
+node_modules/**

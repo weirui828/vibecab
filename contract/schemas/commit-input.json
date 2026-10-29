@@ -126,7 +126,7 @@
       }
     },
     "createdBy": {
-      "$ref": "https://vibecab.local/schemas/principal.json"
+      "$ref": "https://vibecab.local/schemas/version-author.json"
     },
     "source": {
       "$ref": "https://vibecab.local/schemas/version-source.json"

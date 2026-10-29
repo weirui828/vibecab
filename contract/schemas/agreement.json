@@ -44,14 +44,6 @@
     },
     "revertedInVersion": { "type": "integer", "minimum": 1 }
   },
-  "required": [
-    "agreementId",
-    "commentId",
-    "instruction",
-    "kind",
-    "agreedBy",
-    "agreedAt",
-    "state"
-  ],
+  "required": ["agreementId", "commentId", "instruction", "kind", "agreedBy", "agreedAt", "state"],
   "additionalProperties": false
 }

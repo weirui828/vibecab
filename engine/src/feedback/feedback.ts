@@ -47,11 +47,7 @@ export class Feedback {
   ) {}
   private save<T>(kind: string, schema: string, id: string, value: unknown): T {
     const checked = this.contract.read<T>(schema, value);
-    this.store.saveFeedback(
-      kind,
-      id,
-      this.contract.read<Json>("json", checked),
-    );
+    this.store.saveFeedback(kind, id, this.contract.read<Json>("json", checked));
     return checked;
   }
   private get<T>(kind: string, schema: string, id: string): T {
@@ -60,9 +56,7 @@ export class Feedback {
     return this.contract.read<T>(schema, value);
   }
   private list<T>(kind: string, schema: string): T[] {
-    return this.store
-      .feedbackList(kind)
-      .map((value) => this.contract.read<T>(schema, value));
+    return this.store.feedbackList(kind).map((value) => this.contract.read<T>(schema, value));
   }
   private session(id: string): Session {
     return this.get("session", "session", id);
@@ -73,11 +67,7 @@ export class Feedback {
   private agreement(id: string): Agreement {
     return this.get("agreement", "agreement", id);
   }
-  private event(
-    type: string,
-    entity: { kind: string; id: string },
-    payload: unknown,
-  ) {
+  private event(type: string, entity: { kind: string; id: string }, payload: unknown) {
     this.store.appendEvent({
       ts: this.clock.now(),
       type,
@@ -86,8 +76,7 @@ export class Feedback {
     });
   }
   command(name: string, raw: unknown, principal: Principal): unknown {
-    if (principal.kind !== "human")
-      fail("forbidden", "Feedback commands require a human principal");
+    if (principal.kind !== "human") fail("forbidden", "Feedback commands require a human principal");
     switch (name) {
       case "vc.CaptureIdea": {
         const p = this.contract.read<VcCaptureIdeaOperation["payload"]>(
@@ -118,11 +107,7 @@ export class Feedback {
           ...(p.background === undefined ? {} : { background: p.background }),
           createdAt: this.clock.now(),
         });
-        this.event(
-          "vc.ProjectCreated",
-          { kind: "project", id: projectId },
-          { projectId },
-        );
+        this.event("vc.ProjectCreated", { kind: "project", id: projectId }, { projectId });
         return { projectId };
       }
       case "vc.StartSession": {
@@ -131,24 +116,17 @@ export class Feedback {
           raw,
           "#/properties/payload",
         );
-        if (p.primaryProjectId)
-          this.get<Project>("project", "project", p.primaryProjectId);
+        if (p.primaryProjectId) this.get<Project>("project", "project", p.primaryProjectId);
         const sessionId = this.ids.next("session_");
         this.save<Session>("session", "session", sessionId, {
           sessionId,
           title: p.title,
-          ...(p.primaryProjectId
-            ? { primaryProjectId: p.primaryProjectId }
-            : {}),
+          ...(p.primaryProjectId ? { primaryProjectId: p.primaryProjectId } : {}),
           state: "active",
           replyTrigger: p.replyTrigger ?? "manual",
           createdAt: this.clock.now(),
         });
-        this.event(
-          "vc.SessionStarted",
-          { kind: "session", id: sessionId },
-          { sessionId },
-        );
+        this.event("vc.SessionStarted", { kind: "session", id: sessionId }, { sessionId });
         return { sessionId };
       }
       case "vc.AttachArtifact": {
@@ -159,19 +137,12 @@ export class Feedback {
         );
         const session = this.session(p.sessionId);
         this.store.artifact(p.artifactId);
-        if (session.state !== "active")
-          fail(
-            "conflict",
-            "Artifacts can only be attached to an active session",
-          );
+        if (session.state !== "active") fail("conflict", "Artifacts can only be attached to an active session");
         const key = `${p.sessionId}:${p.artifactId}`;
         if (
           p.role === "primary" &&
           this.list<SessionArtifact>("attachment", "session-artifact").some(
-            (x) =>
-              x.sessionId === p.sessionId &&
-              x.role === "primary" &&
-              x.artifactId !== p.artifactId,
+            (x) => x.sessionId === p.sessionId && x.role === "primary" && x.artifactId !== p.artifactId,
           )
         )
           fail("conflict", "Session already has a primary artifact");
@@ -190,18 +161,9 @@ export class Feedback {
       case "vc.PauseSession":
       case "vc.ResumeSession":
       case "vc.EndSession": {
-        const p = this.contract.read<{ sessionId: string }>(
-            "operations/" + name,
-            raw,
-            "#/properties/payload",
-          ),
+        const p = this.contract.read<{ sessionId: string }>("operations/" + name, raw, "#/properties/payload"),
           session = this.session(p.sessionId);
-        const next =
-          name === "vc.PauseSession"
-            ? "paused"
-            : name === "vc.ResumeSession"
-              ? "active"
-              : "ended";
+        const next = name === "vc.PauseSession" ? "paused" : name === "vc.ResumeSession" ? "active" : "ended";
         if (
           (next === "paused" && session.state !== "active") ||
           (next === "active" && session.state !== "paused") ||
@@ -220,13 +182,7 @@ export class Feedback {
         return { sessionId: p.sessionId, state: next };
       }
       case "vc.Comment":
-        return this.post(
-          this.contract.read<FeedbackInput>(
-            "operations/vc.Comment",
-            raw,
-            "#/properties/payload",
-          ),
-        );
+        return this.post(this.contract.read<FeedbackInput>("operations/vc.Comment", raw, "#/properties/payload"));
       case "vc.EditComment": {
         const p = this.contract.read<VcEditCommentOperation["payload"]>(
           "operations/vc.EditComment",
@@ -235,20 +191,14 @@ export class Feedback {
         );
         const c = this.comment(p.commentId);
         this.editable(c);
-        if (p.suggestion && !c.anchor?.locator?.quote)
-          fail("invalid", "A suggestion requires a text quote anchor");
+        if (p.suggestion && !c.anchor?.locator?.quote) fail("invalid", "A suggestion requires a text quote anchor");
         const updated = {
           ...c,
           body: p.body,
           ...(p.suggestion ? { suggestion: p.suggestion } : {}),
           updatedAt: this.clock.now(),
         };
-        this.save<FeedbackComment>(
-          "comment",
-          "feedback-comment",
-          c.commentId,
-          updated,
-        );
+        this.save<FeedbackComment>("comment", "feedback-comment", c.commentId, updated);
         this.event(
           "vc.CommentEdited",
           { kind: "comment", id: c.commentId },
@@ -278,11 +228,7 @@ export class Feedback {
       }
       case "vc.Agree":
         return this.agree(
-          this.contract.read<VcAgreeOperation["payload"]>(
-            "operations/vc.Agree",
-            raw,
-            "#/properties/payload",
-          ),
+          this.contract.read<VcAgreeOperation["payload"]>("operations/vc.Agree", raw, "#/properties/payload"),
         );
       case "vc.Decline": {
         const p = this.contract.read<VcDeclineOperation["payload"]>(
@@ -321,24 +267,16 @@ export class Feedback {
           ),
           session = this.session(p.sessionId);
         if (p.threadId) {
-          const thread = this.list<FeedbackComment>(
-            "comment",
-            "feedback-comment",
-          ).find(
+          const thread = this.list<FeedbackComment>("comment", "feedback-comment").find(
             (c) => c.sessionId === p.sessionId && c.threadId === p.threadId,
           );
           if (!thread) fail("not_found", "Thread not found");
         }
         if (p.threadId)
-          this.save<ReplyTrigger>(
-            "thread-trigger",
-            "reply-trigger",
-            `${p.sessionId}:${p.threadId}`,
-            {
-              mode: p.mode,
-              ...(p.batch === undefined ? {} : { batch: p.batch }),
-            },
-          );
+          this.save<ReplyTrigger>("thread-trigger", "reply-trigger", `${p.sessionId}:${p.threadId}`, {
+            mode: p.mode,
+            ...(p.batch === undefined ? {} : { batch: p.batch }),
+          });
         else
           this.save<Session>("session", "session", p.sessionId, {
             ...session,
@@ -363,8 +301,7 @@ export class Feedback {
         );
         for (const commentId of p.commentIds) {
           const comment = this.comment(commentId);
-          if (comment.author.kind !== "human")
-            fail("invalid", "Only human comments can be marked handled");
+          if (comment.author.kind !== "human") fail("invalid", "Only human comments can be marked handled");
           this.save("delivery-state", "delivery-state", commentId, {
             commentId,
             state: "handled",
@@ -383,61 +320,41 @@ export class Feedback {
   }
   private post(p: FeedbackInput): { commentId: string; threadId: string } {
     const session = this.session(p.sessionId);
-    if (session.state !== "active")
-      fail("conflict", "Comments require an active session");
+    if (session.state !== "active") fail("conflict", "Comments require an active session");
     let anchor: Anchor | undefined;
     if (p.anchor) {
-      const link = this.store.feedback(
-        "attachment",
-        `${p.sessionId}:${p.anchor.artifactId}`,
-      );
-      if (link === undefined)
-        fail("invalid", "Anchor artifact is not attached to this session");
-      const version = this.store.version(
-          p.anchor.artifactId,
-          p.anchor.seenVersion,
-        ),
+      const link = this.store.feedback("attachment", `${p.sessionId}:${p.anchor.artifactId}`);
+      if (link === undefined) fail("invalid", "Anchor artifact is not attached to this session");
+      const version = this.store.version(p.anchor.artifactId, p.anchor.seenVersion),
         hash = version.manifest[p.anchor.elementId];
-      if (hash === undefined)
-        fail("invalid", "Anchor element is absent at seenVersion");
+      if (hash === undefined) fail("invalid", "Anchor element is absent at seenVersion");
       const seenElement = this.store
         .elements(p.anchor.artifactId, p.anchor.seenVersion)
         .find((e) => e.elementId === p.anchor!.elementId);
-      if (!seenElement)
-        fail("invalid", "Anchor element is absent at seenVersion");
-      if (
-        p.anchor.locator &&
-        (!("text" in seenElement) ||
-          !seenElement.text.includes(p.anchor.locator.quote))
-      )
+      if (!seenElement) fail("invalid", "Anchor element is absent at seenVersion");
+      if (p.anchor.locator && (!("text" in seenElement) || !seenElement.text.includes(p.anchor.locator.quote)))
         fail("invalid", "Anchor quote must match text at seenVersion");
       anchor = this.contract.read<Anchor>("anchor", {
         artifactId: p.anchor.artifactId,
         elementId: p.anchor.elementId,
         seenVersion: p.anchor.seenVersion,
         seenHash: hash,
-        ...(p.anchor.locator === undefined
-          ? {}
-          : { locator: p.anchor.locator }),
+        ...(p.anchor.locator === undefined ? {} : { locator: p.anchor.locator }),
       });
-    } else if (p.suggestion)
-      fail("invalid", "A suggestion requires a text quote anchor");
-    if (p.suggestion && !anchor?.locator?.quote)
-      fail("invalid", "A suggestion requires a text quote anchor");
+    } else if (p.suggestion) fail("invalid", "A suggestion requires a text quote anchor");
+    if (p.suggestion && !anchor?.locator?.quote) fail("invalid", "A suggestion requires a text quote anchor");
     let threadId = this.ids.next("thread_");
     if (p.replyTo) {
       const parent = this.comment(p.replyTo);
-      if (parent.sessionId !== p.sessionId)
-        fail("invalid", "Reply must belong to the same session");
+      if (parent.sessionId !== p.sessionId) fail("invalid", "Reply must belong to the same session");
       this.editable(parent);
       threadId = parent.threadId;
       if (parent.state === "open") {
-        this.save<FeedbackComment>(
-          "comment",
-          "feedback-comment",
-          parent.commentId,
-          { ...parent, state: "discussing", updatedAt: this.clock.now() },
-        );
+        this.save<FeedbackComment>("comment", "feedback-comment", parent.commentId, {
+          ...parent,
+          state: "discussing",
+          updatedAt: this.clock.now(),
+        });
         this.event(
           "vc.FeedbackStateChanged",
           { kind: "comment", id: parent.commentId },
@@ -451,31 +368,22 @@ export class Feedback {
     }
     const commentId = this.ids.next("comment_"),
       now = this.clock.now();
-    const c = this.save<FeedbackComment>(
-      "comment",
-      "feedback-comment",
+    const c = this.save<FeedbackComment>("comment", "feedback-comment", commentId, {
       commentId,
-      {
-        commentId,
-        sessionId: p.sessionId,
-        author: { kind: "human" },
-        ...(anchor ? { anchor } : {}),
-        body: p.body,
-        ...(p.suggestion ? { suggestion: p.suggestion } : {}),
-        threadId,
-        ...(p.replyTo ? { replyTo: p.replyTo } : {}),
-        state: "open",
-        deleted: false,
-        read: true,
-        createdAt: now,
-        updatedAt: now,
-      },
-    );
-    this.event(
-      "vc.CommentPosted",
-      { kind: "comment", id: commentId },
-      { commentId, sessionId: p.sessionId, threadId },
-    );
+      sessionId: p.sessionId,
+      author: { kind: "human" },
+      ...(anchor ? { anchor } : {}),
+      body: p.body,
+      ...(p.suggestion ? { suggestion: p.suggestion } : {}),
+      threadId,
+      ...(p.replyTo ? { replyTo: p.replyTo } : {}),
+      state: "open",
+      deleted: false,
+      read: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+    this.event("vc.CommentPosted", { kind: "comment", id: commentId }, { commentId, sessionId: p.sessionId, threadId });
     this.store.saveFeedback(
       "delivery-state",
       commentId,
@@ -485,10 +393,7 @@ export class Feedback {
         updatedAt: now,
       }),
     );
-    const triggerRecord = this.store.feedback(
-      "thread-trigger",
-      `${p.sessionId}:${threadId}`,
-    );
+    const triggerRecord = this.store.feedback("thread-trigger", `${p.sessionId}:${threadId}`);
     const mode =
       triggerRecord === undefined
         ? session.replyTrigger
@@ -498,36 +403,29 @@ export class Feedback {
         batch =
           triggerRecord === undefined
             ? undefined
-            : this.contract.read<ReplyTrigger>("reply-trigger", triggerRecord)
-                .batch;
+            : this.contract.read<ReplyTrigger>("reply-trigger", triggerRecord).batch;
       const delaySeconds =
         mode === "realtime"
-          ? (prefs.realtimeDebounceSeconds ??
-            this.settings().budgets.realtimeDebounceSeconds ??
-            8)
+          ? (prefs.realtimeDebounceSeconds ?? this.settings().budgets.realtimeDebounceSeconds ?? 8)
           : undefined;
       const quietMinutes = batch?.idleMinutes ?? prefs.batchIdleMinutes ?? 10,
         threshold = batch?.count ?? prefs.batchCommentThreshold ?? 5;
-      const savedCount = this.store
-        .feedbackList("delivery-state")
-        .filter((item) => {
-          const state = this.contract.read<{
-            commentId: string;
-            state: string;
-          }>("delivery-state", item);
-          if (state.state !== "saved") return false;
-          const target = this.store.feedback("comment", state.commentId);
-          return (
-            target !== undefined &&
-            this.contract.read<FeedbackComment>("feedback-comment", target)
-              .sessionId === p.sessionId
-          );
-        }).length;
+      const savedCount = this.store.feedbackList("delivery-state").filter((item) => {
+        const state = this.contract.read<{
+          commentId: string;
+          state: string;
+        }>("delivery-state", item);
+        if (state.state !== "saved") return false;
+        const target = this.store.feedback("comment", state.commentId);
+        return (
+          target !== undefined &&
+          this.contract.read<FeedbackComment>("feedback-comment", target).sessionId === p.sessionId
+        );
+      }).length;
       const notBefore =
         mode === "realtime"
           ? Date.parse(now) + delaySeconds! * 1000
-          : Date.parse(now) +
-            (savedCount >= threshold ? 0 : quietMinutes * 60_000);
+          : Date.parse(now) + (savedCount >= threshold ? 0 : quietMinutes * 60_000);
       this.store.enqueue(
         "agent.trigger",
         this.ids.next("trigger_"),
@@ -550,10 +448,7 @@ export class Feedback {
     proposal?: unknown;
   }): { commentId: string } {
     this.session(input.sessionId);
-    const parent = this.list<FeedbackComment>(
-      "comment",
-      "feedback-comment",
-    ).find(
+    const parent = this.list<FeedbackComment>("comment", "feedback-comment").find(
       (c) => c.sessionId === input.sessionId && c.threadId === input.threadId,
     );
     if (!parent) fail("not_found", "Thread not found");
@@ -573,11 +468,7 @@ export class Feedback {
       createdAt: now,
       updatedAt: now,
     });
-    this.store.saveFeedback(
-      "comment",
-      commentId,
-      this.contract.read<Json>("json", comment),
-    );
+    this.store.saveFeedback("comment", commentId, this.contract.read<Json>("json", comment));
     this.event(
       "vc.CommentPosted",
       { kind: "comment", id: commentId },
@@ -600,16 +491,8 @@ export class Feedback {
       createdAt: now,
       updatedAt: now,
     });
-    this.store.saveFeedback(
-      "comment",
-      commentId,
-      this.contract.read<Json>("json", notice),
-    );
-    this.event(
-      "vc.CommentPosted",
-      { kind: "comment", id: commentId },
-      { commentId, sessionId, threadId },
-    );
+    this.store.saveFeedback("comment", commentId, this.contract.read<Json>("json", notice));
+    this.event("vc.CommentPosted", { kind: "comment", id: commentId }, { commentId, sessionId, threadId });
   }
   private agree(p: VcAgreeOperation["payload"]): {
     agreementId: string;
@@ -618,26 +501,13 @@ export class Feedback {
     const c = this.comment(p.commentId);
     this.editable(c);
     if (p.kind === "as_written" && p.instruction !== undefined)
-      fail(
-        "invalid",
-        "As-written agreements derive their instruction from the comment",
-      );
+      fail("invalid", "As-written agreements derive their instruction from the comment");
     if (p.kind === "agent_proposal" && c.author.kind !== "agent")
-      fail(
-        "conflict",
-        "Only an agent proposal can be agreed as an agent proposal",
-      );
-    if (p.kind === "option" && !p.optionLabel)
-      fail("invalid", "Option agreements require an optionLabel");
-    if (p.kind !== "option" && p.optionLabel)
-      fail("invalid", "optionLabel is only valid for option agreements");
-    const instruction =
-      p.instruction ??
-      (p.kind === "as_written"
-        ? (c.suggestion?.replacement ?? c.body)
-        : undefined);
-    if (instruction === undefined)
-      fail("invalid", "Agreement requires an instruction");
+      fail("conflict", "Only an agent proposal can be agreed as an agent proposal");
+    if (p.kind === "option" && !p.optionLabel) fail("invalid", "Option agreements require an optionLabel");
+    if (p.kind !== "option" && p.optionLabel) fail("invalid", "optionLabel is only valid for option agreements");
+    const instruction = p.instruction ?? (p.kind === "as_written" ? (c.suggestion?.replacement ?? c.body) : undefined);
+    if (instruction === undefined) fail("invalid", "Agreement requires an instruction");
     const agreementId = this.ids.next("agreement_"),
       agreedAt = this.clock.now();
     this.save<Agreement>("agreement", "agreement", agreementId, {
@@ -669,9 +539,7 @@ export class Feedback {
         this.ids.next("update_trigger_"),
         this.contract.read<Json>("json", {
           artifactId: c.anchor.artifactId,
-          notBefore: new Date(
-            Date.parse(agreedAt) + delay * 60_000,
-          ).toISOString(),
+          notBefore: new Date(Date.parse(agreedAt) + delay * 60_000).toISOString(),
         }),
         agreedAt,
       );
@@ -694,31 +562,20 @@ export class Feedback {
       return false;
     };
     if (aa.elementId !== bb.elementId)
-      return (
-        ancestor(aa.elementId, bb.elementId) ||
-        ancestor(bb.elementId, aa.elementId)
-      );
-    if (
-      a.suggestion &&
-      b.suggestion &&
-      aa.locator?.quote &&
-      bb.locator?.quote
-    ) {
+      return ancestor(aa.elementId, bb.elementId) || ancestor(bb.elementId, aa.elementId);
+    if (a.suggestion && b.suggestion && aa.locator?.quote && bb.locator?.quote) {
       const element = all.find((e) => e.elementId === aa.elementId);
       if (element && "text" in element) {
         const unique = (quote: string) => {
           const start = element.text.indexOf(quote);
-          return start >= 0 && element.text.indexOf(quote, start + 1) < 0
-            ? start
-            : undefined;
+          return start >= 0 && element.text.indexOf(quote, start + 1) < 0 ? start : undefined;
         };
         const startA = unique(aa.locator.quote),
           startB = unique(bb.locator.quote);
         if (
           startA !== undefined &&
           startB !== undefined &&
-          (startA + aa.locator.quote.length <= startB ||
-            startB + bb.locator.quote.length <= startA)
+          (startA + aa.locator.quote.length <= startB || startB + bb.locator.quote.length <= startA)
         )
           return false;
       }
@@ -738,52 +595,27 @@ export class Feedback {
       const itemIds = [other.agreementId, added.agreementId].sort();
       if (
         this.list<FeedbackConflict>("conflict", "feedback-conflict").some(
-          (x) =>
-            x.itemIds.length === 2 &&
-            x.itemIds.every((id) => itemIds.includes(id)),
+          (x) => x.itemIds.length === 2 && x.itemIds.every((id) => itemIds.includes(id)),
         )
       )
         continue;
       const conflictId = this.ids.next("conflict_");
-      const conflict = this.save<FeedbackConflict>(
-        "conflict",
-        "feedback-conflict",
+      const conflict = this.save<FeedbackConflict>("conflict", "feedback-conflict", conflictId, {
         conflictId,
-        {
-          conflictId,
-          itemIds,
-          stage: "deterministic",
-          state: "open",
-          sessionId: current.sessionId,
-          artifactId: current.anchor?.artifactId ?? aComment.anchor?.artifactId,
-        },
-      );
-      this.event(
-        "vc.ConflictDetected",
-        { kind: "conflict", id: conflictId },
-        { conflictId, itemIds },
-      );
+        itemIds,
+        stage: "deterministic",
+        state: "open",
+        sessionId: current.sessionId,
+        artifactId: current.anchor?.artifactId ?? aComment.anchor?.artifactId,
+      });
+      this.event("vc.ConflictDetected", { kind: "conflict", id: conflictId }, { conflictId, itemIds });
       for (const c of [aComment, bComment])
-        this.postSystemNotice(
-          c,
-          conflict,
-          c.commentId === aComment.commentId ? added : other,
-        );
+        this.postSystemNotice(c, conflict, c.commentId === aComment.commentId ? added : other);
     }
   }
-  private postSystemNotice(
-    target: FeedbackComment,
-    conflict: FeedbackConflict,
-    other: Agreement,
-  ) {
-    const duplicate = this.list<FeedbackComment>(
-      "comment",
-      "feedback-comment",
-    ).some(
-      (c) =>
-        c.author.kind === "system" &&
-        c.threadId === target.threadId &&
-        c.body.includes(conflict.conflictId),
+  private postSystemNotice(target: FeedbackComment, conflict: FeedbackConflict, other: Agreement) {
+    const duplicate = this.list<FeedbackComment>("comment", "feedback-comment").some(
+      (c) => c.author.kind === "system" && c.threadId === target.threadId && c.body.includes(conflict.conflictId),
     );
     if (duplicate) return;
     const agreedComment = this.comment(other.commentId),
@@ -812,12 +644,8 @@ export class Feedback {
     state: "resolved";
   } {
     const keep = this.agreement(p.keep);
-    if (keep.state !== "agreed")
-      fail("conflict", "The kept agreement must still be active");
-    const open = this.list<FeedbackConflict>(
-      "conflict",
-      "feedback-conflict",
-    ).filter((c) => c.state === "open");
+    if (keep.state !== "agreed") fail("conflict", "The kept agreement must still be active");
+    const open = this.list<FeedbackConflict>("conflict", "feedback-conflict").filter((c) => c.state === "open");
     const related = new Set([p.keep]);
     let changed = true;
     while (changed) {
@@ -830,25 +658,14 @@ export class Feedback {
               changed = true;
             }
     }
-    const conflicts = open.filter((c) =>
-      c.itemIds.some((id) => related.has(id)),
-    );
+    const conflicts = open.filter((c) => c.itemIds.some((id) => related.has(id)));
     if (!conflicts.length) fail("not_found", "Open conflict not found");
-    const expected = new Set(
-      conflicts.flatMap((c) => c.itemIds.filter((id) => id !== p.keep)),
-    );
-    if (
-      p.supersede.length !== expected.size ||
-      p.supersede.some((id) => !expected.has(id))
-    )
-      fail(
-        "conflict",
-        "ResolveConflict must supersede every other conflicting agreement",
-      );
+    const expected = new Set(conflicts.flatMap((c) => c.itemIds.filter((id) => id !== p.keep)));
+    if (p.supersede.length !== expected.size || p.supersede.some((id) => !expected.has(id)))
+      fail("conflict", "ResolveConflict must supersede every other conflicting agreement");
     for (const id of p.supersede) {
       const agreement = this.agreement(id);
-      if (agreement.state !== "agreed")
-        fail("conflict", "Only active agreements can be superseded");
+      if (agreement.state !== "agreed") fail("conflict", "Only active agreements can be superseded");
       this.save<Agreement>("agreement", "agreement", id, {
         ...agreement,
         state: "superseded",
@@ -867,12 +684,10 @@ export class Feedback {
       );
     }
     for (const conflict of conflicts) {
-      this.save<FeedbackConflict>(
-        "conflict",
-        "feedback-conflict",
-        conflict.conflictId,
-        { ...conflict, state: "resolved" },
-      );
+      this.save<FeedbackConflict>("conflict", "feedback-conflict", conflict.conflictId, {
+        ...conflict,
+        state: "resolved",
+      });
       this.event(
         "vc.ConflictResolved",
         { kind: "conflict", id: conflict.conflictId },
@@ -891,11 +706,7 @@ export class Feedback {
         this.contract.read("operations/vc.Ideas", raw, "#/properties/payload");
         return this.list<Idea>("idea", "idea");
       case "vc.Projects":
-        this.contract.read(
-          "operations/vc.Projects",
-          raw,
-          "#/properties/payload",
-        );
+        this.contract.read("operations/vc.Projects", raw, "#/properties/payload");
         return this.list<Project>("project", "project");
       case "vc.Sessions": {
         const p = this.contract.read<VcSessionsOperation["payload"]>(
@@ -904,32 +715,20 @@ export class Feedback {
           "#/properties/payload",
         );
         const values = this.list<Session>("session", "session");
-        return p.sessionId
-          ? values.filter((s) => s.sessionId === p.sessionId)
-          : values;
+        return p.sessionId ? values.filter((s) => s.sessionId === p.sessionId) : values;
       }
       case "vc.Threads":
       case "vc.FeedbackItems": {
         const p =
           name === "vc.Threads"
-            ? this.contract.read<VcThreadsOperation["payload"]>(
-                "operations/" + name,
-                raw,
-                "#/properties/payload",
-              )
+            ? this.contract.read<VcThreadsOperation["payload"]>("operations/" + name, raw, "#/properties/payload")
             : this.contract.read<VcFeedbackItemsOperation["payload"]>(
                 "operations/" + name,
                 raw,
                 "#/properties/payload",
               );
-        const includeDeleted =
-          name === "vc.Threads" &&
-          "includeDeleted" in p &&
-          p.includeDeleted === true;
-        const comments = this.list<FeedbackComment>(
-          "comment",
-          "feedback-comment",
-        ).filter(
+        const includeDeleted = name === "vc.Threads" && "includeDeleted" in p && p.includeDeleted === true;
+        const comments = this.list<FeedbackComment>("comment", "feedback-comment").filter(
           (c) =>
             (!p.sessionId || c.sessionId === p.sessionId) &&
             (!p.state || c.state === p.state) &&
@@ -944,20 +743,11 @@ export class Feedback {
           groups.set(c.threadId, group);
         }
         return [...groups].map(([threadId, threadComments]) => {
-          const anchors = threadComments.flatMap((c) =>
-            c.anchor ? [c.anchor] : [],
-          );
-          const anchorResolutions: AnchorResolution[] = anchors.length
-            ? resolveAnchors(this.store, anchors)
-            : [];
-          const trigger = this.store.feedback(
-            "thread-trigger",
-            `${threadComments[0]!.sessionId}:${threadId}`,
-          );
+          const anchors = threadComments.flatMap((c) => (c.anchor ? [c.anchor] : []));
+          const anchorResolutions: AnchorResolution[] = anchors.length ? resolveAnchors(this.store, anchors) : [];
+          const trigger = this.store.feedback("thread-trigger", `${threadComments[0]!.sessionId}:${threadId}`);
           const replyTrigger =
-            trigger === undefined
-              ? undefined
-              : this.contract.read<ReplyTrigger>("reply-trigger", trigger);
+            trigger === undefined ? undefined : this.contract.read<ReplyTrigger>("reply-trigger", trigger);
           const thread = {
             threadId,
             sessionId: threadComments[0]!.sessionId,
@@ -976,10 +766,7 @@ export class Feedback {
         );
         return this.list<Agreement>("agreement", "agreement").filter((a) => {
           const c = this.comment(a.commentId);
-          return (
-            c.anchor?.artifactId === p.artifactId &&
-            (!p.elementId || c.anchor.elementId === p.elementId)
-          );
+          return c.anchor?.artifactId === p.artifactId && (!p.elementId || c.anchor.elementId === p.elementId);
         });
       }
       case "vc.Conflicts": {
@@ -988,10 +775,7 @@ export class Feedback {
           raw,
           "#/properties/payload",
         );
-        return this.list<FeedbackConflict>(
-          "conflict",
-          "feedback-conflict",
-        ).filter(
+        return this.list<FeedbackConflict>("conflict", "feedback-conflict").filter(
           (c) =>
             c.state === "open" &&
             (!p.sessionId || c.sessionId === p.sessionId) &&
@@ -999,15 +783,8 @@ export class Feedback {
         );
       }
       case "vc.AttentionInbox": {
-        this.contract.read(
-          "operations/vc.AttentionInbox",
-          raw,
-          "#/properties/payload",
-        );
-        const conflicts = this.list<FeedbackConflict>(
-          "conflict",
-          "feedback-conflict",
-        )
+        this.contract.read("operations/vc.AttentionInbox", raw, "#/properties/payload");
+        const conflicts = this.list<FeedbackConflict>("conflict", "feedback-conflict")
           .filter((c) => c.state === "open")
           .map((c) => ({
             kind: "conflict",
@@ -1026,10 +803,7 @@ export class Feedback {
               ...(c.anchor ? { artifactId: c.anchor.artifactId } : {}),
             };
           });
-        const replies = this.list<FeedbackComment>(
-          "comment",
-          "feedback-comment",
-        )
+        const replies = this.list<FeedbackComment>("comment", "feedback-comment")
           .filter((c) => c.author.kind === "agent" && !c.read)
           .map((c) => ({
             kind: "unread_reply",

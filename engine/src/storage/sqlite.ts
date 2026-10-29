@@ -12,9 +12,7 @@ import type {
 import type { Artifact, Repository, SearchHit } from "./repository.js";
 import { canonical, revisionHash } from "../content/hash.js";
 function field(row: unknown, key: string): unknown {
-  return typeof row === "object" && row !== null
-    ? Reflect.get(row, key)
-    : undefined;
+  return typeof row === "object" && row !== null ? Reflect.get(row, key) : undefined;
 }
 function json(row: unknown): unknown {
   const value = field(row, "json");
@@ -39,10 +37,21 @@ export class SqliteStore implements Repository {
    CREATE TABLE IF NOT EXISTS vc_feedback(kind TEXT NOT NULL,id TEXT NOT NULL,json TEXT NOT NULL,PRIMARY KEY(kind,id));
    CREATE INDEX IF NOT EXISTS vc_feedback_kind ON vc_feedback(kind,id);
    CREATE TABLE IF NOT EXISTS sys_call_log(call_id TEXT PRIMARY KEY,json TEXT NOT NULL);
-   CREATE VIRTUAL TABLE IF NOT EXISTS vc_search USING fts5(kind UNINDEXED,session_id UNINDEXED,artifact_id UNINDEXED,record_id UNINDEXED,text);
+   CREATE VIRTUAL TABLE IF NOT EXISTS vc_search USING fts5(
+     kind UNINDEXED, session_id UNINDEXED, artifact_id UNINDEXED, record_id UNINDEXED, text
+   );
    CREATE TABLE IF NOT EXISTS vc_element_revisions(hash TEXT PRIMARY KEY,json TEXT NOT NULL);
-   CREATE TABLE IF NOT EXISTS vc_versions(artifact_id TEXT NOT NULL,version INTEGER NOT NULL,parent_version INTEGER,created_by TEXT NOT NULL,source TEXT NOT NULL,created_at TEXT NOT NULL,json TEXT NOT NULL,PRIMARY KEY(artifact_id,version),FOREIGN KEY(artifact_id) REFERENCES vc_artifacts(artifact_id));
-   CREATE TABLE IF NOT EXISTS vc_version_entries(artifact_id TEXT NOT NULL,version INTEGER NOT NULL,element_id TEXT NOT NULL,revision_hash TEXT NOT NULL,PRIMARY KEY(artifact_id,version,element_id),FOREIGN KEY(artifact_id,version) REFERENCES vc_versions(artifact_id,version),FOREIGN KEY(revision_hash) REFERENCES vc_element_revisions(hash));
+   CREATE TABLE IF NOT EXISTS vc_versions(
+     artifact_id TEXT NOT NULL, version INTEGER NOT NULL, parent_version INTEGER,
+     created_by TEXT NOT NULL, source TEXT NOT NULL, created_at TEXT NOT NULL, json TEXT NOT NULL,
+     PRIMARY KEY(artifact_id,version), FOREIGN KEY(artifact_id) REFERENCES vc_artifacts(artifact_id)
+   );
+   CREATE TABLE IF NOT EXISTS vc_version_entries(
+     artifact_id TEXT NOT NULL, version INTEGER NOT NULL, element_id TEXT NOT NULL, revision_hash TEXT NOT NULL,
+     PRIMARY KEY(artifact_id,version,element_id),
+     FOREIGN KEY(artifact_id,version) REFERENCES vc_versions(artifact_id,version),
+     FOREIGN KEY(revision_hash) REFERENCES vc_element_revisions(hash)
+   );
    CREATE INDEX IF NOT EXISTS vc_element_history ON vc_version_entries(element_id);
    CREATE INDEX IF NOT EXISTS sys_outbox_state ON sys_outbox(state,lease_until);
   `);
@@ -51,59 +60,38 @@ export class SqliteStore implements Repository {
     return this.db.transaction(action)();
   }
   private writing() {
-    if (!this.db.inTransaction)
-      throw Error("Write outside command transaction");
+    if (!this.db.inTransaction) throw Error("Write outside command transaction");
   }
   artifact(id: string): Artifact {
-    const row = this.db
-      .prepare("SELECT json FROM vc_artifacts WHERE artifact_id=?")
-      .get(id);
+    const row = this.db.prepare("SELECT json FROM vc_artifacts WHERE artifact_id=?").get(id);
     if (!row) fail("not_found", "Artifact not found");
-    return this.contract.read<Artifact>(
-      "operations/vc.Artifact",
-      json(row),
-      "#/properties/result",
-    );
+    return this.contract.read<Artifact>("operations/vc.Artifact", json(row), "#/properties/result");
   }
   createArtifact(artifact: Artifact) {
     this.writing();
-    this.contract.read(
-      "operations/vc.Artifact",
-      artifact,
-      "#/properties/result",
-    );
-    this.db
-      .prepare("INSERT INTO vc_artifacts VALUES(?,?)")
-      .run(artifact.artifactId, canonical(artifact));
+    this.contract.read("operations/vc.Artifact", artifact, "#/properties/result");
+    this.db.prepare("INSERT INTO vc_artifacts VALUES(?,?)").run(artifact.artifactId, canonical(artifact));
   }
   version(id: string, number = this.artifact(id).headVersion): Version {
-    const row = this.db
-      .prepare("SELECT json FROM vc_versions WHERE artifact_id=? AND version=?")
-      .get(id, number);
+    const row = this.db.prepare("SELECT json FROM vc_versions WHERE artifact_id=? AND version=?").get(id, number);
     if (!row) fail("not_found", "Version not found");
     const version = this.contract.read<Version>("version", json(row));
     const manifest: Record<string, string> = {};
     for (const entry of this.db
-      .prepare(
-        "SELECT element_id,revision_hash FROM vc_version_entries WHERE artifact_id=? AND version=?",
-      )
+      .prepare("SELECT element_id,revision_hash FROM vc_version_entries WHERE artifact_id=? AND version=?")
       .all(id, number)) {
       const elementId = field(entry, "element_id"),
         hash = field(entry, "revision_hash");
-      if (typeof elementId !== "string" || typeof hash !== "string")
-        throw Error("Corrupt manifest");
+      if (typeof elementId !== "string" || typeof hash !== "string") throw Error("Corrupt manifest");
       manifest[elementId] = hash;
     }
-    if (canonical(version.manifest) !== canonical(manifest))
-      throw Error("Corrupt manifest");
+    if (canonical(version.manifest) !== canonical(manifest)) throw Error("Corrupt manifest");
     return version;
   }
   versions(id: string): Version[] {
     this.artifact(id);
     return this.db
-      .prepare(
-        "SELECT json FROM vc_versions WHERE artifact_id=? ORDER BY version",
-      )
+      .prepare("SELECT json FROM vc_versions WHERE artifact_id=? ORDER BY version")
       .all(id)
       .map((row) => this.contract.read<Version>("version", json(row)));
   }
@@ -111,29 +99,18 @@ export class SqliteStore implements Repository {
     const version = this.version(id, number),
       elements: Element[] = [];
     for (const [elementId, hash] of Object.entries(version.manifest)) {
-      const row = this.db
-        .prepare("SELECT json FROM vc_element_revisions WHERE hash=?")
-        .get(hash);
+      const row = this.db.prepare("SELECT json FROM vc_element_revisions WHERE hash=?").get(hash);
       const e = this.contract.read<Element>("element", json(row));
-      if (e.elementId !== elementId || revisionHash(e) !== hash)
-        throw Error("Corrupt revision");
+      if (e.elementId !== elementId || revisionHash(e) !== hash) throw Error("Corrupt revision");
       elements.push(e);
     }
     this.contract.read("doc-tree", elements);
     return elements.sort((a, b) =>
-      a.order < b.order
-        ? -1
-        : a.order > b.order
-          ? 1
-          : a.elementId.localeCompare(b.elementId),
+      a.order < b.order ? -1 : a.order > b.order ? 1 : a.elementId.localeCompare(b.elementId),
     );
   }
   elementIdExists(id: string): boolean {
-    return (
-      this.db
-        .prepare("SELECT 1 FROM vc_version_entries WHERE element_id=? LIMIT 1")
-        .get(id) !== undefined
-    );
+    return this.db.prepare("SELECT 1 FROM vc_version_entries WHERE element_id=? LIMIT 1").get(id) !== undefined;
   }
   saveVersion(version: Version, elements: Element[]) {
     this.writing();
@@ -142,11 +119,8 @@ export class SqliteStore implements Repository {
     const artifact = this.artifact(version.artifactId);
     for (const element of elements) {
       const hash = revisionHash(element);
-      if (version.manifest[element.elementId] !== hash)
-        throw Error("Manifest mismatch");
-      this.db
-        .prepare("INSERT OR IGNORE INTO vc_element_revisions VALUES(?,?)")
-        .run(hash, canonical(element));
+      if (version.manifest[element.elementId] !== hash) throw Error("Manifest mismatch");
+      this.db.prepare("INSERT OR IGNORE INTO vc_element_revisions VALUES(?,?)").run(hash, canonical(element));
     }
     this.db
       .prepare("INSERT INTO vc_versions VALUES(?,?,?,?,?,?,?)")
@@ -166,38 +140,20 @@ export class SqliteStore implements Repository {
         .run(version.artifactId, version.version, id, hash);
     this.db
       .prepare("UPDATE vc_artifacts SET json=? WHERE artifact_id=?")
-      .run(
-        canonical({ ...artifact, headVersion: version.version }),
-        version.artifactId,
-      );
-    this.db
-      .prepare("DELETE FROM vc_search WHERE kind='element' AND artifact_id=?")
-      .run(version.artifactId);
+      .run(canonical({ ...artifact, headVersion: version.version }), version.artifactId);
+    this.db.prepare("DELETE FROM vc_search WHERE kind='element' AND artifact_id=?").run(version.artifactId);
     const sessions = this.db
       .prepare("SELECT json FROM vc_feedback WHERE kind='attachment'")
       .all()
-      .map((row) =>
-        this.contract.read<{ sessionId: string; artifactId: string }>(
-          "session-artifact",
-          json(row),
-        ),
-      )
+      .map((row) => this.contract.read<{ sessionId: string; artifactId: string }>("session-artifact", json(row)))
       .filter((link) => link.artifactId === version.artifactId)
       .map((link) => link.sessionId);
     for (const sessionId of sessions)
       for (const element of elements)
         if ("text" in element && element.text.length)
           this.db
-            .prepare(
-              "INSERT INTO vc_search(kind,session_id,artifact_id,record_id,text) VALUES(?,?,?,?,?)",
-            )
-            .run(
-              "element",
-              sessionId,
-              version.artifactId,
-              element.elementId,
-              element.text,
-            );
+            .prepare("INSERT INTO vc_search(kind,session_id,artifact_id,record_id,text) VALUES(?,?,?,?,?)")
+            .run("element", sessionId, version.artifactId, element.elementId, element.text);
   }
   appendEvent(event: Omit<EventEnvelope, "seq">): EventEnvelope {
     this.writing();
@@ -207,9 +163,7 @@ export class SqliteStore implements Repository {
         ...event,
         seq: next,
       });
-    this.db
-      .prepare("INSERT INTO sys_events(seq,json) VALUES(?,?)")
-      .run(next, canonical(validated));
+    this.db.prepare("INSERT INTO sys_events(seq,json) VALUES(?,?)").run(next, canonical(validated));
     return validated;
   }
   eventsAfter(seq: number): EventEnvelope[] {
@@ -217,38 +171,24 @@ export class SqliteStore implements Repository {
       .prepare("SELECT json FROM sys_events WHERE seq>? ORDER BY seq")
       .all(seq)
       .map((row) => {
-        const event = this.contract.read<EventEnvelope>(
-          "event-envelope",
-          json(row),
-        );
+        const event = this.contract.read<EventEnvelope>("event-envelope", json(row));
         this.contract.read("events/" + event.type, event.payload);
         return event;
       });
   }
   lastSeq(): number {
-    const seq = field(
-      this.db
-        .prepare("SELECT COALESCE(MAX(seq),0) AS seq FROM sys_events")
-        .get(),
-      "seq",
-    );
+    const seq = field(this.db.prepare("SELECT COALESCE(MAX(seq),0) AS seq FROM sys_events").get(), "seq");
     if (typeof seq !== "number") throw Error("Invalid cursor");
     return seq;
   }
   command(id: string): CommandResult | undefined {
-    const row = this.db
-      .prepare("SELECT json FROM sys_commands WHERE command_id=?")
-      .get(id);
-    return row
-      ? this.contract.read<CommandResult>("command-result", json(row))
-      : undefined;
+    const row = this.db.prepare("SELECT json FROM sys_commands WHERE command_id=?").get(id);
+    return row ? this.contract.read<CommandResult>("command-result", json(row)) : undefined;
   }
   saveCommand(id: string, result: CommandResult) {
     this.writing();
     this.contract.read("command-result", result);
-    this.db
-      .prepare("INSERT INTO sys_commands VALUES(?,?)")
-      .run(id, canonical(result));
+    this.db.prepare("INSERT INTO sys_commands VALUES(?,?)").run(id, canonical(result));
   }
   enqueue(kind: string, id: string, payload: Json, ts: string) {
     this.writing();
@@ -262,9 +202,7 @@ export class SqliteStore implements Repository {
       createdAt: ts,
     };
     this.contract.read("job", job);
-    this.db
-      .prepare("INSERT INTO sys_outbox VALUES(?,?,?,?,?)")
-      .run(id, kind, job.state, null, canonical(job));
+    this.db.prepare("INSERT INTO sys_outbox VALUES(?,?,?,?,?)").run(id, kind, job.state, null, canonical(job));
   }
   jobs(): Job[] {
     return this.db
@@ -290,9 +228,7 @@ export class SqliteStore implements Repository {
     this.writeJob({ ...job, state, leaseUntil: null });
   }
   feedback(kind: string, id: string): Json | undefined {
-    const row = this.db
-      .prepare("SELECT json FROM vc_feedback WHERE kind=? AND id=?")
-      .get(kind, id);
+    const row = this.db.prepare("SELECT json FROM vc_feedback WHERE kind=? AND id=?").get(kind, id);
     return row ? this.contract.read<Json>("json", json(row)) : undefined;
   }
   feedbackList(kind: string): Json[] {
@@ -310,9 +246,7 @@ export class SqliteStore implements Repository {
       )
       .run(kind, id, canonical(value));
     if (kind === "comment") {
-      this.db
-        .prepare("DELETE FROM vc_search WHERE kind='comment' AND record_id=?")
-        .run(id);
+      this.db.prepare("DELETE FROM vc_search WHERE kind='comment' AND record_id=?").run(id);
       const comment = this.contract.read<{
         sessionId: string;
         body: string;
@@ -320,9 +254,7 @@ export class SqliteStore implements Repository {
       }>("feedback-comment", value);
       if (!comment.deleted && comment.body.length)
         this.db
-          .prepare(
-            "INSERT INTO vc_search(kind,session_id,artifact_id,record_id,text) VALUES(?,?,?,?,?)",
-          )
+          .prepare("INSERT INTO vc_search(kind,session_id,artifact_id,record_id,text) VALUES(?,?,?,?,?)")
           .run("comment", comment.sessionId, "", id, comment.body);
     }
     if (kind === "attachment") {
@@ -334,21 +266,11 @@ export class SqliteStore implements Repository {
       for (const element of elements)
         if ("text" in element && element.text.length) {
           this.db
-            .prepare(
-              "DELETE FROM vc_search WHERE kind='element' AND session_id=? AND record_id=?",
-            )
+            .prepare("DELETE FROM vc_search WHERE kind='element' AND session_id=? AND record_id=?")
             .run(link.sessionId, element.elementId);
           this.db
-            .prepare(
-              "INSERT INTO vc_search(kind,session_id,artifact_id,record_id,text) VALUES(?,?,?,?,?)",
-            )
-            .run(
-              "element",
-              link.sessionId,
-              link.artifactId,
-              element.elementId,
-              element.text,
-            );
+            .prepare("INSERT INTO vc_search(kind,session_id,artifact_id,record_id,text) VALUES(?,?,?,?,?)")
+            .run("element", link.sessionId, link.artifactId, element.elementId, element.text);
         }
     }
   }
@@ -370,9 +292,7 @@ export class SqliteStore implements Repository {
   search(sessionId: string, query: string): SearchHit[] {
     const terms = query.normalize("NFKC").match(/[\p{L}\p{N}_-]+/gu) ?? [];
     if (!terms.length) return [];
-    const expression = terms
-      .map((term) => '"' + term.replaceAll('"', '""') + '"')
-      .join(" OR ");
+    const expression = terms.map((term) => '"' + term.replaceAll('"', '""') + '"').join(" OR ");
     return this.db
       .prepare(
         "SELECT kind,artifact_id,record_id,text FROM vc_search WHERE session_id=? AND vc_search MATCH ? ORDER BY rank LIMIT 20",
@@ -383,18 +303,12 @@ export class SqliteStore implements Repository {
           artifactId = field(row, "artifact_id"),
           id = field(row, "record_id"),
           text = field(row, "text");
-        if (
-          (kind !== "comment" && kind !== "element") ||
-          typeof id !== "string" ||
-          typeof text !== "string"
-        )
+        if ((kind !== "comment" && kind !== "element") || typeof id !== "string" || typeof text !== "string")
           throw Error("Corrupt search index");
         return {
           kind,
           id,
-          ...(typeof artifactId === "string" && artifactId.length
-            ? { artifactId }
-            : {}),
+          ...(typeof artifactId === "string" && artifactId.length ? { artifactId } : {}),
           text,
         };
       });

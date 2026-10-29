@@ -39,14 +39,6 @@
       "format": "date-time"
     }
   },
-  "required": [
-    "id",
-    "kind",
-    "payload",
-    "state",
-    "leaseUntil",
-    "attempts",
-    "createdAt"
-  ],
+  "required": ["id", "kind", "payload", "state", "leaseUntil", "attempts", "createdAt"],
   "additionalProperties": false
 }

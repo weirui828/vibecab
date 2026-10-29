@@ -25,14 +25,7 @@
     },
     "manifestId": { "type": "string", "minLength": 1 },
     "status": {
-      "enum": [
-        "queued",
-        "running",
-        "completed",
-        "failed",
-        "cancelled",
-        "uncertain"
-      ]
+      "enum": ["queued", "running", "completed", "failed", "cancelled", "uncertain"]
     },
     "usage": {
       "type": "object",
@@ -48,14 +41,6 @@
     "completedAt": { "type": "string", "format": "date-time" },
     "errorCode": { "type": "string" }
   },
-  "required": [
-    "turnId",
-    "sessionId",
-    "kind",
-    "trigger",
-    "manifestId",
-    "status",
-    "createdAt"
-  ],
+  "required": ["turnId", "sessionId", "kind", "trigger", "manifestId", "status", "createdAt"],
   "additionalProperties": false
 }

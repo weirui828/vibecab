@@ -31,7 +31,7 @@
       }
     },
     "createdBy": {
-      "$ref": "https://vibecab.local/schemas/principal.json"
+      "$ref": "https://vibecab.local/schemas/version-author.json"
     },
     "source": {
       "$ref": "https://vibecab.local/schemas/version-source.json"
@@ -41,14 +41,6 @@
       "format": "date-time"
     }
   },
-  "required": [
-    "artifactId",
-    "version",
-    "parentVersion",
-    "manifest",
-    "createdBy",
-    "source",
-    "createdAt"
-  ],
+  "required": ["artifactId", "version", "parentVersion", "manifest", "createdBy", "source", "createdAt"],
   "additionalProperties": false
 }

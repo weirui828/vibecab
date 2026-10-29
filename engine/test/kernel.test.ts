@@ -19,9 +19,7 @@ describe("kernel", () => {
           }),
         ),
       );
-      expect(results.map((r) => (r.ok ? r.seq : 0))).toEqual(
-        Array.from({ length: 30 }, (_, n) => 2 * (n + 1)),
-      );
+      expect(results.map((r) => (r.ok ? r.seq : 0))).toEqual(Array.from({ length: 30 }, (_, n) => 2 * (n + 1)));
       await f.engine.stop();
       await f.engine.start(f.dir);
       expect(
@@ -54,10 +52,7 @@ describe("kernel", () => {
     const f = await fixture();
     await f.engine.stop();
     try {
-      const results = await Promise.allSettled([
-        f.engine.start(f.dir),
-        f.engine.start(f.dir),
-      ]);
+      const results = await Promise.allSettled([f.engine.start(f.dir), f.engine.start(f.dir)]);
       expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
       const second = createEngine({ clock, ids: ids(), seed: 1 });
       await expect(second.start(f.dir)).rejects.toMatchObject({
@@ -162,11 +157,7 @@ describe("kernel", () => {
         payload: { secret: "SENSITIVE", mediaKind: "doc" },
       });
       expect(JSON.stringify(bad)).not.toContain("SENSITIVE");
-      expect(
-        (await readFile(join(f.dir, "workspace.sqlite"))).includes(
-          Buffer.from("SENSITIVE"),
-        ),
-      ).toBe(false);
+      expect((await readFile(join(f.dir, "workspace.sqlite"))).includes(Buffer.from("SENSITIVE"))).toBe(false);
     } finally {
       await f.close();
     }

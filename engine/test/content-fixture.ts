@@ -7,9 +7,7 @@ export function contentFixture() {
   const contract = new Contract(),
     store = new SqliteStore(":memory:", contract),
     content = new Content(store, contract, clock, ids());
-  const artifact = store.transaction(() =>
-    content.create("Test", { kind: "human" }),
-  );
+  const artifact = store.transaction(() => content.create("Test", { kind: "human" }));
   return {
     store,
     content,

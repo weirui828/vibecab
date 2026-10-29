@@ -6,8 +6,7 @@ export class NativeKeyStore implements KeyStore {
   async get(ref: string): Promise<string> {
     try {
       const value = new Entry("VibeCab", ref).getPassword();
-      if (value === null)
-        fail("not_found", "Provider key reference was not found");
+      if (value === null) fail("not_found", "Provider key reference was not found");
       return value;
     } catch (error) {
       if (error instanceof Error && "contract" in error) throw error;
@@ -34,15 +33,13 @@ export class MemoryKeyStore implements KeyStore {
   private readonly secrets = new Map<string, string>();
   async get(ref: string): Promise<string> {
     const secret = this.secrets.get(ref);
-    if (secret === undefined)
-      fail("not_found", "Provider key reference was not found");
+    if (secret === undefined) fail("not_found", "Provider key reference was not found");
     return secret;
   }
   async set(ref: string, secret: string): Promise<void> {
     this.secrets.set(ref, secret);
   }
   async delete(ref: string): Promise<void> {
-    if (!this.secrets.delete(ref))
-      fail("not_found", "Provider key reference was not found");
+    if (!this.secrets.delete(ref)) fail("not_found", "Provider key reference was not found");
   }
 }

@@ -1,10 +1,4 @@
-import type {
-  ModelProvider,
-  ModelRequest,
-  ModelCallOptions,
-  ModelEvent,
-  ProviderModel,
-} from "./types.js";
+import type { ModelProvider, ModelRequest, ModelCallOptions, ModelEvent, ProviderModel } from "./types.js";
 
 type Scenario = { events: ModelEvent[] } | { hang: true };
 export class ScriptedProvider implements ModelProvider {
@@ -24,11 +18,7 @@ export class ScriptedProvider implements ModelProvider {
   enqueueDefaultSequence(sequence: ModelEvent[][]) {
     this.defaultSequence.push(...sequence.map((events) => [...events]));
   }
-  async *call(
-    model: ProviderModel,
-    request: ModelRequest,
-    options: ModelCallOptions,
-  ): AsyncIterable<ModelEvent> {
+  async *call(model: ProviderModel, request: ModelRequest, options: ModelCallOptions): AsyncIterable<ModelEvent> {
     this.calls.push({ model, request, options });
     if (options.signal.aborted) {
       yield {
@@ -41,9 +31,7 @@ export class ScriptedProvider implements ModelProvider {
     }
     await options.onSent?.();
     const scenario = this.scenarios.get(options.idempotencyKey ?? "") ?? {
-      events: this.defaultSequence.shift() ?? [
-        { type: "done", finishReason: "stop" },
-      ],
+      events: this.defaultSequence.shift() ?? [{ type: "done", finishReason: "stop" }],
     };
     if ("hang" in scenario) {
       await new Promise<void>((resolve) => {

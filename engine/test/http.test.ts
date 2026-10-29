@@ -9,9 +9,7 @@ function call(url: string, headers: Record<string, string> = {}) {
   }>((resolve) => {
     const req = request(url + "/v1/capabilities", { headers }, (res) => {
       res.resume();
-      res.on("end", () =>
-        resolve({ status: res.statusCode!, headers: res.headers }),
-      );
+      res.on("end", () => resolve({ status: res.statusCode!, headers: res.headers }));
     });
     req.end();
   });
@@ -33,15 +31,11 @@ it("HTTP authenticates all routes, rejects rebinding and foreign origins, and em
     ] satisfies [Record<string, string>, number][]) {
       const response = await call(server.url, headers);
       expect(response.status).toBe(status);
-      expect(
-        Object.keys(response.headers).some((h) =>
-          h.startsWith("access-control-"),
-        ),
-      ).toBe(false);
+      expect(Object.keys(response.headers).some((h) => h.startsWith("access-control-"))).toBe(false);
     }
-    await expect(
-      startHttp(f.engine, { workspaceDir: f.dir, host: "0.0.0.0" }),
-    ).rejects.toMatchObject({ contract: { code: "invalid" } });
+    await expect(startHttp(f.engine, { workspaceDir: f.dir, host: "0.0.0.0" })).rejects.toMatchObject({
+      contract: { code: "invalid" },
+    });
   } finally {
     await server.close();
     await f.close();

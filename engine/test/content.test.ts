@@ -27,13 +27,9 @@ describe("commit rules", () => {
         before = f.store.version(f.artifactId, 2);
       f.commit({
         baseVersion: 2,
-        changes: [
-          { op: "update", elementId: id, element: paragraph("Changed") },
-        ],
+        changes: [{ op: "update", elementId: id, element: paragraph("Changed") }],
       });
-      expect(f.store.version(f.artifactId, 3).manifest[other]).toBe(
-        before.manifest[other],
-      );
+      expect(f.store.version(f.artifactId, 3).manifest[other]).toBe(before.manifest[other]);
       expect(() =>
         f.commit({
           baseVersion: 3,
@@ -93,9 +89,7 @@ describe("commit rules", () => {
       expect(() =>
         f.commit({
           baseVersion: 2,
-          changes: [
-            { op: "update", elementId: one, element: paragraph("Stale") },
-          ],
+          changes: [{ op: "update", elementId: one, element: paragraph("Stale") }],
         }),
       ).toThrow(
         expect.objectContaining({
@@ -110,9 +104,7 @@ describe("commit rules", () => {
       expect(
         f.commit({
           baseVersion: 2,
-          changes: [
-            { op: "update", elementId: two, element: paragraph("Fine") },
-          ],
+          changes: [{ op: "update", elementId: two, element: paragraph("Fine") }],
         }).version,
       ).toBe(4);
     } finally {
@@ -322,9 +314,7 @@ it("rejects a generated element ID already used by another artifact", async () =
     const content = new Content(f.store, new Contract(), clock, {
       next: (prefix) => (prefix === "el_" ? duplicate : "art_second"),
     });
-    const second = f.store.transaction(() =>
-      content.create("Second", { kind: "human" }),
-    );
+    const second = f.store.transaction(() => content.create("Second", { kind: "human" }));
     expect(() =>
       f.store.transaction(() =>
         content.commit({

@@ -15,16 +15,11 @@ it("revalidates stored event payloads before replay", async () => {
     await f.engine.stop();
     const db = new Database(join(f.dir, "workspace.sqlite"));
     try {
-      db.prepare(
-        "UPDATE sys_events SET json=json_set(json, '$.payload', json('[]')) WHERE seq=1",
-      ).run();
+      db.prepare("UPDATE sys_events SET json=json_set(json, '$.payload', json('[]')) WHERE seq=1").run();
     } finally {
       db.close();
     }
-    const store = new SqliteStore(
-      join(f.dir, "workspace.sqlite"),
-      new Contract(),
-    );
+    const store = new SqliteStore(join(f.dir, "workspace.sqlite"), new Contract());
     try {
       expect(() => store.eventsAfter(0)).toThrow();
     } finally {

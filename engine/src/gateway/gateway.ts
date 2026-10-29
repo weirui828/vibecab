@@ -12,12 +12,7 @@ import type {
 } from "./types.js";
 
 const safeMessages: Record<
-  | "provider_error"
-  | "rate_limited"
-  | "auth"
-  | "unsupported"
-  | "timeout"
-  | "cancelled",
+  "provider_error" | "rate_limited" | "auth" | "unsupported" | "timeout" | "cancelled",
   string
 > = {
   provider_error: "Model provider failed",
@@ -44,45 +39,27 @@ export class ProviderGateway {
     if (!model) fail("unsupported", "Model alias is not configured");
     return model.capabilities;
   }
-  async *call(
-    request: ModelRequest,
-    options: ModelCallOptions,
-  ): AsyncIterable<ModelEvent> {
+  async *call(request: ModelRequest, options: ModelCallOptions): AsyncIterable<ModelEvent> {
     const model = this.models[request.modelRef];
     if (!model) fail("unsupported", "Model alias is not configured");
     if (request.tools?.length && !model.capabilities.tools)
       fail("unsupported", "Configured model does not support tools");
     if (request.output?.kind === "json" && !model.capabilities.jsonSchemaOutput)
-      fail(
-        "unsupported",
-        "Configured model does not support structured output",
-      );
-    if (!model.capabilities.streaming)
-      fail("unsupported", "Configured model does not support streaming");
-    if (
-      estimateInputTokens(request) + request.maxOutputTokens >
-      model.capabilities.maxContextTokens
-    )
-      fail(
-        "unsupported",
-        "Request exceeds the configured model context window",
-      );
-    if (
-      request.output?.kind === "json" &&
-      !this.contract.schemaIsValid(request.output.schema)
-    )
+      fail("unsupported", "Configured model does not support structured output");
+    if (!model.capabilities.streaming) fail("unsupported", "Configured model does not support streaming");
+    if (estimateInputTokens(request) + request.maxOutputTokens > model.capabilities.maxContextTokens)
+      fail("unsupported", "Request exceeds the configured model context window");
+    if (request.output?.kind === "json" && !this.contract.schemaIsValid(request.output.schema))
       fail("invalid", "Structured output schema is invalid");
     const provider = this.providers[model.provider];
-    if (!provider)
-      fail("unsupported", "Configured model provider is unavailable");
+    if (!provider) fail("unsupported", "Configured model provider is unavailable");
     const reservation = this.ledger.assertReserved(options.reservationId),
       startedAt = this.clock.now(),
       startMs = Date.parse(startedAt);
     let quality: "reported" | "estimated" | "unknown" = "unknown",
       inputTokens: number | undefined,
       outputTokens: number | undefined;
-    let finishReason:
-        "stop" | "length" | "tool_calls" | "content_filter" | "error" = "error",
+    let finishReason: "stop" | "length" | "tool_calls" | "content_filter" | "error" = "error",
       errorCode: string | undefined;
     try {
       for await (const event of provider.call(model, request, options)) {
@@ -122,18 +99,12 @@ export class ProviderGateway {
       yield {
         type: "error",
         code: options.signal.aborted ? "cancelled" : "provider_error",
-        message: options.signal.aborted
-          ? safeMessages.cancelled
-          : safeMessages.provider_error,
+        message: options.signal.aborted ? safeMessages.cancelled : safeMessages.provider_error,
         retryable: options.signal.aborted ? false : true,
       };
     } finally {
       let settledMicros = reservation.amountMicros;
-      if (
-        quality !== "unknown" &&
-        inputTokens !== undefined &&
-        outputTokens !== undefined
-      ) {
+      if (quality !== "unknown" && inputTokens !== undefined && outputTokens !== undefined) {
         try {
           const cost = reportedCostMicros(inputTokens, outputTokens, model);
           this.ledger.settle(options.reservationId, cost, quality);
@@ -144,8 +115,7 @@ export class ProviderGateway {
         }
       } else this.ledger.markUncertain(options.reservationId);
       const settled = this.ledger.reservation(options.reservationId);
-      if (settled.state === "uncertain")
-        settledMicros = reservation.amountMicros;
+      if (settled.state === "uncertain") settledMicros = reservation.amountMicros;
       this.ledger.log(
         this.contract.read("call-log", {
           callId: options.reservationId,

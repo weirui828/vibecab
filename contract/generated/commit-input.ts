@@ -70,6 +70,12 @@ export type ElementDraft =
       };
       text: string;
     };
+export type VersionAuthor =
+  | Principal
+  | {
+      kind: "agent";
+      turnId: string;
+    };
 export type Principal =
   | {
       kind: "human";
@@ -106,7 +112,7 @@ export interface CommitInput {
         elementId: string;
       }
   )[];
-  createdBy: Principal;
+  createdBy: VersionAuthor;
   source: VersionSource;
 }
 export interface VersionSource {

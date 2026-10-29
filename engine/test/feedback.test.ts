@@ -22,36 +22,21 @@ async function setupSession(
   content: string,
   format: "text" | "markdown" = "text",
 ) {
-  const imported = await command(
-    f,
-    "vc.ImportContent",
-    { content, format },
-    "import",
-  );
+  const imported = await command(f, "vc.ImportContent", { content, format }, "import");
   if (!imported.ok) throw Error(imported.error.message);
   const a = new Contract().read<{ artifactId: string }>(
     "operations/vc.ImportContent",
     imported.result,
     "#/properties/result",
   );
-  const project = await command(
-    f,
-    "vc.CreateProject",
-    { title: "Project" },
-    "project",
-  );
+  const project = await command(f, "vc.CreateProject", { title: "Project" }, "project");
   if (!project.ok) throw Error(project.error.message);
   const p = new Contract().read<{ projectId: string }>(
     "operations/vc.CreateProject",
     project.result,
     "#/properties/result",
   );
-  const started = await command(
-    f,
-    "vc.StartSession",
-    { title: "Session", primaryProjectId: p.projectId },
-    "session",
-  );
+  const started = await command(f, "vc.StartSession", { title: "Session", primaryProjectId: p.projectId }, "session");
   if (!started.ok) throw Error(started.error.message);
   const session = new Contract().read<{ sessionId: string }>(
     "operations/vc.StartSession",
@@ -69,16 +54,20 @@ async function setupSession(
     name: "vc.Elements",
     args: { artifactId: a.artifactId },
   });
-  const e = new Contract().read<
-    import("../../contract/src/index.js").Element[]
-  >("operations/vc.Elements", elements, "#/properties/result");
+  const e = new Contract().read<import("../../contract/src/index.js").Element[]>(
+    "operations/vc.Elements",
+    elements,
+    "#/properties/result",
+  );
   const versions = await f.engine.query(ctx, {
     name: "vc.Versions",
     args: { artifactId: a.artifactId },
   });
-  const version = new Contract().read<
-    import("../../contract/src/index.js").Version[]
-  >("operations/vc.Versions", versions, "#/properties/result")[0]!;
+  const version = new Contract().read<import("../../contract/src/index.js").Version[]>(
+    "operations/vc.Versions",
+    versions,
+    "#/properties/result",
+  )[0]!;
   return {
     artifactId: a.artifactId,
     sessionId: session.sessionId,
@@ -112,23 +101,10 @@ async function comment(
     "#/properties/result",
   );
 }
-async function agree(
-  f: Awaited<ReturnType<typeof fixture>>,
-  commentId: string,
-  commandId: string,
-) {
-  const result = await command(
-    f,
-    "vc.Agree",
-    { commentId, kind: "as_written" },
-    commandId,
-  );
+async function agree(f: Awaited<ReturnType<typeof fixture>>, commentId: string, commandId: string) {
+  const result = await command(f, "vc.Agree", { commentId, kind: "as_written" }, commandId);
   if (!result.ok) throw Error(result.error.message);
-  return new Contract().read<{ agreementId: string }>(
-    "operations/vc.Agree",
-    result.result,
-    "#/properties/result",
-  );
+  return new Contract().read<{ agreementId: string }>("operations/vc.Agree", result.result, "#/properties/result");
 }
 describe("feedback", () => {
   it("captures ideas, lists projects, and validates session lifecycle and reply-trigger settings", async () => {
@@ -141,39 +117,18 @@ describe("feedback", () => {
         "idea",
       );
       expect(captured.ok).toBe(true);
-      const ideas = new Contract().read<
-        import("../../contract/src/index.js").Idea[]
-      >(
+      const ideas = new Contract().read<import("../../contract/src/index.js").Idea[]>(
         "operations/vc.Ideas",
         await f.engine.query(ctx, { name: "vc.Ideas", args: {} }),
         "#/properties/result",
       );
       expect(ideas).toHaveLength(1);
       const data = await setupSession(f, "Session lifecycle.");
+      expect(await command(f, "vc.PauseSession", { sessionId: data.sessionId }, "pause")).toMatchObject({ ok: true });
       expect(
-        await command(
-          f,
-          "vc.PauseSession",
-          { sessionId: data.sessionId },
-          "pause",
-        ),
-      ).toMatchObject({ ok: true });
-      expect(
-        await command(
-          f,
-          "vc.Comment",
-          { sessionId: data.sessionId, body: "Paused" },
-          "paused-comment",
-        ),
+        await command(f, "vc.Comment", { sessionId: data.sessionId, body: "Paused" }, "paused-comment"),
       ).toMatchObject({ ok: false, error: { code: "conflict" } });
-      expect(
-        await command(
-          f,
-          "vc.ResumeSession",
-          { sessionId: data.sessionId },
-          "resume",
-        ),
-      ).toMatchObject({ ok: true });
+      expect(await command(f, "vc.ResumeSession", { sessionId: data.sessionId }, "resume")).toMatchObject({ ok: true });
       expect(
         await command(
           f,
@@ -182,27 +137,17 @@ describe("feedback", () => {
           "trigger",
         ),
       ).toMatchObject({ ok: true });
-      const sessions = new Contract().read<
-        import("../../contract/src/index.js").Session[]
-      >(
+      const sessions = new Contract().read<import("../../contract/src/index.js").Session[]>(
         "operations/vc.Sessions",
         await f.engine.query(ctx, { name: "vc.Sessions", args: {} }),
         "#/properties/result",
       );
-      expect(
-        sessions.find((s) => s.sessionId === data.sessionId)?.replyTrigger,
-      ).toBe("batch");
-      expect(
-        await command(f, "vc.EndSession", { sessionId: data.sessionId }, "end"),
-      ).toMatchObject({ ok: true });
-      expect(
-        await command(
-          f,
-          "vc.ResumeSession",
-          { sessionId: data.sessionId },
-          "resume-ended",
-        ),
-      ).toMatchObject({ ok: false, error: { code: "conflict" } });
+      expect(sessions.find((s) => s.sessionId === data.sessionId)?.replyTrigger).toBe("batch");
+      expect(await command(f, "vc.EndSession", { sessionId: data.sessionId }, "end")).toMatchObject({ ok: true });
+      expect(await command(f, "vc.ResumeSession", { sessionId: data.sessionId }, "resume-ended")).toMatchObject({
+        ok: false,
+        error: { code: "conflict" },
+      });
     } finally {
       await f.close();
     }
@@ -252,22 +197,8 @@ describe("feedback", () => {
         seenVersion: 1,
         locator: { quote: "beta", prefix: "Alpha ", suffix: " gamma." },
       };
-      const one = await comment(
-        f,
-        data.sessionId,
-        anchor,
-        "Replace beta.",
-        "BETA",
-        "comment-one",
-      );
-      const two = await comment(
-        f,
-        data.sessionId,
-        anchor,
-        "Remove beta.",
-        "",
-        "comment-two",
-      );
+      const one = await comment(f, data.sessionId, anchor, "Replace beta.", "BETA", "comment-one");
+      const two = await comment(f, data.sessionId, anchor, "Remove beta.", "", "comment-two");
       const a1 = await agree(f, one.commentId, "agree-one"),
         a2 = await agree(f, two.commentId, "agree-two");
       const rawConflicts = await f.engine.query(ctx, {
@@ -284,14 +215,12 @@ describe("feedback", () => {
         name: "vc.Threads",
         args: { sessionId: data.sessionId },
       });
-      const threads = new Contract().read<
-        import("../../contract/src/index.js").Thread[]
-      >("operations/vc.Threads", rawThreads, "#/properties/result");
-      expect(
-        threads
-          .flatMap((t) => t.comments)
-          .filter((c) => c.author.kind === "system"),
-      ).toHaveLength(2);
+      const threads = new Contract().read<import("../../contract/src/index.js").Thread[]>(
+        "operations/vc.Threads",
+        rawThreads,
+        "#/properties/result",
+      );
+      expect(threads.flatMap((t) => t.comments).filter((c) => c.author.kind === "system")).toHaveLength(2);
       const resolution = await command(
         f,
         "vc.ResolveConflict",
@@ -300,12 +229,7 @@ describe("feedback", () => {
       );
       expect(resolution.ok).toBe(true);
       expect(
-        await command(
-          f,
-          "vc.ResolveConflict",
-          { keep: a1.agreementId, supersede: [a2.agreementId] },
-          "resolve",
-        ),
+        await command(f, "vc.ResolveConflict", { keep: a1.agreementId, supersede: [a2.agreementId] }, "resolve"),
       ).toEqual(resolution);
       expect(
         await f.engine.query(ctx, {
@@ -313,9 +237,7 @@ describe("feedback", () => {
           args: { sessionId: data.sessionId },
         }),
       ).toEqual([]);
-      const records = new Contract().read<
-        import("../../contract/src/index.js").Agreement[]
-      >(
+      const records = new Contract().read<import("../../contract/src/index.js").Agreement[]>(
         "operations/vc.DecisionRecord",
         await f.engine.query(ctx, {
           name: "vc.DecisionRecord",
@@ -323,9 +245,7 @@ describe("feedback", () => {
         }),
         "#/properties/result",
       );
-      expect(records.find((a) => a.agreementId === a2.agreementId)?.state).toBe(
-        "superseded",
-      );
+      expect(records.find((a) => a.agreementId === a2.agreementId)?.state).toBe("superseded");
       const threadQuery = await f.engine.query(ctx, {
         name: "vc.Threads",
         args: { sessionId: data.sessionId },
@@ -437,12 +357,7 @@ describe("feedback", () => {
     const f = await fixture();
     try {
       const data = await setupSession(f, "A sentence.");
-      const posted = await command(
-        f,
-        "vc.Comment",
-        { sessionId: data.sessionId, body: "Comment" },
-        "state-comment",
-      );
+      const posted = await command(f, "vc.Comment", { sessionId: data.sessionId, body: "Comment" }, "state-comment");
       if (!posted.ok) throw Error(posted.error.message);
       const commentId = new Contract().read<{ commentId: string }>(
         "operations/vc.Comment",
@@ -461,19 +376,8 @@ describe("feedback", () => {
         discarded.result,
         "#/properties/result",
       ).commentId;
-      expect(
-        (
-          await command(
-            f,
-            "vc.DeleteComment",
-            { commentId: discardedId },
-            "discard-delete",
-          )
-        ).ok,
-      ).toBe(true);
-      const visible = new Contract().read<
-        import("../../contract/src/index.js").Thread[]
-      >(
+      expect((await command(f, "vc.DeleteComment", { commentId: discardedId }, "discard-delete")).ok).toBe(true);
+      const visible = new Contract().read<import("../../contract/src/index.js").Thread[]>(
         "operations/vc.Threads",
         await f.engine.query(ctx, {
           name: "vc.Threads",
@@ -481,14 +385,8 @@ describe("feedback", () => {
         }),
         "#/properties/result",
       );
-      expect(
-        visible
-          .flatMap((t) => t.comments)
-          .some((c) => c.commentId === discardedId),
-      ).toBe(false);
-      const retained = new Contract().read<
-        import("../../contract/src/index.js").Thread[]
-      >(
+      expect(visible.flatMap((t) => t.comments).some((c) => c.commentId === discardedId)).toBe(false);
+      const retained = new Contract().read<import("../../contract/src/index.js").Thread[]>(
         "operations/vc.Threads",
         await f.engine.query(ctx, {
           name: "vc.Threads",
@@ -496,48 +394,36 @@ describe("feedback", () => {
         }),
         "#/properties/result",
       );
-      expect(
-        retained
-          .flatMap((t) => t.comments)
-          .find((c) => c.commentId === discardedId)?.deleted,
-      ).toBe(true);
+      expect(retained.flatMap((t) => t.comments).find((c) => c.commentId === discardedId)?.deleted).toBe(true);
       const agreed = await agree(f, commentId, "state-agree");
-      expect(
-        await command(f, "vc.Decline", { commentId }, "bad-decline"),
-      ).toMatchObject({ ok: false, error: { code: "conflict" } });
-      expect(
-        await command(f, "vc.DeleteComment", { commentId }, "bad-delete"),
-      ).toMatchObject({ ok: false, error: { code: "conflict" } });
-      expect(
-        await command(
-          f,
-          "vc.Agree",
-          { commentId, kind: "as_written" },
-          "state-agree",
-        ),
-      ).toMatchObject({ ok: true });
+      expect(await command(f, "vc.Decline", { commentId }, "bad-decline")).toMatchObject({
+        ok: false,
+        error: { code: "conflict" },
+      });
+      expect(await command(f, "vc.DeleteComment", { commentId }, "bad-delete")).toMatchObject({
+        ok: false,
+        error: { code: "conflict" },
+      });
+      expect(await command(f, "vc.Agree", { commentId, kind: "as_written" }, "state-agree")).toMatchObject({
+        ok: true,
+      });
       expect(agreed.agreementId).toBeTruthy();
     } finally {
       await f.close();
     }
   });
   it("keeps random comment and reply sequences within the defined state machine", async () => {
-    const actions = fc.array(
-      fc.constantFrom("reply", "agree", "decline", "edit", "delete"),
-      { minLength: 1, maxLength: 10 },
-    );
+    const actions = fc.array(fc.constantFrom("reply", "agree", "decline", "edit", "delete"), {
+      minLength: 1,
+      maxLength: 10,
+    });
     await fc.assert(
       fc.asyncProperty(actions, async (sequence) => {
         await new Promise<void>((resolve) => setImmediate(resolve));
         const f = await fixture();
         try {
           const data = await setupSession(f, "State machine.");
-          const root = await command(
-            f,
-            "vc.Comment",
-            { sessionId: data.sessionId, body: "Root" },
-            "root",
-          );
+          const root = await command(f, "vc.Comment", { sessionId: data.sessionId, body: "Root" }, "root");
           if (!root.ok) throw Error(root.error.message);
           const commentId = new Contract().read<{ commentId: string }>(
             "operations/vc.Comment",
@@ -574,8 +460,7 @@ describe("feedback", () => {
                       ? "vc.EditComment"
                       : "vc.DeleteComment";
             const result = await command(f, type, input, id);
-            const canChange =
-              !deleted && (state === "open" || state === "discussing");
+            const canChange = !deleted && (state === "open" || state === "discussing");
             if (!canChange)
               expect(result).toMatchObject({
                 ok: false,
@@ -588,9 +473,7 @@ describe("feedback", () => {
               if (action === "decline") state = "declined";
               if (action === "delete") deleted = true;
             }
-            const threads = new Contract().read<
-              import("../../contract/src/index.js").Thread[]
-            >(
+            const threads = new Contract().read<import("../../contract/src/index.js").Thread[]>(
               "operations/vc.Threads",
               await f.engine.query(ctx, {
                 name: "vc.Threads",
@@ -598,9 +481,7 @@ describe("feedback", () => {
               }),
               "#/properties/result",
             );
-            const current = threads
-              .flatMap((t) => t.comments)
-              .find((c) => c.commentId === commentId)!;
+            const current = threads.flatMap((t) => t.comments).find((c) => c.commentId === commentId)!;
             expect(current.state).toBe(state);
             expect(current.deleted).toBe(deleted);
           }

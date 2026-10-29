@@ -16,15 +16,7 @@
           "minLength": 1
         },
         "state": {
-          "enum": [
-            "open",
-            "discussing",
-            "agreed",
-            "scheduled",
-            "applied",
-            "declined",
-            "superseded"
-          ]
+          "enum": ["open", "discussing", "agreed", "scheduled", "applied", "declined", "superseded"]
         }
       },
       "additionalProperties": false

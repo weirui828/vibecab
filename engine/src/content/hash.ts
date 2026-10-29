@@ -9,8 +9,7 @@ export function canonical(value: unknown): string {
   } catch {
     fail("invalid", "Value cannot be canonicalized");
   }
-  if (typeof result !== "string")
-    fail("invalid", "Value cannot be canonicalized");
+  if (typeof result !== "string") fail("invalid", "Value cannot be canonicalized");
   return result;
 }
 export function revisionHash(element: Element): string {

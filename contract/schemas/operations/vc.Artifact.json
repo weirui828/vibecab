@@ -37,13 +37,7 @@
           "format": "date-time"
         }
       },
-      "required": [
-        "artifactId",
-        "title",
-        "mediaKind",
-        "headVersion",
-        "createdAt"
-      ],
+      "required": ["artifactId", "title", "mediaKind", "headVersion", "createdAt"],
       "additionalProperties": false
     }
   },

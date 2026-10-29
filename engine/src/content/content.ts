@@ -4,6 +4,7 @@ import type {
   CommitInput,
   Element,
   Principal,
+  VersionAuthor,
   Version,
   VersionSource,
 } from "../../../contract/src/index.js";
@@ -103,13 +104,10 @@ export class Content {
   private commitInitial(
     artifactId: string,
     changes: CommitInput["changes"],
-    createdBy: Principal,
+    createdBy: VersionAuthor,
     source: VersionSource,
   ) {
-    return this.apply(
-      { artifactId, baseVersion: 1, changes, createdBy, source },
-      undefined,
-    );
+    return this.apply({ artifactId, baseVersion: 1, changes, createdBy, source }, undefined);
   }
   commit(raw: unknown) {
     const input = this.contract.read<CommitInput>("commit-input", raw);
@@ -127,15 +125,9 @@ export class Content {
     };
     return { artifactId, ...this.apply(input, head, target) };
   }
-  private apply(
-    input: CommitInput,
-    head: Version | undefined,
-    restore?: Version,
-  ) {
+  private apply(input: CommitInput, head: Version | undefined, restore?: Version) {
     const { artifactId, createdBy, source } = input;
-    const base = head
-      ? this.store.version(artifactId, input.baseVersion)
-      : undefined;
+    const base = head ? this.store.version(artifactId, input.baseVersion) : undefined;
     const original = head ? this.store.elements(artifactId, head.version) : [];
     const map = new Map(original.map((e) => [e.elementId, e]));
     const writeSet = new Set<string>(),
@@ -144,10 +136,7 @@ export class Content {
     const descendants = (id: string) => {
       const found = new Set([id]);
       let changed = true;
-      const elements = [
-        ...original,
-        ...(base ? this.store.elements(artifactId, base.version) : []),
-      ];
+      const elements = [...original, ...(base ? this.store.elements(artifactId, base.version) : [])];
       while (changed) {
         changed = false;
         for (const e of elements)
@@ -160,8 +149,7 @@ export class Content {
     };
     for (const change of input.changes) {
       if (change.op === "add") {
-        if (Object.hasOwn(idMap, change.tempId))
-          fail("conflict", "Duplicate temporary ID");
+        if (Object.hasOwn(idMap, change.tempId)) fail("conflict", "Duplicate temporary ID");
         const id = this.ids.next("el_");
         if (this.store.elementIdExists(id) || Object.values(idMap).includes(id))
           fail("conflict", "Element ID already used");
@@ -180,16 +168,11 @@ export class Content {
       const target = this.store.elements(artifactId, restore.version);
       map.clear();
       for (const e of target) map.set(e.elementId, e);
-      for (const id of new Set([
-        ...Object.keys(head?.manifest ?? {}),
-        ...Object.keys(restore.manifest),
-      ]))
+      for (const id of new Set([...Object.keys(head?.manifest ?? {}), ...Object.keys(restore.manifest)]))
         if (head?.manifest[id] !== restore.manifest[id]) writeSet.add(id);
     }
     const conflicting = [...writeSet].filter(
-      (id) =>
-        !Object.values(idMap).includes(id) &&
-        head?.manifest[id] !== base?.manifest[id],
+      (id) => !Object.values(idMap).includes(id) && head?.manifest[id] !== base?.manifest[id],
     );
     if (conflicting.length)
       fail("stale_base", "Elements changed since base version", {
@@ -201,8 +184,7 @@ export class Content {
         const element = this.contract.read<Element>("element", {
           ...change.element,
           elementId: idMap[change.tempId],
-          parentId:
-            change.parentId === null ? null : resolveId(change.parentId),
+          parentId: change.parentId === null ? null : resolveId(change.parentId),
           order: "a0",
         });
         map.set(element.elementId, element);
@@ -210,8 +192,7 @@ export class Content {
     }
     const positioned = new Set<string>();
     for (const change of input.changes) {
-      if (change.op !== "add" && !map.has(change.elementId))
-        fail("conflict", "Element does not exist at head");
+      if (change.op !== "add" && !map.has(change.elementId)) fail("conflict", "Element does not exist at head");
       if (change.op === "remove") {
         for (const id of descendants(change.elementId)) map.delete(id);
         continue;
@@ -219,13 +200,8 @@ export class Content {
       if (change.op === "update") {
         const current = map.get(change.elementId);
         if (!current) fail("conflict", "Element was removed");
-        if (current.type !== change.element.type)
-          fail("conflict", "An update cannot change element type");
-        if (
-          "blobHash" in current &&
-          "blobHash" in change.element &&
-          current.blobHash !== change.element.blobHash
-        )
+        if (current.type !== change.element.type) fail("conflict", "An update cannot change element type");
+        if ("blobHash" in current && "blobHash" in change.element && current.blobHash !== change.element.blobHash)
           fail("conflict", "An update can only change text and props");
         map.set(
           change.elementId,
@@ -241,13 +217,9 @@ export class Content {
       const id = change.op === "add" ? idMap[change.tempId]! : change.elementId;
       const current = map.get(id);
       if (!current) fail("conflict", "Element was removed");
-      const parentId =
-          change.parentId === null ? null : resolveId(change.parentId),
+      const parentId = change.parentId === null ? null : resolveId(change.parentId),
         parent = parentId === null ? undefined : map.get(parentId);
-      if (
-        (parentId !== null && (!parent || removed.has(parentId))) ||
-        !this.contract.allows(parent, current)
-      )
+      if ((parentId !== null && (!parent || removed.has(parentId))) || !this.contract.allows(parent, current))
         fail("conflict", "Invalid target parent");
       const siblings = [...map.values()]
         .filter(
@@ -255,22 +227,16 @@ export class Content {
             e.parentId === parentId &&
             e.elementId !== id &&
             !removed.has(e.elementId) &&
-            (!Object.values(idMap).includes(e.elementId) ||
-              positioned.has(e.elementId)),
+            (!Object.values(idMap).includes(e.elementId) || positioned.has(e.elementId)),
         )
         .sort((a, b) => (a.order < b.order ? -1 : 1));
       let at = siblings.length - 1;
       if (change.after === null) at = -1;
       else if (change.after !== undefined) {
-        at = siblings.findIndex(
-          (e) => e.elementId === resolveId(change.after!),
-        );
+        at = siblings.findIndex((e) => e.elementId === resolveId(change.after!));
         if (at < 0) fail("conflict", "after must name a sibling");
       }
-      const order = generateKeyBetween(
-        siblings[at]?.order ?? null,
-        siblings[at + 1]?.order ?? null,
-      );
+      const order = generateKeyBetween(siblings[at]?.order ?? null, siblings[at + 1]?.order ?? null);
       map.set(id, { ...current, parentId, order });
       positioned.add(id);
     }
@@ -283,12 +249,8 @@ export class Content {
     const manifest: Record<string, string> = {};
     for (const e of elements) manifest[e.elementId] = revisionHash(e);
     if (head)
-      for (const id of new Set([
-        ...Object.keys(head.manifest),
-        ...Object.keys(manifest),
-      ]))
-        if (!writeSet.has(id) && head.manifest[id] !== manifest[id])
-          throw Error("Untouched element changed");
+      for (const id of new Set([...Object.keys(head.manifest), ...Object.keys(manifest)]))
+        if (!writeSet.has(id) && head.manifest[id] !== manifest[id]) throw Error("Untouched element changed");
     if (restore && canonical(manifest) !== canonical(restore.manifest))
       throw Error("Restore changed historical manifest");
     const version = (head?.version ?? 0) + 1;
@@ -307,12 +269,7 @@ export class Content {
     this.versionEvent(artifactId, version, [...writeSet], source);
     return { version, idMap, writeSet: [...writeSet] };
   }
-  private versionEvent(
-    artifactId: string,
-    version: number,
-    writeSet: string[],
-    source: VersionSource,
-  ) {
+  private versionEvent(artifactId: string, version: number, writeSet: string[], source: VersionSource) {
     this.store.appendEvent({
       ts: this.clock.now(),
       type: "vc.VersionCommitted",

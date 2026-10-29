@@ -18,12 +18,8 @@ it("preserves the persisted canonical JSON bytes and revision hashes", () => {
   const persisted =
     '{"elementId":"el_00000000000000000000000001","order":"a0","parentId":null,"props":{},"text":"Café 🌍","type":"paragraph"}';
   expect(canonical(element)).toBe(persisted);
-  expect(revisionHash(element)).toBe(
-    createHash("sha256").update(persisted).digest("hex"),
-  );
-  expect(canonical({ z: -0, b: [1e30, 0.000001], a: "\u20ac" })).toBe(
-    '{"a":"€","b":[1e+30,0.000001],"z":0}',
-  );
+  expect(revisionHash(element)).toBe(createHash("sha256").update(persisted).digest("hex"));
+  expect(canonical({ z: -0, b: [1e30, 0.000001], a: "\u20ac" })).toBe('{"a":"€","b":[1e+30,0.000001],"z":0}');
 });
 
 it("extends existing fractional order keys without changing their format", () => {

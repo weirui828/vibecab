@@ -133,5 +133,6 @@ export type { Thread } from './thread.js';
 export type { UpdatePlan } from './update-plan.js';
 export type { UpdateWrite } from './update-write.js';
 export type { Update } from './update.js';
+export type { VersionAuthor } from './version-author.js';
 export type { VersionSource } from './version-source.js';
 export type { Version } from './version.js';

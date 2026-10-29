@@ -14,11 +14,7 @@ export interface Client {
   command(ctx: CallContext, cmd: CommandEnvelope): Promise<CommandResult>;
   query(ctx: CallContext, q: QueryEnvelope): Promise<Json>;
   subscribe(ctx: CallContext, sub: Subscription): AsyncIterable<EventEnvelope>;
-  putBlob(
-    ctx: CallContext,
-    bytes: Uint8Array,
-    mediaType: string,
-  ): Promise<string>;
+  putBlob(ctx: CallContext, bytes: Uint8Array, mediaType: string): Promise<string>;
   getBlob(ctx: CallContext, hash: string): Promise<Uint8Array>;
 }
 export function contractSuite(
@@ -33,18 +29,10 @@ export function contractSuite(
       close: () => Promise<void>,
       n = 0;
     const schema = new Contract();
-    const cmd = (
-      type: string,
-      payload: Json,
-      commandId = "cmd-" + ++n,
-      context = ctx,
-    ) => client.command(context, { commandId, type, payload });
-    const query = (name: string, args: Json = {}) =>
-      client.query(ctx, { name, args });
-    async function imported(
-      content = "Alpha beta",
-      format: "text" | "markdown" = "text",
-    ) {
+    const cmd = (type: string, payload: Json, commandId = "cmd-" + ++n, context = ctx) =>
+      client.command(context, { commandId, type, payload });
+    const query = (name: string, args: Json = {}) => client.query(ctx, { name, args });
+    async function imported(content = "Alpha beta", format: "text" | "markdown" = "text") {
       const r = await cmd("vc.ImportContent", {
         content,
         format,
@@ -69,17 +57,12 @@ export function contractSuite(
         mediaKind: "doc",
       });
       expect(empty.ok).toBe(true);
-      const a = await imported(
-        "# Heading\n\nAlpha **beta**\n\n- One\n- Two",
-        "markdown",
-      );
+      const a = await imported("# Heading\n\nAlpha **beta**\n\n- One\n- Two", "markdown");
       const artifact = await query("vc.Artifact", { artifactId: a.artifactId });
       expect(artifact).toMatchObject({ headVersion: 1, mediaKind: "doc" });
       const outline = await query("vc.Outline", { artifactId: a.artifactId });
       expect(outline).toHaveLength(3);
-      const elements = schema.read<
-        import("../../../contract/src/index.js").VcElementsOperation["result"]
-      >(
+      const elements = schema.read<import("../../../contract/src/index.js").VcElementsOperation["result"]>(
         "operations/vc.Elements",
         await query("vc.Elements", { artifactId: a.artifactId }),
         "#/properties/result",
@@ -87,9 +70,7 @@ export function contractSuite(
       expect(elements.map((e) => e.type)).toEqual(
         expect.arrayContaining(["heading", "paragraph", "list", "list_item"]),
       );
-      const versions = schema.read<
-        import("../../../contract/src/index.js").Version[]
-      >(
+      const versions = schema.read<import("../../../contract/src/index.js").Version[]>(
         "operations/vc.Versions",
         await query("vc.Versions", { artifactId: a.artifactId }),
         "#/properties/result",
@@ -116,9 +97,11 @@ export function contractSuite(
           })
         ).ok,
       ).toBe(true);
-      expect(
-        await query("vc.Diff", { artifactId: a.artifactId, from: 1, to: 2 }),
-      ).toMatchObject({ removed: [], changed: [], moved: [] });
+      expect(await query("vc.Diff", { artifactId: a.artifactId, from: 1, to: 2 })).toMatchObject({
+        removed: [],
+        changed: [],
+        moved: [],
+      });
       expect(
         (
           await cmd("vc.RestoreVersion", {
@@ -127,21 +110,18 @@ export function contractSuite(
           })
         ).ok,
       ).toBe(true);
-      expect(
-        await query("vc.Versions", { artifactId: a.artifactId }),
-      ).toHaveLength(3);
-      expect(
-        await query("vc.Elements", { artifactId: a.artifactId, version: 3 }),
-      ).toEqual(elements);
+      expect(await query("vc.Versions", { artifactId: a.artifactId })).toHaveLength(3);
+      expect(await query("vc.Elements", { artifactId: a.artifactId, version: 3 })).toEqual(elements);
       expect(await query("sys.Capabilities")).toMatchObject({
         contractVersion: "1.0",
         mediaKinds: ["doc"],
       });
     });
     it("rejects invalid input, unsupported operations, and inadequate authority", async () => {
-      expect(
-        await cmd("vc.CreateArtifact", { title: "Bad", mediaKind: "page" }),
-      ).toMatchObject({ ok: false, error: { code: "invalid" } });
+      expect(await cmd("vc.CreateArtifact", { title: "Bad", mediaKind: "page" })).toMatchObject({
+        ok: false,
+        error: { code: "invalid" },
+      });
       expect(
         await cmd("vc.CreateProject", {
           title: "Forged principal",
@@ -159,51 +139,27 @@ export function contractSuite(
         error: { code: "invalid" },
       });
       expect(
-        await cmd(
-          "vc.CreateArtifact",
-          { title: "Read", mediaKind: "doc" },
-          undefined,
-          { ...ctx, scope: "read" },
-        ),
+        await cmd("vc.CreateArtifact", { title: "Read", mediaKind: "doc" }, undefined, { ...ctx, scope: "read" }),
       ).toMatchObject({ ok: false, error: { code: "forbidden" } });
       expect(
-        await cmd(
-          "vc.CreateArtifact",
-          { title: "Wrong version", mediaKind: "doc" },
-          undefined,
-          { ...ctx, contractVersion: "2.0" },
-        ),
+        await cmd("vc.CreateArtifact", { title: "Wrong version", mediaKind: "doc" }, undefined, {
+          ...ctx,
+          contractVersion: "2.0",
+        }),
       ).toMatchObject({ ok: false, error: { code: "unsupported" } });
-      await expect(
-        client.query(ctx, { name: "vc.Settings", args: {} }),
-      ).rejects.toMatchObject({ contract: { code: "unsupported" } });
+      await expect(client.query(ctx, { name: "vc.Settings", args: {} })).rejects.toMatchObject({
+        contract: { code: "unsupported" },
+      });
     });
     it("is idempotent and does not widen authority on retry", async () => {
-      const first = await cmd(
-        "vc.CreateArtifact",
-        { title: "Once", mediaKind: "doc" },
-        "same",
-      );
+      const first = await cmd("vc.CreateArtifact", { title: "Once", mediaKind: "doc" }, "same");
+      expect(await cmd("vc.CreateArtifact", { title: "Different", mediaKind: "doc" }, "same")).toEqual(first);
       expect(
-        await cmd(
-          "vc.CreateArtifact",
-          { title: "Different", mediaKind: "doc" },
-          "same",
-        ),
-      ).toEqual(first);
-      expect(
-        await cmd(
-          "vc.CreateArtifact",
-          { title: "Once", mediaKind: "doc" },
-          "same",
-          { ...ctx, scope: "read" },
-        ),
+        await cmd("vc.CreateArtifact", { title: "Once", mediaKind: "doc" }, "same", { ...ctx, scope: "read" }),
       ).toMatchObject({ ok: false, error: { code: "forbidden" } });
     });
     it("validates every operation payload and retains failed command results", async () => {
-      const capabilities = schema.read<
-        import("../../../contract/src/index.js").SysCapabilitiesOperation["result"]
-      >(
+      const capabilities = schema.read<import("../../../contract/src/index.js").SysCapabilitiesOperation["result"]>(
         "operations/sys.Capabilities",
         await query("sys.Capabilities"),
         "#/properties/result",
@@ -219,19 +175,9 @@ export function contractSuite(
             contract: { code: "invalid" },
           });
       }
-      const first = await cmd(
-        "vc.CreateArtifact",
-        { mediaKind: "doc" },
-        "failed-id",
-      );
+      const first = await cmd("vc.CreateArtifact", { mediaKind: "doc" }, "failed-id");
       expect(first).toMatchObject({ ok: false, error: { code: "invalid" } });
-      expect(
-        await cmd(
-          "vc.CreateArtifact",
-          { title: "Retry", mediaKind: "doc" },
-          "failed-id",
-        ),
-      ).toEqual(first);
+      expect(await cmd("vc.CreateArtifact", { title: "Retry", mediaKind: "doc" }, "failed-id")).toEqual(first);
     });
     it("replays and resumes events without gaps or duplicates", async () => {
       const a = await imported();
@@ -292,9 +238,7 @@ export function contractSuite(
           })
         ).ok,
       ).toBe(true);
-      const elements = schema.read<
-        import("../../../contract/src/index.js").VcElementsOperation["result"]
-      >(
+      const elements = schema.read<import("../../../contract/src/index.js").VcElementsOperation["result"]>(
         "operations/vc.Elements",
         await query("vc.Elements", { artifactId: a.artifactId }),
         "#/properties/result",
@@ -318,24 +262,16 @@ export function contractSuite(
         posted.result,
         "#/properties/result",
       ).commentId;
-      const thread = schema.read<
-        import("../../../contract/src/index.js").Thread[]
-      >(
+      const thread = schema.read<import("../../../contract/src/index.js").Thread[]>(
         "operations/vc.Threads",
         await query("vc.Threads", { sessionId }),
         "#/properties/result",
       )[0]!;
       expect(thread.comments[0]!.anchor?.seenHash).toMatch(/^[a-f0-9]{64}$/);
       expect(thread.anchorResolutions[0]!.state).toBe("current");
-      expect(
-        (await cmd("vc.Agree", { commentId, kind: "as_written" })).ok,
-      ).toBe(true);
-      expect(await query("vc.FeedbackItems", { sessionId })).toMatchObject([
-        { commentId, state: "agreed" },
-      ]);
-      expect(await query("vc.Sessions", {})).toMatchObject([
-        { sessionId, state: "active", replyTrigger: "manual" },
-      ]);
+      expect((await cmd("vc.Agree", { commentId, kind: "as_written" })).ok).toBe(true);
+      expect(await query("vc.FeedbackItems", { sessionId })).toMatchObject([{ commentId, state: "agreed" }]);
+      expect(await query("vc.Sessions", {})).toMatchObject([{ sessionId, state: "active", replyTrigger: "manual" }]);
       expect(
         await cmd("vc.Comment", { sessionId, body: "Denied" }, undefined, {
           ...ctx,

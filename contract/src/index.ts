@@ -5,12 +5,7 @@ import { Ajv2020 } from "ajv/dist/2020.js";
 import { fullFormats } from "ajv-formats/dist/formats.js";
 import type { ErrorObject } from "ajv";
 import type { AnySchema } from "ajv";
-import type {
-  ContractError,
-  Element,
-  Json,
-  OperationMeta,
-} from "../generated/index.js";
+import type { ContractError, Element, Json, OperationMeta } from "../generated/index.js";
 export type * from "../generated/index.js";
 export type JsonSchema = Exclude<AnySchema, boolean>;
 export const CONTRACT_VERSION = "1.0";
@@ -19,11 +14,7 @@ export class BoundaryError extends Error {
     super(contract.message);
   }
 }
-export function fail(
-  code: ContractError["code"],
-  message: string,
-  details?: Json,
-): never {
+export function fail(code: ContractError["code"], message: string, details?: Json): never {
   throw new BoundaryError({
     code,
     message,
@@ -57,12 +48,7 @@ export function inlineText(text: string): boolean {
         continue;
       }
       if (s[i] === "<" && /^<\/?[A-Za-z!]/.test(s.slice(i))) return false;
-      if (
-        s.startsWith("~~", i) ||
-        s.startsWith("__", i) ||
-        s.startsWith("[^", i) ||
-        s.startsWith("![", i)
-      )
+      if (s.startsWith("~~", i) || s.startsWith("__", i) || s.startsWith("[^", i) || s.startsWith("![", i))
         return false;
       if (s[i] === "*") {
         let count = 0;
@@ -95,12 +81,7 @@ export function inlineText(text: string): boolean {
         }
         if (s.slice(end, end + 2) !== "](") return false;
         const close = s.indexOf(")", end + 2);
-        if (
-          close < 0 ||
-          !scan(s.slice(i + 1, end)) ||
-          /[\s()]/.test(s.slice(end + 2, close))
-        )
-          return false;
+        if (close < 0 || !scan(s.slice(i + 1, end)) || /[\s()]/.test(s.slice(end + 2, close))) return false;
         i = close + 1;
         continue;
       }
@@ -122,8 +103,7 @@ export class Contract {
   >();
   private readonly children: Record<string, string[]>;
   constructor() {
-    for (const [format, validator] of Object.entries(fullFormats))
-      this.ajv.addFormat(format, validator);
+    for (const [format, validator] of Object.entries(fullFormats)) this.ajv.addFormat(format, validator);
     this.ajv.addKeyword({
       keyword: "inlineText",
       type: "string",
@@ -151,9 +131,7 @@ export class Contract {
         },
       },
     });
-    const element: unknown = JSON.parse(
-      readFileSync(resolve(root, "element.json"), "utf8"),
-    );
+    const element: unknown = JSON.parse(readFileSync(resolve(root, "element.json"), "utf8"));
     if (!childSchema(element)) throw new Error("Invalid child rules");
     this.children = element.docChildren;
     const metaSchema = this.ajv.compile<{
@@ -190,11 +168,8 @@ export class Contract {
     });
     for (const file of readdirSync(root, { recursive: true })) {
       if (typeof file !== "string" || !file.endsWith(".json")) continue;
-      const schema: unknown = JSON.parse(
-        readFileSync(resolve(root, file), "utf8"),
-      );
-      if (!schema || typeof schema !== "object")
-        throw new Error("Invalid schema");
+      const schema: unknown = JSON.parse(readFileSync(resolve(root, file), "utf8"));
+      if (!schema || typeof schema !== "object") throw new Error("Invalid schema");
       this.ajv.addSchema(schema);
       if (metaSchema(schema))
         this.operations.set(schema.operation.name, {
@@ -206,23 +181,13 @@ export class Contract {
   read<T>(name: string, value: unknown, fragment = ""): T {
     const validate = this.ajv.getSchema<T>(base + name + ".json" + fragment);
     if (!validate) throw new Error("Missing schema: " + name);
-    if ("$async" in validate)
-      throw new Error("Asynchronous schema validation is unsupported");
-    if (!validate(value))
-      fail(
-        "invalid",
-        "Contract validation failed",
-        this.paths(validate.errors),
-      );
+    if ("$async" in validate) throw new Error("Asynchronous schema validation is unsupported");
+    if (!validate(value)) fail("invalid", "Contract validation failed", this.paths(validate.errors));
     return value;
   }
   schema(name: string): JsonSchema {
     const validator = this.ajv.getSchema(base + name + ".json");
-    if (
-      !validator ||
-      typeof validator.schema !== "object" ||
-      validator.schema === null
-    )
+    if (!validator || typeof validator.schema !== "object" || validator.schema === null)
       throw new Error("Missing object schema: " + name);
     return validator.schema as JsonSchema;
   }
@@ -262,13 +227,8 @@ export class Contract {
     if (map.size !== elements.length) return false;
     const siblings = new Set<string>();
     for (const element of elements) {
-      const parent =
-        element.parentId === null ? undefined : map.get(element.parentId);
-      if (
-        (element.parentId !== null && !parent) ||
-        !this.allows(parent, element)
-      )
-        return false;
+      const parent = element.parentId === null ? undefined : map.get(element.parentId);
+      if ((element.parentId !== null && !parent) || !this.allows(parent, element)) return false;
       const key = JSON.stringify([element.parentId, element.order]);
       if (siblings.has(key)) return false;
       siblings.add(key);

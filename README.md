@@ -29,17 +29,17 @@ TypeScript 6.0.3 dependency. Node and its type declarations stay on the Node 26
 line. `minimumReleaseAge: 0` allows the latest stable package releases.
 
 ```js
-import { createEngine } from './dist/engine/src/engine.js';
-import { inProcess } from './dist/adapters/in-process/src/index.js';
+import { createEngine } from "./dist/engine/src/engine.js";
+import { inProcess } from "./dist/adapters/in-process/src/index.js";
 
 const engine = createEngine();
-await engine.start('/path/to/workspace');
+await engine.start("/path/to/workspace");
 try {
   const client = inProcess(engine);
   const result = await client.command({
-    commandId: 'my-import-1',
-    type: 'vc.ImportContent',
-    payload: { title: 'Draft', format: 'markdown', content: '# Draft\n\nHello.' },
+    commandId: "my-import-1",
+    type: "vc.ImportContent",
+    payload: { title: "Draft", format: "markdown", content: "# Draft\n\nHello." },
   });
   console.log(result);
 } finally {

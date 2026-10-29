@@ -14,6 +14,7 @@ export interface Dependencies {
   seed: number;
   keyStore: KeyStore;
   modelProviders: Record<string, ModelProvider>;
+  updateCheckpoint?: (updateId: string, stage: "checking") => Promise<void>;
 }
 export function defaults(): Dependencies {
   const next = monotonicFactory();

@@ -2,11 +2,7 @@ import { expect, it } from "vitest";
 import fc from "fast-check";
 import { Contract } from "../../contract/src/index.js";
 import type { Json } from "../../contract/src/index.js";
-import {
-  BudgetLedger,
-  estimateInputTokens,
-  estimateReservationMicros,
-} from "../src/gateway/ledger.js";
+import { BudgetLedger, estimateInputTokens, estimateReservationMicros } from "../src/gateway/ledger.js";
 import { MemoryKeyStore } from "../src/gateway/keys.js";
 import { ProviderGateway } from "../src/gateway/gateway.js";
 import { ScriptedProvider } from "../src/gateway/fake.js";
@@ -87,17 +83,10 @@ it("gates capabilities before calling the provider and validates structured outp
         void _;
     }).rejects.toMatchObject({ contract: { code: "unsupported" } });
     expect(provider.calls).toHaveLength(0);
-    const invalid: ModelEvent[] = [
-      { type: "output", json: { ok: "not boolean" } },
-    ];
+    const invalid: ModelEvent[] = [{ type: "output", json: { ok: "not boolean" } }];
     provider.enqueue("r2", invalid);
     f.ledger.reserve("r2", [{ kind: "daily", key: "2026-10-28" }], 100);
-    const validModel = new ProviderGateway(
-      { default: model },
-      { "openai-compatible": provider },
-      f.ledger,
-      f.contract,
-    );
+    const validModel = new ProviderGateway({ default: model }, { "openai-compatible": provider }, f.ledger, f.contract);
     const events: ModelEvent[] = [];
     for await (const event of validModel.call(
       {
@@ -144,12 +133,7 @@ it("requires an existing budget reservation and propagates cancellation to the f
   const f = setup(),
     provider = new ScriptedProvider();
   try {
-    const gateway = new ProviderGateway(
-      { default: model },
-      { "openai-compatible": provider },
-      f.ledger,
-      f.contract,
-    );
+    const gateway = new ProviderGateway({ default: model }, { "openai-compatible": provider }, f.ledger, f.contract);
     await expect(async () => {
       for await (const _ of gateway.call(request, {
         reservationId: "missing",
@@ -170,12 +154,13 @@ it("requires an existing budget reservation and propagates cancellation to the f
     expect(provider.calls).toHaveLength(1);
     f.ledger.reserve("r2", [{ kind: "daily", key: "2026-10-28" }], 100);
     provider.enqueueHang("hang");
-    const hangingController = new AbortController(),
-    iterator = gateway.call(request, {
-          reservationId: "r2",
-          idempotencyKey: "hang",
-          signal: hangingController.signal,
-    })[Symbol.asyncIterator]();
+    const hangingController = new AbortController();
+    const hangingResponse = gateway.call(request, {
+      reservationId: "r2",
+      idempotencyKey: "hang",
+      signal: hangingController.signal,
+    });
+    const iterator = hangingResponse[Symbol.asyncIterator]();
     const next = iterator.next();
     await new Promise<void>((resolve) => setImmediate(resolve));
     hangingController.abort();
@@ -206,17 +191,10 @@ it("reserves against every account, settles reported cost, and keeps unknown res
       60,
     );
     expect(estimateInputTokens(request)).toBe(
-      Math.ceil(
-        JSON.stringify({ messages: request.messages, tools: [], output: null })
-          .length / 3,
-      ),
+      Math.ceil(JSON.stringify({ messages: request.messages, tools: [], output: null }).length / 3),
     );
-    expect(estimateReservationMicros(request, model)).toBe(
-      estimateInputTokens(request) + request.maxOutputTokens,
-    );
-    expect(() =>
-      f.ledger.reserve("two", [{ kind: "session", key: "s" }], 50),
-    ).toThrow(
+    expect(estimateReservationMicros(request, model)).toBe(estimateInputTokens(request) + request.maxOutputTokens);
+    expect(() => f.ledger.reserve("two", [{ kind: "session", key: "s" }], 50)).toThrow(
       expect.objectContaining({
         contract: expect.objectContaining({ code: "budget_exceeded" }),
       }),
@@ -241,40 +219,22 @@ it("marks a lost model-call lease uncertain and retains its budget reservation",
   const f = setup(100),
     now = clock.now();
   try {
-    f.ledger.reserve(
-      "lost-reservation",
-      [{ kind: "daily", key: "2026-10-28" }],
-      80,
-    );
+    f.ledger.reserve("lost-reservation", [{ kind: "daily", key: "2026-10-28" }], 80);
     f.store.transaction(() => {
-      f.store.enqueue(
-        "model.call",
-        "lost-job",
-        { reservationId: "lost-reservation" },
-        now,
-      );
+      f.store.enqueue("model.call", "lost-job", { reservationId: "lost-reservation" }, now);
       f.store.lease("lost-job", "2026-10-28T00:01:00.000Z");
     });
-    const runner = new JobRunner(
-      f.store,
-      clock,
-      (action) => Promise.resolve(f.store.transaction(action)),
-      {
-        leaseMs: 1000,
-        handlers: {},
-        onUncertain: (job) => {
-          const payload = job.payload;
-          if (
-            typeof payload === "object" &&
-            payload !== null &&
-            !Array.isArray(payload)
-          ) {
-            const id = Reflect.get(payload, "reservationId");
-            if (typeof id === "string") f.ledger.markUncertain(id);
-          }
-        },
+    const runner = new JobRunner(f.store, clock, (action) => Promise.resolve(f.store.transaction(action)), {
+      leaseMs: 1000,
+      handlers: {},
+      onUncertain: (job) => {
+        const payload = job.payload;
+        if (typeof payload === "object" && payload !== null && !Array.isArray(payload)) {
+          const id = Reflect.get(payload, "reservationId");
+          if (typeof id === "string") f.ledger.markUncertain(id);
+        }
       },
-    );
+    });
     await runner.recover();
     expect(f.store.jobs()[0]).toMatchObject({ state: "uncertain" });
     expect(f.ledger.reservation("lost-reservation")).toMatchObject({
@@ -292,10 +252,7 @@ it("marks a lost model-call lease uncertain and retains its budget reservation",
 it("preserves nested budget ceilings for random reservations, settlements, and unknown calls", () =>
   fc.assert(
     fc.property(
-      fc.array(
-        fc.tuple(fc.nat(80), fc.nat(80), fc.integer({ min: 0, max: 2 })),
-        { maxLength: 30 },
-      ),
+      fc.array(fc.tuple(fc.nat(80), fc.nat(80), fc.integer({ min: 0, max: 2 })), { maxLength: 30 }),
       (triples) => {
         const f = setup(100);
         try {
@@ -313,17 +270,10 @@ it("preserves nested budget ceilings for random reservations, settlements, and u
               f.ledger.reserve(id, scopes, amount);
               for (const scope of scopes) {
                 const before = f.ledger.state(scope);
-                expect(
-                  before.usedMicros + before.reservedMicros,
-                ).toBeLessThanOrEqual(100);
+                expect(before.usedMicros + before.reservedMicros).toBeLessThanOrEqual(100);
               }
               if (quality === 2) f.ledger.markUncertain(id);
-              else
-                f.ledger.settle(
-                  id,
-                  Math.min(settle, amount),
-                  quality === 0 ? "reported" : "estimated",
-                );
+              else f.ledger.settle(id, Math.min(settle, amount), quality === 0 ? "reported" : "estimated");
             } catch (error) {
               expect(error).toMatchObject({
                 contract: { code: "budget_exceeded" },
@@ -331,9 +281,7 @@ it("preserves nested budget ceilings for random reservations, settlements, and u
             }
             for (const scope of scopes) {
               const after = f.ledger.state(scope);
-              expect(
-                after.usedMicros + after.reservedMicros,
-              ).toBeLessThanOrEqual(100);
+              expect(after.usedMicros + after.reservedMicros).toBeLessThanOrEqual(100);
             }
           });
         } finally {
@@ -410,9 +358,7 @@ it("validates and persists settings, key references, budget limits, usage and bu
         })
       ).ok,
     ).toBe(true);
-    expect(
-      await f.engine.query(ctx, { name: "sys.Settings", args: {} }),
-    ).toMatchObject({
+    expect(await f.engine.query(ctx, { name: "sys.Settings", args: {} })).toMatchObject({
       models: { default: { keyRef: "provider:default" } },
       budgets: { localTimeZone: "UTC" },
     });
@@ -422,14 +368,10 @@ it("validates and persists settings, key references, budget limits, usage and bu
       payload: { account: { kind: "turn", key: "t" }, limitMicros: 500 },
     });
     expect(budget.ok).toBe(true);
-    expect(
-      await f.engine.query(ctx, { name: "sys.Budgets", args: {} }),
-    ).toMatchObject([
+    expect(await f.engine.query(ctx, { name: "sys.Budgets", args: {} })).toMatchObject([
       { account: { kind: "turn", key: "t" }, limitMicros: 500 },
     ]);
-    expect(
-      await f.engine.query(ctx, { name: "sys.Usage", args: {} }),
-    ).toMatchObject({ calls: [] });
+    expect(await f.engine.query(ctx, { name: "sys.Usage", args: {} })).toMatchObject({ calls: [] });
   } finally {
     await f.close();
   }
@@ -445,9 +387,7 @@ it("maps recorded OpenAI-compatible JSON streaming requests and responses withou
       object: "chat.completion.chunk",
       created: 1,
       model: "fake-model",
-      choices: [
-        { index: 0, delta: { content: '{"ok":true}' }, finish_reason: null },
-      ],
+      choices: [{ index: 0, delta: { content: '{"ok":true}' }, finish_reason: null }],
     },
     {
       id: "chatcmpl-test",
@@ -460,9 +400,7 @@ it("maps recorded OpenAI-compatible JSON streaming requests and responses withou
   ];
   const fetcher: typeof fetch = async (input, init) => {
     captured.push({ url: String(input), body: String(init?.body ?? "") });
-    const body =
-      chunks.map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`).join("") +
-      "data: [DONE]\n\n";
+    const body = chunks.map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`).join("") + "data: [DONE]\n\n";
     return new Response(body, {
       headers: { "content-type": "text/event-stream" },
     });
@@ -484,9 +422,7 @@ it("maps recorded OpenAI-compatible JSON streaming requests and responses withou
     { reservationId: "r", signal: new AbortController().signal },
   ))
     events.push(event);
-  expect(captured[0]!.url).toBe(
-    "https://model.example.test/v1/chat/completions",
-  );
+  expect(captured[0]!.url).toBe("https://model.example.test/v1/chat/completions");
   expect(JSON.parse(captured[0]!.body)).toMatchObject({
     stream: true,
     stream_options: { include_usage: true },
@@ -548,11 +484,9 @@ it("maps streamed OpenAI tool call deltas from recorded fixtures", async () => {
     },
   ];
   const fetcher: typeof fetch = async () =>
-    new Response(
-      chunks.map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`).join("") +
-        "data: [DONE]\n\n",
-      { headers: { "content-type": "text/event-stream" } },
-    );
+    new Response(chunks.map((chunk) => `data: ${JSON.stringify(chunk)}\n\n`).join("") + "data: [DONE]\n\n", {
+      headers: { "content-type": "text/event-stream" },
+    });
   const provider = new OpenAICompatibleProvider(keys, fetcher),
     events: ModelEvent[] = [];
   const toolRequest = {

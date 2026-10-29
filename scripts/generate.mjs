@@ -2,15 +2,10 @@ import { readdir, readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve, relative } from "node:path";
 import { compile } from "json-schema-to-typescript";
 const root = resolve("contract/schemas");
-const files = (await readdir(root, { recursive: true }))
-  .filter((f) => f.endsWith(".json"))
-  .sort();
+const files = (await readdir(root, { recursive: true })).filter((f) => f.endsWith(".json")).sort();
 const schemas = new Map(
   await Promise.all(
-    files.map(async (f) => [
-      JSON.parse(await readFile(resolve(root, f), "utf8")).$id,
-      resolve(root, f),
-    ]),
+    files.map(async (f) => [JSON.parse(await readFile(resolve(root, f), "utf8")).$id, resolve(root, f)]),
   ),
 );
 const exports = [];

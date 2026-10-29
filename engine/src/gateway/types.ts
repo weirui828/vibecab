@@ -21,8 +21,7 @@ export interface ModelRequest {
     toolCalls?: ToolCall[];
   }>;
   tools?: Array<{ name: string; description: string; parameters: JsonSchema }>;
-  output?:
-    { kind: "text" } | { kind: "json"; schema: JsonSchema; name: string };
+  output?: { kind: "text" } | { kind: "json"; schema: JsonSchema; name: string };
   maxOutputTokens: number;
   temperature?: number;
 }
@@ -38,18 +37,11 @@ export type ModelEvent =
     }
   | {
       type: "done";
-      finishReason:
-        "stop" | "length" | "tool_calls" | "content_filter" | "error";
+      finishReason: "stop" | "length" | "tool_calls" | "content_filter" | "error";
     }
   | {
       type: "error";
-      code:
-        | "provider_error"
-        | "rate_limited"
-        | "auth"
-        | "unsupported"
-        | "timeout"
-        | "cancelled";
+      code: "provider_error" | "rate_limited" | "auth" | "unsupported" | "timeout" | "cancelled";
       message: string;
       retryable: boolean;
     };
@@ -62,18 +54,11 @@ export interface ModelCallOptions {
   onSent?: () => Promise<void>;
 }
 export interface ModelGateway {
-  call(
-    request: ModelRequest,
-    options: ModelCallOptions,
-  ): AsyncIterable<ModelEvent>;
+  call(request: ModelRequest, options: ModelCallOptions): AsyncIterable<ModelEvent>;
   capabilities(modelRef: string): ModelCapabilities;
 }
 export interface ModelProvider {
-  call(
-    model: ProviderModel,
-    request: ModelRequest,
-    options: ModelCallOptions,
-  ): AsyncIterable<ModelEvent>;
+  call(model: ProviderModel, request: ModelRequest, options: ModelCallOptions): AsyncIterable<ModelEvent>;
 }
 export interface KeyStore {
   get(ref: string): Promise<string>;
