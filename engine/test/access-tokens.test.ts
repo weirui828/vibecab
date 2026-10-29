@@ -36,6 +36,18 @@ it("creates channel-bound tokens and never returns their secrets again", async (
     const createdEvent = await events[Symbol.asyncIterator]().next();
     expect(createdEvent.value?.type).toBe("sys.AccessTokenCreated");
     expect(JSON.stringify(createdEvent.value)).not.toContain(result.token);
+    const rejected = await f.rawEngine
+      .query(
+        { kind: "token", secret: result.token, transport: "cli" },
+        { contractVersion: "1.0", requestId: "token-wrong-transport" },
+        { name: "sys.Capabilities", args: {} },
+      )
+      .then(
+        () => "unexpected success",
+        (error: unknown) => JSON.stringify(error),
+      );
+    expect(rejected).not.toContain(result.token);
+    expect(rejected).toContain("unauthenticated");
     expect(
       await f.engine.command(ctx, {
         commandId: "token-create-read",
