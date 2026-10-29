@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/events/vc.CommentDeleted.json",
+  "title": "CommentDeleted",
+  "type": "object",
+  "properties": {
+    "commentId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sessionId": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "commentId",
+    "sessionId"
+  ],
+  "additionalProperties": false
+}

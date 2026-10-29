@@ -4,8 +4,10 @@ import { fileURLToPath } from 'node:url';
 import { Ajv2020 } from 'ajv/dist/2020.js';
 import { fullFormats } from 'ajv-formats/dist/formats.js';
 import type { ErrorObject } from 'ajv';
+import type { AnySchema } from 'ajv';
 import type { ContractError, Element, Json, OperationMeta } from '../generated/index.js';
 export type * from '../generated/index.js';
+export type JsonSchema = Exclude<AnySchema, boolean>;
 export const CONTRACT_VERSION = '1.0';
 export class BoundaryError extends Error {
     constructor(readonly contract: ContractError) { super(contract.message); }
@@ -99,7 +101,7 @@ export class Contract {
     }>();
     private readonly children: Record<string, string[]>;
     constructor() {
-        this.ajv.addFormat('date-time', fullFormats['date-time']!);
+        for (const [format, validator] of Object.entries(fullFormats)) this.ajv.addFormat(format, validator);
         this.ajv.addKeyword({ keyword: 'inlineText', type: 'string', schemaType: 'boolean', validate: (_: boolean, data: string) => inlineText(data) });
         this.ajv.addKeyword({ keyword: 'operation', valid: true });
         this.ajv.addKeyword({ keyword: 'docChildren', valid: true });
@@ -151,6 +153,20 @@ export class Contract {
         if (!validate(value))
             fail('invalid', 'Contract validation failed', this.paths(validate.errors));
         return value;
+    }
+    schema(name: string): JsonSchema {
+        const validator = this.ajv.getSchema(base + name + '.json');
+        if (!validator || typeof validator.schema !== 'object' || validator.schema === null)
+            throw new Error('Missing object schema: ' + name);
+        return validator.schema as JsonSchema;
+    }
+    validates(schema: JsonSchema, value: unknown): boolean {
+        try { const validate = this.ajv.compile(schema); return '$async' in validate ? false : validate(value); }
+        catch { return false; }
+    }
+    schemaIsValid(schema: JsonSchema): boolean {
+        try { const validate = this.ajv.compile(schema); return !('$async' in validate); }
+        catch { return false; }
     }
     private paths(errors: ErrorObject[] | null | undefined): Json {
         // Never echo input values or parser messages: payloads may contain secrets.

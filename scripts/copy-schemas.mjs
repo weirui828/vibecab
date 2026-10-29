@@ -1,6 +1,7 @@
 import { cp, mkdir, symlink } from 'node:fs/promises';
 import { resolve, relative } from 'node:path';
 await cp('contract/schemas', 'dist/contract/schemas', { recursive: true });
+await cp('engine/src/agent/prompts', 'dist/engine/src/agent/prompts', { recursive: true });
 // pnpm installs dependencies per source package; preserve that resolution in emitted packages.
 for (const name of ['contract', 'engine', 'adapters/in-process', 'adapters/http']) {
   const output = resolve('dist', name);

@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/vc.Agree.json",
+  "title": "vcAgreeOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": {
+        "commentId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "instruction": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "as_written",
+            "agent_proposal",
+            "option"
+          ]
+        },
+        "optionLabel": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "commentId",
+        "kind"
+      ],
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "properties": {
+        "agreementId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "commentId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "agreementId",
+        "commentId"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "payload",
+    "result"
+  ],
+  "additionalProperties": false,
+  "operation": {
+    "name": "vc.Agree",
+    "kind": "command",
+    "meta": {
+      "effect": "collaborate",
+      "irreversible": false,
+      "channels": [
+        "in_process",
+        "http",
+        "cli",
+        "mcp"
+      ]
+    }
+  }
+}

@@ -1,5 +1,6 @@
-import type { CommandResult, Element, EventEnvelope, Job, Json, VcArtifactOperation, Version } from '../../../contract/src/index.js';
+import type { CallLog, CommandResult, Element, EventEnvelope, Job, Json, VcArtifactOperation, Version } from '../../../contract/src/index.js';
 export type Artifact = VcArtifactOperation['result'];
+export interface SearchHit { kind: 'comment'|'element'; id: string; artifactId?: string; text: string; }
 export interface Repository {
     transaction<T>(action: () => T): T;
     artifact(id: string): Artifact;
@@ -18,5 +19,11 @@ export interface Repository {
     jobs(): Job[];
     lease(id: string, until: string): void;
     jobState(id: string, state: Job['state']): void;
+    feedback(kind: string, id: string): Json | undefined;
+    feedbackList(kind: string): Json[];
+    saveFeedback(kind: string, id: string, value: Json): void;
+    callLogs(): CallLog[];
+    saveCallLog(log: CallLog): void;
+    search(sessionId: string, query: string): SearchHit[];
     close(): void;
 }

@@ -2,7 +2,10 @@ packages:
   - contract
   - engine
   - adapters/*
-onlyBuiltDependencies:
-  - node
-  - better-sqlite3
-  - esbuild
+  - tools/*
+resolvePeersFromWorkspaceRoot: false
+allowBuilds:
+  node: true
+  better-sqlite3: true
+  esbuild: true
+minimumReleaseAge: 0

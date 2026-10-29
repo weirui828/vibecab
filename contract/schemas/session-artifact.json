@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://vibecab.local/schemas/session-artifact.json","title":"SessionArtifact","type":"object","properties":{"sessionId":{"type":"string","minLength":1},"artifactId":{"type":"string","minLength":1},"role":{"enum":["primary","reference"]}},"required":["sessionId","artifactId","role"],"additionalProperties":false}

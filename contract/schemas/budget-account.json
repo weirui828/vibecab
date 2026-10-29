@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://vibecab.local/schemas/budget-account.json","title":"BudgetAccount","type":"object","properties":{"kind":{"enum":["daily","session","grant","run","turn"]},"key":{"type":"string","minLength":1}},"required":["kind"],"additionalProperties":false}

@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://vibecab.local/schemas/agent-tools/outline.json","title":"OutlineToolArgs","type":"object","properties":{"artifactId":{"type":"string","minLength":1}},"required":["artifactId"],"additionalProperties":false}

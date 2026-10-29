@@ -4,7 +4,7 @@ Headless TypeScript engine for Task 01: JSON Schema contract, serial command ker
 SQLite history, structured `doc` content, and in-process / loopback HTTP adapters.
 Feedback, Updates, model providers, TMR, and UI are outside this milestone.
 
-Use Node 22 and pnpm 10. The workspace pins a Node 22 development binary, so pnpm
+Use Node 26.13.0 and pnpm 12.16.1. The workspace pins a Node 26 development binary, so pnpm
 scripts also work when the host's default Node differs.
 
 ```sh
@@ -15,13 +15,18 @@ pnpm lint
 pnpm test
 pnpm test:prop    # 1,000 runs per property; failures include a reproducible seed
 pnpm build
-pnpm test:build   # validate the emitted JavaScript on Node 22
+pnpm test:build   # validate the emitted JavaScript on Node 26
 ```
 
 `contract/schemas/` is the source of truth. `pnpm gen` regenerates TypeScript;
 never edit `contract/generated/` directly. The build emits a runnable JavaScript
 workspace under `dist/`, including the schemas needed for runtime validation.
 Workspace package exports point at TypeScript sources for development.
+
+The engine compiler is TypeScript 7. The latest TypeScript ESLint parser still
+requires TypeScript below 6.1, so lint tooling lives in `tools/lint` with its own
+TypeScript 6.0.3 dependency. Node and its type declarations stay on the Node 26
+line. `minimumReleaseAge: 0` allows the latest stable package releases.
 
 ```js
 import { createEngine } from './dist/engine/src/engine.js';

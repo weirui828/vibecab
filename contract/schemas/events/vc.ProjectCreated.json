@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/events/vc.ProjectCreated.json",
+  "title": "ProjectCreated",
+  "type": "object",
+  "properties": {
+    "projectId": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "projectId"
+  ],
+  "additionalProperties": false
+}

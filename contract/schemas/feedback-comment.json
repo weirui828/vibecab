@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/feedback-comment.json",
+  "title": "FeedbackComment",
+  "type": "object",
+  "properties": {
+    "commentId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "sessionId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "author": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "human"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "system"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "agent"
+            },
+            "turnId": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "kind",
+            "turnId"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "anchor": {
+      "$ref": "https://vibecab.local/schemas/anchor.json"
+    },
+    "body": {
+      "type": "string",
+      "minLength": 1
+    },
+    "suggestion": {
+      "type": "object",
+      "properties": {
+        "replacement": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "replacement"
+      ],
+      "additionalProperties": false
+    },
+    "proposal": {
+      "oneOf": [
+        {"type":"object","properties":{"elementId":{"type":"string","minLength":1},"text":{"type":"string"}},"required":["elementId","text"],"additionalProperties":false},
+        {"type":"array","minItems":1,"items":{"type":"object","properties":{"label":{"type":"string","minLength":1},"text":{"type":"string"}},"required":["label","text"],"additionalProperties":false}}
+      ]
+    },
+    "threadId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "replyTo": {
+      "type": "string",
+      "minLength": 1
+    },
+    "state": {
+      "enum": [
+        "open",
+        "discussing",
+        "agreed",
+        "scheduled",
+        "applied",
+        "declined",
+        "superseded"
+      ]
+    },
+    "declineReason": {
+      "type": "string"
+    },
+    "appliedInVersion": {"type":"integer","minimum":1},
+    "deleted": {
+      "type": "boolean"
+    },
+    "read": {
+      "type": "boolean"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "commentId",
+    "sessionId",
+    "author",
+    "body",
+    "threadId",
+    "state",
+    "deleted",
+    "read",
+    "createdAt",
+    "updatedAt"
+  ],
+  "additionalProperties": false
+}

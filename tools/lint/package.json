@@ -1,0 +1,15 @@
+{
+  "name": "@vibecab/lint",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint ../.."
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.13.0",
+    "typescript-eslint": "^8.72.1",
+    "typescript": "~6.0.3"
+  }
+}

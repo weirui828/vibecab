@@ -1,4 +1,7 @@
 import { monotonicFactory } from 'ulid';
+import type { KeyStore } from '../gateway/types.js';
+import { NativeKeyStore } from '../gateway/keys.js';
+import type { ModelProvider } from '../gateway/types.js';
 export interface Clock {
     now(): string;
 }
@@ -9,10 +12,12 @@ export interface Dependencies {
     clock: Clock;
     ids: IdGenerator;
     seed: number;
+    keyStore: KeyStore;
+    modelProviders: Record<string, ModelProvider>;
 }
 export function defaults(): Dependencies {
     const next = monotonicFactory();
-    return { clock: { now: () => new Date().toISOString() }, ids: { next: prefix => prefix + next() }, seed: 0 };
+    return { clock: { now: () => new Date().toISOString() }, ids: { next: prefix => prefix + next() }, seed: 0, keyStore: new NativeKeyStore(), modelProviders: {} };
 }
 export function random(seed: number): () => number {
     let state = seed >>> 0;

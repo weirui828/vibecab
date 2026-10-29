@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/sys.SetBudget.json",
+  "title": "sysSetBudgetOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": {
+        "account": {
+          "$ref": "https://vibecab.local/schemas/budget-account.json"
+        },
+        "limitMicros": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        }
+      },
+      "required": [
+        "account",
+        "limitMicros"
+      ],
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "$ref": "https://vibecab.local/schemas/budget-state.json"
+        }
+      },
+      "required": [
+        "state"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "payload",
+    "result"
+  ],
+  "additionalProperties": false,
+  "operation": {
+    "name": "sys.SetBudget",
+    "kind": "command",
+    "meta": {
+      "effect": "admin",
+      "irreversible": false,
+      "channels": [
+        "in_process",
+        "http",
+        "cli"
+      ]
+    }
+  }
+}

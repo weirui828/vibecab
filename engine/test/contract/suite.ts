@@ -52,7 +52,9 @@ export function contractSuite(name: string, setup: () => Promise<{
         });
         it('rejects invalid input, unsupported operations, and inadequate authority', async () => {
             expect(await cmd('vc.CreateArtifact', { title: 'Bad', mediaKind: 'page' })).toMatchObject({ ok: false, error: { code: 'invalid' } });
-            expect(await cmd('vc.Comment', {})).toMatchObject({ ok: false, error: { code: 'unsupported' } });
+            expect(await cmd('vc.CreateProject', { title: 'Forged principal', principal: { kind: 'agent', turnId: 'forged' } })).toMatchObject({ ok: false, error: { code: 'invalid' } });
+            expect(() => schema.read('call-context', { ...ctx, principal: { kind: 'agent', turnId: 'forged' } })).toThrow();
+            expect(await cmd('vc.Comment', {})).toMatchObject({ ok: false, error: { code: 'invalid' } });
             expect(await cmd('vc.CreateArtifact', { title: 'Read', mediaKind: 'doc' }, undefined, { ...ctx, scope: 'read' })).toMatchObject({ ok: false, error: { code: 'forbidden' } });
             expect(await cmd('vc.CreateArtifact', { title: 'Wrong version', mediaKind: 'doc' }, undefined, { ...ctx, contractVersion: '2.0' })).toMatchObject({ ok: false, error: { code: 'unsupported' } });
             await expect(client.query(ctx, { name: 'vc.Settings', args: {} })).rejects.toMatchObject({ contract: { code: 'unsupported' } });
@@ -94,6 +96,31 @@ export function contractSuite(name: string, setup: () => Promise<{
             const hash = await client.putBlob(ctx, bytes, 'text/plain');
             expect(hash).toMatch(/^[a-f0-9]{64}$/);
             expect(await client.getBlob(ctx, hash)).toEqual(bytes);
+        });
+        it('supports project sessions, attached anchored threads, and explicit agreement', async () => {
+            const a = await imported('Target sentence.');
+            const project = await cmd('vc.CreateProject', { title: 'Draft' });
+            expect(project.ok).toBe(true);
+            if (!project.ok) throw Error();
+            const projectId = schema.read<{ projectId: string }>('operations/vc.CreateProject', project.result, '#/properties/result').projectId;
+            const started = await cmd('vc.StartSession', { title: 'Review', primaryProjectId: projectId, replyTrigger: 'manual' });
+            expect(started.ok).toBe(true);
+            if (!started.ok) throw Error();
+            const sessionId = schema.read<{ sessionId: string }>('operations/vc.StartSession', started.result, '#/properties/result').sessionId;
+            expect((await cmd('vc.AttachArtifact', { sessionId, artifactId: a.artifactId, role: 'primary' })).ok).toBe(true);
+            const elements = schema.read<import('../../../contract/src/index.js').VcElementsOperation['result']>('operations/vc.Elements', await query('vc.Elements', { artifactId: a.artifactId }), '#/properties/result');
+            const elementId = elements[0]!.elementId;
+            const posted = await cmd('vc.Comment', { sessionId, anchor: { artifactId: a.artifactId, elementId, seenVersion: 1, locator: { quote: 'sentence', prefix: 'Target ', suffix: '.' } }, body: 'Tighten this.', suggestion: { replacement: 'line' } });
+            expect(posted.ok).toBe(true);
+            if (!posted.ok) throw Error();
+            const commentId = schema.read<{ commentId: string }>('operations/vc.Comment', posted.result, '#/properties/result').commentId;
+            const thread = schema.read<import('../../../contract/src/index.js').Thread[]>('operations/vc.Threads', await query('vc.Threads', { sessionId }), '#/properties/result')[0]!;
+            expect(thread.comments[0]!.anchor?.seenHash).toMatch(/^[a-f0-9]{64}$/);
+            expect(thread.anchorResolutions[0]!.state).toBe('current');
+            expect((await cmd('vc.Agree', { commentId, kind: 'as_written' })).ok).toBe(true);
+            expect(await query('vc.FeedbackItems', { sessionId })).toMatchObject([{ commentId, state: 'agreed' }]);
+            expect(await query('vc.Sessions', {})).toMatchObject([{ sessionId, state: 'active', replyTrigger: 'manual' }]);
+            expect((await cmd('vc.Comment', { sessionId, body: 'Denied' }, undefined, { ...ctx, scope: 'read' }))).toMatchObject({ ok: false, error: { code: 'forbidden' } });
         });
     });
 }

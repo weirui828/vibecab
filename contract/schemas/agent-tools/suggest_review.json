@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://vibecab.local/schemas/agent-tools/suggest_review.json","title":"SuggestReviewToolArgs","type":"object","properties":{"question":{"type":"string","minLength":1},"elementIds":{"type":"array","items":{"type":"string","minLength":1}}},"required":["question","elementIds"],"additionalProperties":false}

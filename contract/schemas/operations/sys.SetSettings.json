@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/sys.SetSettings.json",
+  "title": "sysSetSettingsOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": {
+        "patch": {
+          "type": "object",
+          "properties": {
+            "models": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "https://vibecab.local/schemas/provider-model.json"
+              }
+            },
+            "budgets": {
+              "$ref": "https://vibecab.local/schemas/settings.json#/properties/budgets"
+            },
+            "sessions": {
+              "$ref": "https://vibecab.local/schemas/settings.json#/properties/sessions"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "patch"
+      ],
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "properties": {
+        "settings": {
+          "$ref": "https://vibecab.local/schemas/settings.json"
+        }
+      },
+      "required": [
+        "settings"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "payload",
+    "result"
+  ],
+  "additionalProperties": false,
+  "operation": {
+    "name": "sys.SetSettings",
+    "kind": "command",
+    "meta": {
+      "effect": "admin",
+      "irreversible": false,
+      "channels": [
+        "in_process",
+        "http",
+        "cli"
+      ]
+    }
+  }
+}

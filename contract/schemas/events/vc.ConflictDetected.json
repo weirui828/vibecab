@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/events/vc.ConflictDetected.json",
+  "title": "ConflictDetected",
+  "type": "object",
+  "properties": {
+    "conflictId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "itemIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    }
+  },
+  "required": [
+    "conflictId",
+    "itemIds"
+  ],
+  "additionalProperties": false
+}

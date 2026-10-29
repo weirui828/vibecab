@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import { Contract, fail } from '../../../contract/src/index.js';
-import type { CommandResult, Element, EventEnvelope, Job, Json, Version } from '../../../contract/src/index.js';
-import type { Artifact, Repository } from './repository.js';
+import type { CallLog, CommandResult, Element, EventEnvelope, Job, Json, Version } from '../../../contract/src/index.js';
+import type { Artifact, Repository, SearchHit } from './repository.js';
 import { canonical, revisionHash } from '../content/hash.js';
 function field(row: unknown, key: string): unknown { return typeof row === 'object' && row !== null ? Reflect.get(row, key) : undefined; }
 function json(row: unknown): unknown { const value = field(row, 'json'); if (typeof value !== 'string')
@@ -18,6 +18,10 @@ export class SqliteStore implements Repository {
    CREATE TABLE IF NOT EXISTS sys_events(seq INTEGER PRIMARY KEY AUTOINCREMENT,json TEXT NOT NULL);
    CREATE TABLE IF NOT EXISTS sys_outbox(id TEXT PRIMARY KEY,kind TEXT NOT NULL,state TEXT NOT NULL,lease_until TEXT,json TEXT NOT NULL);
    CREATE TABLE IF NOT EXISTS vc_artifacts(artifact_id TEXT PRIMARY KEY,json TEXT NOT NULL);
+   CREATE TABLE IF NOT EXISTS vc_feedback(kind TEXT NOT NULL,id TEXT NOT NULL,json TEXT NOT NULL,PRIMARY KEY(kind,id));
+   CREATE INDEX IF NOT EXISTS vc_feedback_kind ON vc_feedback(kind,id);
+   CREATE TABLE IF NOT EXISTS sys_call_log(call_id TEXT PRIMARY KEY,json TEXT NOT NULL);
+   CREATE VIRTUAL TABLE IF NOT EXISTS vc_search USING fts5(kind UNINDEXED,session_id UNINDEXED,artifact_id UNINDEXED,record_id UNINDEXED,text);
    CREATE TABLE IF NOT EXISTS vc_element_revisions(hash TEXT PRIMARY KEY,json TEXT NOT NULL);
    CREATE TABLE IF NOT EXISTS vc_versions(artifact_id TEXT NOT NULL,version INTEGER NOT NULL,parent_version INTEGER,created_by TEXT NOT NULL,source TEXT NOT NULL,created_at TEXT NOT NULL,json TEXT NOT NULL,PRIMARY KEY(artifact_id,version),FOREIGN KEY(artifact_id) REFERENCES vc_artifacts(artifact_id));
    CREATE TABLE IF NOT EXISTS vc_version_entries(artifact_id TEXT NOT NULL,version INTEGER NOT NULL,element_id TEXT NOT NULL,revision_hash TEXT NOT NULL,PRIMARY KEY(artifact_id,version,element_id),FOREIGN KEY(artifact_id,version) REFERENCES vc_versions(artifact_id,version),FOREIGN KEY(revision_hash) REFERENCES vc_element_revisions(hash));
@@ -81,6 +85,9 @@ export class SqliteStore implements Repository {
         for (const [id, hash] of Object.entries(version.manifest))
             this.db.prepare('INSERT INTO vc_version_entries VALUES(?,?,?,?)').run(version.artifactId, version.version, id, hash);
         this.db.prepare('UPDATE vc_artifacts SET json=? WHERE artifact_id=?').run(canonical({ ...artifact, headVersion: version.version }), version.artifactId);
+        this.db.prepare("DELETE FROM vc_search WHERE kind='element' AND artifact_id=?").run(version.artifactId);
+        const sessions = this.db.prepare("SELECT json FROM vc_feedback WHERE kind='attachment'").all().map(row => this.contract.read<{sessionId:string;artifactId:string}>('session-artifact', json(row))).filter(link => link.artifactId === version.artifactId).map(link => link.sessionId);
+        for (const sessionId of sessions) for (const element of elements) if ('text' in element && element.text.length) this.db.prepare('INSERT INTO vc_search(kind,session_id,artifact_id,record_id,text) VALUES(?,?,?,?,?)').run('element', sessionId, version.artifactId, element.elementId, element.text);
     }
     appendEvent(event: Omit<EventEnvelope, 'seq'>): EventEnvelope {
         this.writing();
@@ -100,6 +107,15 @@ export class SqliteStore implements Repository {
         fail('conflict', 'Job is not pending'); this.writeJob({ ...job, state: 'leased', leaseUntil: until, attempts: job.attempts + 1 }); }
     jobState(id: string, state: Job['state']) { this.writing(); const job = this.jobs().find(j => j.id === id); if (!job)
         fail('not_found', 'Job not found'); this.writeJob({ ...job, state, leaseUntil: null }); }
+    feedback(kind: string, id: string): Json | undefined { const row = this.db.prepare('SELECT json FROM vc_feedback WHERE kind=? AND id=?').get(kind, id); return row ? this.contract.read<Json>('json', json(row)) : undefined; }
+    feedbackList(kind: string): Json[] { return this.db.prepare('SELECT json FROM vc_feedback WHERE kind=? ORDER BY rowid').all(kind).map(row => this.contract.read<Json>('json', json(row))); }
+    saveFeedback(kind: string, id: string, value: Json) { this.writing(); this.contract.read<Json>('json', value); this.db.prepare('INSERT INTO vc_feedback(kind,id,json) VALUES(?,?,?) ON CONFLICT(kind,id) DO UPDATE SET json=excluded.json').run(kind, id, canonical(value));
+        if (kind === 'comment') { this.db.prepare("DELETE FROM vc_search WHERE kind='comment' AND record_id=?").run(id); const comment=this.contract.read<{sessionId:string;body:string;deleted:boolean}>('feedback-comment',value); if(!comment.deleted&&comment.body.length)this.db.prepare('INSERT INTO vc_search(kind,session_id,artifact_id,record_id,text) VALUES(?,?,?,?,?)').run('comment',comment.sessionId,'',id,comment.body); }
+        if (kind === 'attachment') { const link=this.contract.read<{sessionId:string;artifactId:string}>('session-artifact',value); const elements=this.elements(link.artifactId); for(const element of elements) if('text' in element&&element.text.length){this.db.prepare("DELETE FROM vc_search WHERE kind='element' AND session_id=? AND record_id=?").run(link.sessionId,element.elementId);this.db.prepare('INSERT INTO vc_search(kind,session_id,artifact_id,record_id,text) VALUES(?,?,?,?,?)').run('element',link.sessionId,link.artifactId,element.elementId,element.text);} }
+    }
+    callLogs(): CallLog[] { return this.db.prepare('SELECT json FROM sys_call_log ORDER BY rowid').all().map(row => this.contract.read<CallLog>('call-log', json(row))); }
+    saveCallLog(log: CallLog) { this.writing(); this.contract.read<CallLog>('call-log', log); this.db.prepare('INSERT INTO sys_call_log(call_id,json) VALUES(?,?) ON CONFLICT(call_id) DO UPDATE SET json=excluded.json').run(log.callId, canonical(log)); }
+    search(sessionId: string, query: string): SearchHit[] { const terms=query.normalize('NFKC').match(/[\p{L}\p{N}_-]+/gu)??[]; if(!terms.length)return[]; const expression=terms.map(term=>'"'+term.replaceAll('"','""')+'"').join(' OR '); return this.db.prepare('SELECT kind,artifact_id,record_id,text FROM vc_search WHERE session_id=? AND vc_search MATCH ? ORDER BY rank LIMIT 20').all(sessionId,expression).map(row=>{const kind=field(row,'kind'),artifactId=field(row,'artifact_id'),id=field(row,'record_id'),text=field(row,'text'); if((kind!=='comment'&&kind!=='element')||typeof id!=='string'||typeof text!=='string')throw Error('Corrupt search index'); return {kind,id,...(typeof artifactId==='string'&&artifactId.length?{artifactId}:{}),text};}); }
     private writeJob(job: Job) { this.contract.read('job', job); this.db.prepare('UPDATE sys_outbox SET state=?,lease_until=?,json=? WHERE id=?').run(job.state, job.leaseUntil, canonical(job), job.id); }
     close() { this.db.close(); }
 }

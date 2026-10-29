@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/events/vc.ArtifactAttached.json",
+  "title": "ArtifactAttached",
+  "type": "object",
+  "properties": {
+    "sessionId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifactId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "role": {
+      "enum": [
+        "primary",
+        "reference"
+      ]
+    }
+  },
+  "required": [
+    "sessionId",
+    "artifactId",
+    "role"
+  ],
+  "additionalProperties": false
+}

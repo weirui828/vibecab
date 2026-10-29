@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/agreement.json",
+  "title": "Agreement",
+  "type": "object",
+  "properties": {
+    "agreementId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "commentId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "instruction": {
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "as_written",
+        "agent_proposal",
+        "option"
+      ]
+    },
+    "optionLabel": {
+      "type": "string",
+      "minLength": 1
+    },
+    "agreedBy": {
+      "const": "human"
+    },
+    "agreedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "supersedes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "state": {
+      "enum": [
+        "agreed",
+        "scheduled",
+        "applied",
+        "superseded"
+      ]
+    },
+    "appliedVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "revertedInVersion": {"type":"integer","minimum":1}
+  },
+  "required": [
+    "agreementId",
+    "commentId",
+    "instruction",
+    "kind",
+    "agreedBy",
+    "agreedAt",
+    "state"
+  ],
+  "additionalProperties": false
+}
