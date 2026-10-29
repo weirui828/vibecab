@@ -1,1 +1,16 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://vibecab.local/schemas/session.json","title":"Session","type":"object","properties":{"sessionId":{"type":"string","minLength":1},"title":{"type":"string","minLength":1},"primaryProjectId":{"type":"string","minLength":1},"state":{"enum":["active","paused","ended"]},"replyTrigger":{"enum":["realtime","batch","manual"]},"createdAt":{"type":"string","format":"date-time"}},"required":["sessionId","title","state","replyTrigger","createdAt"],"additionalProperties":false}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/session.json",
+  "title": "Session",
+  "type": "object",
+  "properties": {
+    "sessionId": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "primaryProjectId": { "type": "string", "minLength": 1 },
+    "state": { "enum": ["active", "paused", "ended"] },
+    "replyTrigger": { "enum": ["realtime", "batch", "manual"] },
+    "createdAt": { "type": "string", "format": "date-time" }
+  },
+  "required": ["sessionId", "title", "state", "replyTrigger", "createdAt"],
+  "additionalProperties": false
+}

@@ -26,17 +26,11 @@
           }
         }
       },
-      "required": [
-        "accounts",
-        "calls"
-      ],
+      "required": ["accounts", "calls"],
       "additionalProperties": false
     }
   },
-  "required": [
-    "payload",
-    "result"
-  ],
+  "required": ["payload", "result"],
   "additionalProperties": false,
   "operation": {
     "name": "sys.Usage",
@@ -44,12 +38,7 @@
     "meta": {
       "effect": "read",
       "irreversible": false,
-      "channels": [
-        "in_process",
-        "http",
-        "cli",
-        "mcp"
-      ]
+      "channels": ["in_process", "http", "cli", "mcp"]
     }
   }
 }

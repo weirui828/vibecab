@@ -22,16 +22,11 @@
               "type": "string"
             }
           },
-          "required": [
-            "replacement"
-          ],
+          "required": ["replacement"],
           "additionalProperties": false
         }
       },
-      "required": [
-        "commentId",
-        "body"
-      ],
+      "required": ["commentId", "body"],
       "additionalProperties": false
     },
     "result": {
@@ -42,16 +37,11 @@
           "minLength": 1
         }
       },
-      "required": [
-        "commentId"
-      ],
+      "required": ["commentId"],
       "additionalProperties": false
     }
   },
-  "required": [
-    "payload",
-    "result"
-  ],
+  "required": ["payload", "result"],
   "additionalProperties": false,
   "operation": {
     "name": "vc.EditComment",
@@ -59,12 +49,7 @@
     "meta": {
       "effect": "collaborate",
       "irreversible": false,
-      "channels": [
-        "in_process",
-        "http",
-        "cli",
-        "mcp"
-      ]
+      "channels": ["in_process", "http", "cli", "mcp"]
     }
   }
 }

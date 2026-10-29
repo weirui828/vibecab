@@ -52,12 +52,7 @@
                 "$ref": "https://vibecab.local/schemas/element-draft.json"
               }
             },
-            "required": [
-              "op",
-              "tempId",
-              "parentId",
-              "element"
-            ],
+            "required": ["op", "tempId", "parentId", "element"],
             "additionalProperties": false
           },
           {
@@ -74,11 +69,7 @@
                 "$ref": "https://vibecab.local/schemas/element-draft.json"
               }
             },
-            "required": [
-              "op",
-              "elementId",
-              "element"
-            ],
+            "required": ["op", "elementId", "element"],
             "additionalProperties": false
           },
           {
@@ -114,11 +105,7 @@
                 ]
               }
             },
-            "required": [
-              "op",
-              "elementId",
-              "parentId"
-            ],
+            "required": ["op", "elementId", "parentId"],
             "additionalProperties": false
           },
           {
@@ -132,10 +119,7 @@
                 "minLength": 1
               }
             },
-            "required": [
-              "op",
-              "elementId"
-            ],
+            "required": ["op", "elementId"],
             "additionalProperties": false
           }
         ]
@@ -148,12 +132,6 @@
       "$ref": "https://vibecab.local/schemas/version-source.json"
     }
   },
-  "required": [
-    "artifactId",
-    "baseVersion",
-    "changes",
-    "createdBy",
-    "source"
-  ],
+  "required": ["artifactId", "baseVersion", "changes", "createdBy", "source"],
   "additionalProperties": false
 }

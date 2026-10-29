@@ -13,16 +13,9 @@
       "minLength": 1
     },
     "role": {
-      "enum": [
-        "primary",
-        "reference"
-      ]
+      "enum": ["primary", "reference"]
     }
   },
-  "required": [
-    "sessionId",
-    "artifactId",
-    "role"
-  ],
+  "required": ["sessionId", "artifactId", "role"],
   "additionalProperties": false
 }

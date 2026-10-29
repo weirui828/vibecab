@@ -1,1 +1,14 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://vibecab.local/schemas/budget-state.json","title":"BudgetState","type":"object","properties":{"account":{"$ref":"https://vibecab.local/schemas/budget-account.json"},"limitMicros":{"type":["integer","null"],"minimum":0},"usedMicros":{"type":"integer","minimum":0},"reservedMicros":{"type":"integer","minimum":0}},"required":["account","limitMicros","usedMicros","reservedMicros"],"additionalProperties":false}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/budget-state.json",
+  "title": "BudgetState",
+  "type": "object",
+  "properties": {
+    "account": { "$ref": "https://vibecab.local/schemas/budget-account.json" },
+    "limitMicros": { "type": ["integer", "null"], "minimum": 0 },
+    "usedMicros": { "type": "integer", "minimum": 0 },
+    "reservedMicros": { "type": "integer", "minimum": 0 }
+  },
+  "required": ["account", "limitMicros", "usedMicros", "reservedMicros"],
+  "additionalProperties": false
+}

@@ -1,1 +1,31 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://vibecab.local/schemas/context-manifest.json","title":"ContextManifest","type":"object","properties":{"manifestId":{"type":"string","minLength":1},"turnId":{"type":"string","minLength":1},"requestIndex":{"type":"integer","minimum":0},"items":{"type":"array","items":{"$ref":"https://vibecab.local/schemas/manifest-item.json"}},"dropped":{"type":"array","items":{"$ref":"https://vibecab.local/schemas/manifest-dropped.json"}},"promptHash":{"type":"string","pattern":"^[a-f0-9]{64}$"},"createdAt":{"type":"string","format":"date-time"}},"required":["manifestId","turnId","requestIndex","items","dropped","promptHash","createdAt"],"additionalProperties":false}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/context-manifest.json",
+  "title": "ContextManifest",
+  "type": "object",
+  "properties": {
+    "manifestId": { "type": "string", "minLength": 1 },
+    "turnId": { "type": "string", "minLength": 1 },
+    "requestIndex": { "type": "integer", "minimum": 0 },
+    "items": {
+      "type": "array",
+      "items": { "$ref": "https://vibecab.local/schemas/manifest-item.json" }
+    },
+    "dropped": {
+      "type": "array",
+      "items": { "$ref": "https://vibecab.local/schemas/manifest-dropped.json" }
+    },
+    "promptHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "createdAt": { "type": "string", "format": "date-time" }
+  },
+  "required": [
+    "manifestId",
+    "turnId",
+    "requestIndex",
+    "items",
+    "dropped",
+    "promptHash",
+    "createdAt"
+  ],
+  "additionalProperties": false
+}

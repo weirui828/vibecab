@@ -41,17 +41,9 @@
     }
   ],
   "docChildren": {
-    "list": [
-      "list_item"
-    ],
-    "list_item": [
-      "list"
-    ],
-    "table": [
-      "table_row"
-    ],
-    "table_row": [
-      "table_cell"
-    ]
+    "list": ["list_item"],
+    "list_item": ["list"],
+    "table": ["table_row"],
+    "table_row": ["table_cell"]
   }
 }

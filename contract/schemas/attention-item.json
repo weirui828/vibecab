@@ -1,1 +1,14 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://vibecab.local/schemas/attention-item.json","title":"AttentionItem","type":"object","properties":{"kind":{"enum":["conflict","agreed_item","unread_reply"]},"id":{"type":"string","minLength":1},"sessionId":{"type":"string","minLength":1},"artifactId":{"type":"string","minLength":1}},"required":["kind","id"],"additionalProperties":false}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/attention-item.json",
+  "title": "AttentionItem",
+  "type": "object",
+  "properties": {
+    "kind": { "enum": ["conflict", "agreed_item", "unread_reply"] },
+    "id": { "type": "string", "minLength": 1 },
+    "sessionId": { "type": "string", "minLength": 1 },
+    "artifactId": { "type": "string", "minLength": 1 }
+  },
+  "required": ["kind", "id"],
+  "additionalProperties": false
+}

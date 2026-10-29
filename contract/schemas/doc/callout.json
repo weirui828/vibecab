@@ -31,16 +31,10 @@
       "properties": {
         "tone": {
           "type": "string",
-          "enum": [
-            "info",
-            "note",
-            "warning"
-          ]
+          "enum": ["info", "note", "warning"]
         }
       },
-      "required": [
-        "tone"
-      ],
+      "required": ["tone"],
       "additionalProperties": false
     },
     "text": {
@@ -48,13 +42,6 @@
       "inlineText": true
     }
   },
-  "required": [
-    "elementId",
-    "type",
-    "parentId",
-    "order",
-    "props",
-    "text"
-  ],
+  "required": ["elementId", "type", "parentId", "order", "props", "text"],
   "additionalProperties": false
 }

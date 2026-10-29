@@ -16,11 +16,7 @@
       "type": "string"
     },
     "kind": {
-      "enum": [
-        "as_written",
-        "agent_proposal",
-        "option"
-      ]
+      "enum": ["as_written", "agent_proposal", "option"]
     },
     "optionLabel": {
       "type": "string",
@@ -40,18 +36,13 @@
       }
     },
     "state": {
-      "enum": [
-        "agreed",
-        "scheduled",
-        "applied",
-        "superseded"
-      ]
+      "enum": ["agreed", "scheduled", "applied", "superseded"]
     },
     "appliedVersion": {
       "type": "integer",
       "minimum": 1
     },
-    "revertedInVersion": {"type":"integer","minimum":1}
+    "revertedInVersion": { "type": "integer", "minimum": 1 }
   },
   "required": [
     "agreementId",

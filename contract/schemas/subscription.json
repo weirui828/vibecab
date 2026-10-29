@@ -37,8 +37,6 @@
       "additionalProperties": false
     }
   },
-  "required": [
-    "afterSeq"
-  ],
+  "required": ["afterSeq"],
   "additionalProperties": false
 }

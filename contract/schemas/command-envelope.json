@@ -16,10 +16,6 @@
       "$ref": "https://vibecab.local/schemas/json.json"
     }
   },
-  "required": [
-    "commandId",
-    "type",
-    "payload"
-  ],
+  "required": ["commandId", "type", "payload"],
   "additionalProperties": false
 }

@@ -17,10 +17,6 @@
       "minLength": 1
     }
   },
-  "required": [
-    "commentId",
-    "sessionId",
-    "state"
-  ],
+  "required": ["commentId", "sessionId", "state"],
   "additionalProperties": false
 }

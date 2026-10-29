@@ -15,9 +15,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "title"
-      ],
+      "required": ["title"],
       "additionalProperties": false
     },
     "result": {
@@ -28,16 +26,11 @@
           "minLength": 1
         }
       },
-      "required": [
-        "projectId"
-      ],
+      "required": ["projectId"],
       "additionalProperties": false
     }
   },
-  "required": [
-    "payload",
-    "result"
-  ],
+  "required": ["payload", "result"],
   "additionalProperties": false,
   "operation": {
     "name": "vc.CreateProject",
@@ -45,12 +38,7 @@
     "meta": {
       "effect": "collaborate",
       "irreversible": false,
-      "channels": [
-        "in_process",
-        "http",
-        "cli",
-        "mcp"
-      ]
+      "channels": ["in_process", "http", "cli", "mcp"]
     }
   }
 }

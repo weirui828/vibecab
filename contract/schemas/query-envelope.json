@@ -12,9 +12,6 @@
       "$ref": "https://vibecab.local/schemas/json.json"
     }
   },
-  "required": [
-    "name",
-    "args"
-  ],
+  "required": ["name", "args"],
   "additionalProperties": false
 }

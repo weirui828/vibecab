@@ -37,13 +37,6 @@
       "inlineText": true
     }
   },
-  "required": [
-    "elementId",
-    "type",
-    "parentId",
-    "order",
-    "props",
-    "text"
-  ],
+  "required": ["elementId", "type", "parentId", "order", "props", "text"],
   "additionalProperties": false
 }

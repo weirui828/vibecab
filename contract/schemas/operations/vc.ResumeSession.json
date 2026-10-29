@@ -12,9 +12,7 @@
           "minLength": 1
         }
       },
-      "required": [
-        "sessionId"
-      ],
+      "required": ["sessionId"],
       "additionalProperties": false
     },
     "result": {
@@ -28,17 +26,11 @@
           "const": "active"
         }
       },
-      "required": [
-        "sessionId",
-        "state"
-      ],
+      "required": ["sessionId", "state"],
       "additionalProperties": false
     }
   },
-  "required": [
-    "payload",
-    "result"
-  ],
+  "required": ["payload", "result"],
   "additionalProperties": false,
   "operation": {
     "name": "vc.ResumeSession",
@@ -46,12 +38,7 @@
     "meta": {
       "effect": "collaborate",
       "irreversible": false,
-      "channels": [
-        "in_process",
-        "http",
-        "cli",
-        "mcp"
-      ]
+      "channels": ["in_process", "http", "cli", "mcp"]
     }
   }
 }

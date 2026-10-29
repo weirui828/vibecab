@@ -1,1 +1,29 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://vibecab.local/schemas/budget-reservation.json","title":"BudgetReservation","type":"object","properties":{"reservationId":{"type":"string","minLength":1},"amountMicros":{"type":"integer","minimum":0},"scopes":{"type":"array","items":{"type":"object","properties":{"account":{"$ref":"https://vibecab.local/schemas/budget-account.json"},"amountMicros":{"type":"integer","minimum":0}},"required":["account","amountMicros"],"additionalProperties":false}},"state":{"enum":["reserved","uncertain","settled"]},"usageQuality":{"enum":["reported","estimated","unknown"]},"settledMicros":{"type":"integer","minimum":0}},"required":["reservationId","amountMicros","scopes","state"],"additionalProperties":false}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/budget-reservation.json",
+  "title": "BudgetReservation",
+  "type": "object",
+  "properties": {
+    "reservationId": { "type": "string", "minLength": 1 },
+    "amountMicros": { "type": "integer", "minimum": 0 },
+    "scopes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "account": {
+            "$ref": "https://vibecab.local/schemas/budget-account.json"
+          },
+          "amountMicros": { "type": "integer", "minimum": 0 }
+        },
+        "required": ["account", "amountMicros"],
+        "additionalProperties": false
+      }
+    },
+    "state": { "enum": ["reserved", "uncertain", "settled"] },
+    "usageQuality": { "enum": ["reported", "estimated", "unknown"] },
+    "settledMicros": { "type": "integer", "minimum": 0 }
+  },
+  "required": ["reservationId", "amountMicros", "scopes", "state"],
+  "additionalProperties": false
+}

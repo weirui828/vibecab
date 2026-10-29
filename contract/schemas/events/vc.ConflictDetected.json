@@ -16,9 +16,6 @@
       }
     }
   },
-  "required": [
-    "conflictId",
-    "itemIds"
-  ],
+  "required": ["conflictId", "itemIds"],
   "additionalProperties": false
 }

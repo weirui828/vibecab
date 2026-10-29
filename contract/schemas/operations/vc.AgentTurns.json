@@ -1,1 +1,28 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://vibecab.local/schemas/operations/vc.AgentTurns.json","title":"vcAgentTurnsOperation","type":"object","properties":{"payload":{"type":"object","properties":{"sessionId":{"type":"string"}},"additionalProperties":false},"result":{"type":"array","items":{"$ref":"https://vibecab.local/schemas/agent-turn.json"}}},"required":["payload","result"],"additionalProperties":false,"operation":{"name":"vc.AgentTurns","kind":"query","meta":{"effect":"read","irreversible":false,"channels":["in_process","http","cli","mcp"]}}}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/vc.AgentTurns.json",
+  "title": "vcAgentTurnsOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": { "sessionId": { "type": "string" } },
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "array",
+      "items": { "$ref": "https://vibecab.local/schemas/agent-turn.json" }
+    }
+  },
+  "required": ["payload", "result"],
+  "additionalProperties": false,
+  "operation": {
+    "name": "vc.AgentTurns",
+    "kind": "query",
+    "meta": {
+      "effect": "read",
+      "irreversible": false,
+      "channels": ["in_process", "http", "cli", "mcp"]
+    }
+  }
+}

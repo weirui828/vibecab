@@ -34,19 +34,10 @@
           "type": "string"
         }
       },
-      "required": [
-        "quote",
-        "prefix",
-        "suffix"
-      ],
+      "required": ["quote", "prefix", "suffix"],
       "additionalProperties": false
     }
   },
-  "required": [
-    "artifactId",
-    "elementId",
-    "seenVersion",
-    "seenHash"
-  ],
+  "required": ["artifactId", "elementId", "seenVersion", "seenHash"],
   "additionalProperties": false
 }

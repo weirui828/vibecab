@@ -30,11 +30,7 @@
               "$ref": "https://vibecab.local/schemas/anchor.json#/properties/locator"
             }
           },
-          "required": [
-            "artifactId",
-            "elementId",
-            "seenVersion"
-          ],
+          "required": ["artifactId", "elementId", "seenVersion"],
           "additionalProperties": false
         },
         "body": {
@@ -48,9 +44,7 @@
               "type": "string"
             }
           },
-          "required": [
-            "replacement"
-          ],
+          "required": ["replacement"],
           "additionalProperties": false
         },
         "replyTo": {
@@ -58,10 +52,7 @@
           "minLength": 1
         }
       },
-      "required": [
-        "sessionId",
-        "body"
-      ],
+      "required": ["sessionId", "body"],
       "additionalProperties": false
     },
     "result": {
@@ -76,17 +67,11 @@
           "minLength": 1
         }
       },
-      "required": [
-        "commentId",
-        "threadId"
-      ],
+      "required": ["commentId", "threadId"],
       "additionalProperties": false
     }
   },
-  "required": [
-    "payload",
-    "result"
-  ],
+  "required": ["payload", "result"],
   "additionalProperties": false,
   "operation": {
     "name": "vc.Comment",
@@ -94,12 +79,7 @@
     "meta": {
       "effect": "collaborate",
       "irreversible": false,
-      "channels": [
-        "in_process",
-        "http",
-        "cli",
-        "mcp"
-      ]
+      "channels": ["in_process", "http", "cli", "mcp"]
     }
   }
 }

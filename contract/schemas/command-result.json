@@ -17,11 +17,7 @@
           "minimum": 0
         }
       },
-      "required": [
-        "ok",
-        "result",
-        "seq"
-      ],
+      "required": ["ok", "result", "seq"],
       "additionalProperties": false
     },
     {
@@ -34,10 +30,7 @@
           "$ref": "https://vibecab.local/schemas/contract-error.json"
         }
       },
-      "required": [
-        "ok",
-        "error"
-      ],
+      "required": ["ok", "error"],
       "additionalProperties": false
     }
   ]

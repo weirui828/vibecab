@@ -1,1 +1,39 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://vibecab.local/schemas/agent-tools/reply.json","title":"AgentReplyToolArgs","type":"object","properties":{"threadId":{"type":"string","minLength":1},"body":{"type":"string","minLength":1},"replyTo":{"type":"string","minLength":1},"proposal":{"oneOf":[{"type":"object","properties":{"elementId":{"type":"string","minLength":1},"text":{"type":"string"}},"required":["elementId","text"],"additionalProperties":false},{"type":"array","minItems":1,"items":{"type":"object","properties":{"label":{"type":"string","minLength":1},"text":{"type":"string"}},"required":["label","text"],"additionalProperties":false}}]}},"required":["threadId","body"],"additionalProperties":false}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/agent-tools/reply.json",
+  "title": "AgentReplyToolArgs",
+  "type": "object",
+  "properties": {
+    "threadId": { "type": "string", "minLength": 1 },
+    "body": { "type": "string", "minLength": 1 },
+    "replyTo": { "type": "string", "minLength": 1 },
+    "proposal": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "elementId": { "type": "string", "minLength": 1 },
+            "text": { "type": "string" }
+          },
+          "required": ["elementId", "text"],
+          "additionalProperties": false
+        },
+        {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": { "type": "string", "minLength": 1 },
+              "text": { "type": "string" }
+            },
+            "required": ["label", "text"],
+            "additionalProperties": false
+          }
+        }
+      ]
+    }
+  },
+  "required": ["threadId", "body"],
+  "additionalProperties": false
+}

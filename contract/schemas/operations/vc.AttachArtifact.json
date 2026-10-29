@@ -16,17 +16,10 @@
           "minLength": 1
         },
         "role": {
-          "enum": [
-            "primary",
-            "reference"
-          ]
+          "enum": ["primary", "reference"]
         }
       },
-      "required": [
-        "sessionId",
-        "artifactId",
-        "role"
-      ],
+      "required": ["sessionId", "artifactId", "role"],
       "additionalProperties": false
     },
     "result": {
@@ -37,16 +30,11 @@
           "minLength": 1
         }
       },
-      "required": [
-        "sessionId"
-      ],
+      "required": ["sessionId"],
       "additionalProperties": false
     }
   },
-  "required": [
-    "payload",
-    "result"
-  ],
+  "required": ["payload", "result"],
   "additionalProperties": false,
   "operation": {
     "name": "vc.AttachArtifact",
@@ -54,12 +42,7 @@
     "meta": {
       "effect": "collaborate",
       "irreversible": false,
-      "channels": [
-        "in_process",
-        "http",
-        "cli",
-        "mcp"
-      ]
+      "channels": ["in_process", "http", "cli", "mcp"]
     }
   }
 }

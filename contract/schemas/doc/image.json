@@ -44,13 +44,6 @@
       "pattern": "^[a-f0-9]{64}$"
     }
   },
-  "required": [
-    "elementId",
-    "type",
-    "parentId",
-    "order",
-    "props",
-    "blobHash"
-  ],
+  "required": ["elementId", "type", "parentId", "order", "props", "blobHash"],
   "additionalProperties": false
 }

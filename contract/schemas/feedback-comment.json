@@ -21,9 +21,7 @@
               "const": "human"
             }
           },
-          "required": [
-            "kind"
-          ],
+          "required": ["kind"],
           "additionalProperties": false
         },
         {
@@ -33,9 +31,7 @@
               "const": "system"
             }
           },
-          "required": [
-            "kind"
-          ],
+          "required": ["kind"],
           "additionalProperties": false
         },
         {
@@ -49,10 +45,7 @@
               "minLength": 1
             }
           },
-          "required": [
-            "kind",
-            "turnId"
-          ],
+          "required": ["kind", "turnId"],
           "additionalProperties": false
         }
       ]
@@ -71,15 +64,33 @@
           "type": "string"
         }
       },
-      "required": [
-        "replacement"
-      ],
+      "required": ["replacement"],
       "additionalProperties": false
     },
     "proposal": {
       "oneOf": [
-        {"type":"object","properties":{"elementId":{"type":"string","minLength":1},"text":{"type":"string"}},"required":["elementId","text"],"additionalProperties":false},
-        {"type":"array","minItems":1,"items":{"type":"object","properties":{"label":{"type":"string","minLength":1},"text":{"type":"string"}},"required":["label","text"],"additionalProperties":false}}
+        {
+          "type": "object",
+          "properties": {
+            "elementId": { "type": "string", "minLength": 1 },
+            "text": { "type": "string" }
+          },
+          "required": ["elementId", "text"],
+          "additionalProperties": false
+        },
+        {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": { "type": "string", "minLength": 1 },
+              "text": { "type": "string" }
+            },
+            "required": ["label", "text"],
+            "additionalProperties": false
+          }
+        }
       ]
     },
     "threadId": {
@@ -104,7 +115,7 @@
     "declineReason": {
       "type": "string"
     },
-    "appliedInVersion": {"type":"integer","minimum":1},
+    "appliedInVersion": { "type": "integer", "minimum": 1 },
     "deleted": {
       "type": "boolean"
     },

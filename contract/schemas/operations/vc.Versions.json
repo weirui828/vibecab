@@ -12,9 +12,7 @@
           "minLength": 1
         }
       },
-      "required": [
-        "artifactId"
-      ],
+      "required": ["artifactId"],
       "additionalProperties": false
     },
     "result": {
@@ -24,10 +22,7 @@
       }
     }
   },
-  "required": [
-    "payload",
-    "result"
-  ],
+  "required": ["payload", "result"],
   "additionalProperties": false,
   "operation": {
     "name": "vc.Versions",
@@ -35,12 +30,7 @@
     "meta": {
       "effect": "read",
       "irreversible": false,
-      "channels": [
-        "in_process",
-        "http",
-        "cli",
-        "mcp"
-      ]
+      "channels": ["in_process", "http", "cli", "mcp"]
     }
   }
 }

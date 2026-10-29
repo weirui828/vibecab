@@ -35,9 +35,7 @@
           "maximum": 6
         }
       },
-      "required": [
-        "level"
-      ],
+      "required": ["level"],
       "additionalProperties": false
     },
     "text": {
@@ -45,13 +43,6 @@
       "inlineText": true
     }
   },
-  "required": [
-    "elementId",
-    "type",
-    "parentId",
-    "order",
-    "props",
-    "text"
-  ],
+  "required": ["elementId", "type", "parentId", "order", "props", "text"],
   "additionalProperties": false
 }

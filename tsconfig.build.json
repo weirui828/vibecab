@@ -1,5 +1,15 @@
 {
   "extends": "./tsconfig.json",
-  "compilerOptions": { "noEmit": false, "declaration": true, "rootDir": ".", "outDir": "dist" },
-  "include": ["contract/src/**/*.ts", "contract/generated/**/*.ts", "engine/src/**/*.ts", "adapters/*/src/**/*.ts"]
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "rootDir": ".",
+    "outDir": "dist"
+  },
+  "include": [
+    "contract/src/**/*.ts",
+    "contract/generated/**/*.ts",
+    "engine/src/**/*.ts",
+    "adapters/*/src/**/*.ts"
+  ]
 }

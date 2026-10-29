@@ -16,11 +16,7 @@
           "minLength": 1
         },
         "mode": {
-          "enum": [
-            "realtime",
-            "batch",
-            "manual"
-          ]
+          "enum": ["realtime", "batch", "manual"]
         },
         "batch": {
           "type": "object",
@@ -37,10 +33,7 @@
           "additionalProperties": false
         }
       },
-      "required": [
-        "sessionId",
-        "mode"
-      ],
+      "required": ["sessionId", "mode"],
       "additionalProperties": false
     },
     "result": {
@@ -51,16 +44,11 @@
           "minLength": 1
         }
       },
-      "required": [
-        "sessionId"
-      ],
+      "required": ["sessionId"],
       "additionalProperties": false
     }
   },
-  "required": [
-    "payload",
-    "result"
-  ],
+  "required": ["payload", "result"],
   "additionalProperties": false,
   "operation": {
     "name": "vc.SetReplyTrigger",
@@ -68,12 +56,7 @@
     "meta": {
       "effect": "collaborate",
       "irreversible": false,
-      "channels": [
-        "in_process",
-        "http",
-        "cli",
-        "mcp"
-      ]
+      "channels": ["in_process", "http", "cli", "mcp"]
     }
   }
 }

@@ -17,19 +17,13 @@
         },
         "format": {
           "type": "string",
-          "enum": [
-            "markdown",
-            "text"
-          ]
+          "enum": ["markdown", "text"]
         },
         "content": {
           "type": "string"
         }
       },
-      "required": [
-        "format",
-        "content"
-      ],
+      "required": ["format", "content"],
       "additionalProperties": false
     },
     "result": {
@@ -51,17 +45,11 @@
           }
         }
       },
-      "required": [
-        "artifactId",
-        "version"
-      ],
+      "required": ["artifactId", "version"],
       "additionalProperties": false
     }
   },
-  "required": [
-    "payload",
-    "result"
-  ],
+  "required": ["payload", "result"],
   "additionalProperties": false,
   "operation": {
     "name": "vc.ImportContent",
@@ -69,12 +57,7 @@
     "meta": {
       "effect": "collaborate",
       "irreversible": false,
-      "channels": [
-        "in_process",
-        "http",
-        "cli",
-        "mcp"
-      ]
+      "channels": ["in_process", "http", "cli", "mcp"]
     }
   }
 }

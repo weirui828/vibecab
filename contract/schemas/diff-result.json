@@ -49,20 +49,12 @@
               "type": "boolean"
             }
           },
-          "required": [
-            "value"
-          ],
+          "required": ["value"],
           "additionalProperties": false
         }
       }
     }
   },
-  "required": [
-    "added",
-    "removed",
-    "changed",
-    "moved",
-    "textDiffs"
-  ],
+  "required": ["added", "removed", "changed", "moved", "textDiffs"],
   "additionalProperties": false
 }

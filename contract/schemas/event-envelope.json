@@ -28,22 +28,13 @@
           "minLength": 1
         }
       },
-      "required": [
-        "kind",
-        "id"
-      ],
+      "required": ["kind", "id"],
       "additionalProperties": false
     },
     "payload": {
       "$ref": "https://vibecab.local/schemas/json.json"
     }
   },
-  "required": [
-    "seq",
-    "ts",
-    "type",
-    "entity",
-    "payload"
-  ],
+  "required": ["seq", "ts", "type", "entity", "payload"],
   "additionalProperties": false
 }

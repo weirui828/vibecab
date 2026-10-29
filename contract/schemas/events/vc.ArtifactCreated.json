@@ -15,10 +15,6 @@
       "const": "doc"
     }
   },
-  "required": [
-    "artifactId",
-    "title",
-    "mediaKind"
-  ],
+  "required": ["artifactId", "title", "mediaKind"],
   "additionalProperties": false
 }

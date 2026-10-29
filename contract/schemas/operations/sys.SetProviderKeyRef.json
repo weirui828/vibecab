@@ -16,10 +16,7 @@
           "minLength": 1
         }
       },
-      "required": [
-        "alias",
-        "keyRef"
-      ],
+      "required": ["alias", "keyRef"],
       "additionalProperties": false
     },
     "result": {
@@ -34,17 +31,11 @@
           "minLength": 1
         }
       },
-      "required": [
-        "alias",
-        "keyRef"
-      ],
+      "required": ["alias", "keyRef"],
       "additionalProperties": false
     }
   },
-  "required": [
-    "payload",
-    "result"
-  ],
+  "required": ["payload", "result"],
   "additionalProperties": false,
   "operation": {
     "name": "sys.SetProviderKeyRef",
@@ -52,11 +43,7 @@
     "meta": {
       "effect": "admin",
       "irreversible": false,
-      "channels": [
-        "in_process",
-        "http",
-        "cli"
-      ]
+      "channels": ["in_process", "http", "cli"]
     }
   }
 }

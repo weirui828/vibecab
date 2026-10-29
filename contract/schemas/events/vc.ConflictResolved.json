@@ -20,10 +20,6 @@
       }
     }
   },
-  "required": [
-    "conflictId",
-    "keep",
-    "supersede"
-  ],
+  "required": ["conflictId", "keep", "supersede"],
   "additionalProperties": false
 }

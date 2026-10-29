@@ -33,12 +33,6 @@
       "additionalProperties": false
     }
   },
-  "required": [
-    "elementId",
-    "type",
-    "parentId",
-    "order",
-    "props"
-  ],
+  "required": ["elementId", "type", "parentId", "order", "props"],
   "additionalProperties": false
 }

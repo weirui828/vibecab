@@ -1,1 +1,1 @@
-export { default } from './tools/lint/config.js';
+export { default } from "./tools/lint/config.js";

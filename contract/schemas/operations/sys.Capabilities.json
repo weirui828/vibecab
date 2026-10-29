@@ -33,10 +33,7 @@
               },
               "kind": {
                 "type": "string",
-                "enum": [
-                  "command",
-                  "query"
-                ]
+                "enum": ["command", "query"]
               },
               "supported": {
                 "type": "boolean"
@@ -45,28 +42,16 @@
                 "$ref": "https://vibecab.local/schemas/operation-meta.json"
               }
             },
-            "required": [
-              "name",
-              "kind",
-              "supported",
-              "meta"
-            ],
+            "required": ["name", "kind", "supported", "meta"],
             "additionalProperties": false
           }
         }
       },
-      "required": [
-        "contractVersion",
-        "mediaKinds",
-        "operations"
-      ],
+      "required": ["contractVersion", "mediaKinds", "operations"],
       "additionalProperties": false
     }
   },
-  "required": [
-    "payload",
-    "result"
-  ],
+  "required": ["payload", "result"],
   "additionalProperties": false,
   "operation": {
     "name": "sys.Capabilities",
@@ -74,12 +59,7 @@
     "meta": {
       "effect": "read",
       "irreversible": false,
-      "channels": [
-        "in_process",
-        "http",
-        "cli",
-        "mcp"
-      ]
+      "channels": ["in_process", "http", "cli", "mcp"]
     }
   }
 }

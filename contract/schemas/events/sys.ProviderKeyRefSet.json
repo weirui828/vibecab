@@ -13,9 +13,6 @@
       "minLength": 1
     }
   },
-  "required": [
-    "alias",
-    "keyRef"
-  ],
+  "required": ["alias", "keyRef"],
   "additionalProperties": false
 }

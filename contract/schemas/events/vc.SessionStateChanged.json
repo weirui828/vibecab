@@ -9,16 +9,9 @@
       "minLength": 1
     },
     "state": {
-      "enum": [
-        "active",
-        "paused",
-        "ended"
-      ]
+      "enum": ["active", "paused", "ended"]
     }
   },
-  "required": [
-    "sessionId",
-    "state"
-  ],
+  "required": ["sessionId", "state"],
   "additionalProperties": false
 }

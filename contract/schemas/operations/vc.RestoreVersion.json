@@ -16,10 +16,7 @@
           "minimum": 1
         }
       },
-      "required": [
-        "artifactId",
-        "version"
-      ],
+      "required": ["artifactId", "version"],
       "additionalProperties": false
     },
     "result": {
@@ -41,17 +38,11 @@
           }
         }
       },
-      "required": [
-        "artifactId",
-        "version"
-      ],
+      "required": ["artifactId", "version"],
       "additionalProperties": false
     }
   },
-  "required": [
-    "payload",
-    "result"
-  ],
+  "required": ["payload", "result"],
   "additionalProperties": false,
   "operation": {
     "name": "vc.RestoreVersion",
@@ -59,12 +50,7 @@
     "meta": {
       "effect": "collaborate",
       "irreversible": false,
-      "channels": [
-        "in_process",
-        "http",
-        "cli",
-        "mcp"
-      ]
+      "channels": ["in_process", "http", "cli", "mcp"]
     }
   }
 }

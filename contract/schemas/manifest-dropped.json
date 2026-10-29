@@ -1,1 +1,13 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://vibecab.local/schemas/manifest-dropped.json","title":"ManifestDropped","type":"object","properties":{"kind":{"type":"string","minLength":1},"id":{"type":"string","minLength":1},"reason":{"enum":["token_budget","not_relevant","not_attached"]}},"required":["kind","id","reason"],"additionalProperties":false}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/manifest-dropped.json",
+  "title": "ManifestDropped",
+  "type": "object",
+  "properties": {
+    "kind": { "type": "string", "minLength": 1 },
+    "id": { "type": "string", "minLength": 1 },
+    "reason": { "enum": ["token_budget", "not_relevant", "not_attached"] }
+  },
+  "required": ["kind", "id", "reason"],
+  "additionalProperties": false
+}

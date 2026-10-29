@@ -9,8 +9,6 @@
       "minLength": 1
     }
   },
-  "required": [
-    "ideaId"
-  ],
+  "required": ["ideaId"],
   "additionalProperties": false
 }

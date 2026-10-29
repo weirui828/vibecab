@@ -20,21 +20,14 @@
           "minimum": 1
         }
       },
-      "required": [
-        "artifactId",
-        "from",
-        "to"
-      ],
+      "required": ["artifactId", "from", "to"],
       "additionalProperties": false
     },
     "result": {
       "$ref": "https://vibecab.local/schemas/diff-result.json"
     }
   },
-  "required": [
-    "payload",
-    "result"
-  ],
+  "required": ["payload", "result"],
   "additionalProperties": false,
   "operation": {
     "name": "vc.Diff",
@@ -42,12 +35,7 @@
     "meta": {
       "effect": "read",
       "irreversible": false,
-      "channels": [
-        "in_process",
-        "http",
-        "cli",
-        "mcp"
-      ]
+      "channels": ["in_process", "http", "cli", "mcp"]
     }
   }
 }

@@ -1,1 +1,10 @@
-{"name":"@vibecab/in-process","version":"0.1.0","type":"module","exports":"./src/index.ts","dependencies":{"@vibecab/engine":"workspace:*","@vibecab/contract":"workspace:*"}}
+{
+  "name": "@vibecab/in-process",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": "./src/index.ts",
+  "dependencies": {
+    "@vibecab/engine": "workspace:*",
+    "@vibecab/contract": "workspace:*"
+  }
+}

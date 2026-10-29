@@ -13,9 +13,6 @@
       "minLength": 1
     }
   },
-  "required": [
-    "commentId",
-    "sessionId"
-  ],
+  "required": ["commentId", "sessionId"],
   "additionalProperties": false
 }

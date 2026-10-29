@@ -41,12 +41,7 @@
           }
         }
       },
-      "required": [
-        "elementId",
-        "type",
-        "preview",
-        "children"
-      ],
+      "required": ["elementId", "type", "preview", "children"],
       "additionalProperties": false
     }
   }

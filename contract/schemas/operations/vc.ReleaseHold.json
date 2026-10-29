@@ -1,1 +1,37 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://vibecab.local/schemas/operations/vc.ReleaseHold.json","title":"vcReleaseHoldOperation","type":"object","properties":{"payload":{"type":"object","properties":{"artifactId":{"type":"string"},"elementId":{"type":"string"}},"required":["artifactId","elementId"],"additionalProperties":false},"result":{"type":"object","properties":{"artifactId":{"type":"string"},"elementId":{"type":"string"}},"required":["artifactId","elementId"],"additionalProperties":false}},"required":["payload","result"],"additionalProperties":false,"operation":{"name":"vc.ReleaseHold","kind":"command","meta":{"effect":"collaborate","irreversible":false,"channels":["in_process","http","cli","mcp"]}}}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/vc.ReleaseHold.json",
+  "title": "vcReleaseHoldOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": {
+        "artifactId": { "type": "string" },
+        "elementId": { "type": "string" }
+      },
+      "required": ["artifactId", "elementId"],
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "properties": {
+        "artifactId": { "type": "string" },
+        "elementId": { "type": "string" }
+      },
+      "required": ["artifactId", "elementId"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["payload", "result"],
+  "additionalProperties": false,
+  "operation": {
+    "name": "vc.ReleaseHold",
+    "kind": "command",
+    "meta": {
+      "effect": "collaborate",
+      "irreversible": false,
+      "channels": ["in_process", "http", "cli", "mcp"]
+    }
+  }
+}

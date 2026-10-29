@@ -17,13 +17,7 @@
     },
     "state": {
       "type": "string",
-      "enum": [
-        "pending",
-        "leased",
-        "completed",
-        "interrupted",
-        "uncertain"
-      ]
+      "enum": ["pending", "leased", "completed", "interrupted", "uncertain"]
     },
     "leaseUntil": {
       "anyOf": [

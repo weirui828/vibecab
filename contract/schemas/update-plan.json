@@ -1,1 +1,25 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://vibecab.local/schemas/update-plan.json","title":"UpdatePlan","type":"object","properties":{"items":{"type":"array","items":{"type":"object","properties":{"itemId":{"type":"string"},"action":{"enum":["edit","add","move","remove","none"]},"elementIds":{"type":"array","items":{"type":"string"}},"newUnder":{"type":"array","items":{"type":"string"}},"note":{"type":"string"}},"required":["itemId","action","elementIds","note"],"additionalProperties":false}}},"required":["items"],"additionalProperties":false}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/update-plan.json",
+  "title": "UpdatePlan",
+  "type": "object",
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "itemId": { "type": "string" },
+          "action": { "enum": ["edit", "add", "move", "remove", "none"] },
+          "elementIds": { "type": "array", "items": { "type": "string" } },
+          "newUnder": { "type": "array", "items": { "type": "string" } },
+          "note": { "type": "string" }
+        },
+        "required": ["itemId", "action", "elementIds", "note"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["items"],
+  "additionalProperties": false
+}

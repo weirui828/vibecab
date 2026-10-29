@@ -1,1 +1,31 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://vibecab.local/schemas/operations/vc.RevokeGrant.json","title":"vcRevokeGrantOperation","type":"object","properties":{"payload":{"type":"object","properties":{"grantId":{"type":"string","minLength":1}},"required":["grantId"],"additionalProperties":false},"result":{"type":"object","properties":{"grantId":{"type":"string"}},"required":["grantId"],"additionalProperties":false}},"required":["payload","result"],"additionalProperties":false,"operation":{"name":"vc.RevokeGrant","kind":"command","meta":{"effect":"admin","irreversible":false,"channels":["in_process","http","cli"]}}}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/vc.RevokeGrant.json",
+  "title": "vcRevokeGrantOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": { "grantId": { "type": "string", "minLength": 1 } },
+      "required": ["grantId"],
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "properties": { "grantId": { "type": "string" } },
+      "required": ["grantId"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["payload", "result"],
+  "additionalProperties": false,
+  "operation": {
+    "name": "vc.RevokeGrant",
+    "kind": "command",
+    "meta": {
+      "effect": "admin",
+      "irreversible": false,
+      "channels": ["in_process", "http", "cli"]
+    }
+  }
+}

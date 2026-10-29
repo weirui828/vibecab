@@ -14,9 +14,7 @@
           }
         }
       },
-      "required": [
-        "anchors"
-      ],
+      "required": ["anchors"],
       "additionalProperties": false
     },
     "result": {
@@ -26,10 +24,7 @@
       }
     }
   },
-  "required": [
-    "payload",
-    "result"
-  ],
+  "required": ["payload", "result"],
   "additionalProperties": false,
   "operation": {
     "name": "vc.ResolveAnchors",
@@ -37,12 +32,7 @@
     "meta": {
       "effect": "read",
       "irreversible": false,
-      "channels": [
-        "in_process",
-        "http",
-        "cli",
-        "mcp"
-      ]
+      "channels": ["in_process", "http", "cli", "mcp"]
     }
   }
 }

@@ -1,1 +1,52 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://vibecab.local/schemas/update.json","title":"Update","type":"object","properties":{"updateId":{"type":"string"},"artifactId":{"type":"string"},"baseVersion":{"type":"integer","minimum":1},"itemIds":{"type":"array","items":{"type":"string"}},"status":{"enum":["queued","planning","awaiting_plan_review","writing","checking","committed","partially_committed","failed","cancelled"]},"plan":{"$ref":"https://vibecab.local/schemas/json.json"},"resultVersion":{"type":"integer","minimum":1},"itemResults":{"type":"array","items":{"type":"object","properties":{"itemId":{"type":"string"},"status":{"enum":["addressed","not_addressed"]},"elementIds":{"type":"array","items":{"type":"string"}},"reason":{"type":"string"}},"required":["itemId","status"],"additionalProperties":false}},"createdAt":{"type":"string","format":"date-time"}},"required":["updateId","artifactId","baseVersion","itemIds","status","itemResults","createdAt"],"additionalProperties":false}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/update.json",
+  "title": "Update",
+  "type": "object",
+  "properties": {
+    "updateId": { "type": "string" },
+    "artifactId": { "type": "string" },
+    "baseVersion": { "type": "integer", "minimum": 1 },
+    "itemIds": { "type": "array", "items": { "type": "string" } },
+    "status": {
+      "enum": [
+        "queued",
+        "planning",
+        "awaiting_plan_review",
+        "writing",
+        "checking",
+        "committed",
+        "partially_committed",
+        "failed",
+        "cancelled"
+      ]
+    },
+    "plan": { "$ref": "https://vibecab.local/schemas/json.json" },
+    "resultVersion": { "type": "integer", "minimum": 1 },
+    "itemResults": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "itemId": { "type": "string" },
+          "status": { "enum": ["addressed", "not_addressed"] },
+          "elementIds": { "type": "array", "items": { "type": "string" } },
+          "reason": { "type": "string" }
+        },
+        "required": ["itemId", "status"],
+        "additionalProperties": false
+      }
+    },
+    "createdAt": { "type": "string", "format": "date-time" }
+  },
+  "required": [
+    "updateId",
+    "artifactId",
+    "baseVersion",
+    "itemIds",
+    "status",
+    "itemResults",
+    "createdAt"
+  ],
+  "additionalProperties": false
+}

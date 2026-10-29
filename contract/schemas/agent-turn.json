@@ -1,1 +1,61 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"https://vibecab.local/schemas/agent-turn.json","title":"AgentTurn","type":"object","properties":{"turnId":{"type":"string","minLength":1},"sessionId":{"type":"string","minLength":1},"kind":{"const":"reply"},"trigger":{"type":"object","properties":{"mode":{"enum":["realtime","batch","manual"]},"commentIds":{"type":"array","items":{"type":"string","minLength":1}},"threadIds":{"type":"array","items":{"type":"string","minLength":1}}},"required":["mode","commentIds"],"additionalProperties":false},"manifestId":{"type":"string","minLength":1},"status":{"enum":["queued","running","completed","failed","cancelled","uncertain"]},"usage":{"type":"object","properties":{"inputTokens":{"type":"integer","minimum":0},"outputTokens":{"type":"integer","minimum":0},"quality":{"enum":["reported","estimated","unknown"]}},"required":["quality"],"additionalProperties":false},"createdAt":{"type":"string","format":"date-time"},"completedAt":{"type":"string","format":"date-time"},"errorCode":{"type":"string"}},"required":["turnId","sessionId","kind","trigger","manifestId","status","createdAt"],"additionalProperties":false}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/agent-turn.json",
+  "title": "AgentTurn",
+  "type": "object",
+  "properties": {
+    "turnId": { "type": "string", "minLength": 1 },
+    "sessionId": { "type": "string", "minLength": 1 },
+    "kind": { "const": "reply" },
+    "trigger": {
+      "type": "object",
+      "properties": {
+        "mode": { "enum": ["realtime", "batch", "manual"] },
+        "commentIds": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "threadIds": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        }
+      },
+      "required": ["mode", "commentIds"],
+      "additionalProperties": false
+    },
+    "manifestId": { "type": "string", "minLength": 1 },
+    "status": {
+      "enum": [
+        "queued",
+        "running",
+        "completed",
+        "failed",
+        "cancelled",
+        "uncertain"
+      ]
+    },
+    "usage": {
+      "type": "object",
+      "properties": {
+        "inputTokens": { "type": "integer", "minimum": 0 },
+        "outputTokens": { "type": "integer", "minimum": 0 },
+        "quality": { "enum": ["reported", "estimated", "unknown"] }
+      },
+      "required": ["quality"],
+      "additionalProperties": false
+    },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "completedAt": { "type": "string", "format": "date-time" },
+    "errorCode": { "type": "string" }
+  },
+  "required": [
+    "turnId",
+    "sessionId",
+    "kind",
+    "trigger",
+    "manifestId",
+    "status",
+    "createdAt"
+  ],
+  "additionalProperties": false
+}

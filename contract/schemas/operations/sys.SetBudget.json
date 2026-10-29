@@ -11,17 +11,11 @@
           "$ref": "https://vibecab.local/schemas/budget-account.json"
         },
         "limitMicros": {
-          "type": [
-            "integer",
-            "null"
-          ],
+          "type": ["integer", "null"],
           "minimum": 0
         }
       },
-      "required": [
-        "account",
-        "limitMicros"
-      ],
+      "required": ["account", "limitMicros"],
       "additionalProperties": false
     },
     "result": {
@@ -31,16 +25,11 @@
           "$ref": "https://vibecab.local/schemas/budget-state.json"
         }
       },
-      "required": [
-        "state"
-      ],
+      "required": ["state"],
       "additionalProperties": false
     }
   },
-  "required": [
-    "payload",
-    "result"
-  ],
+  "required": ["payload", "result"],
   "additionalProperties": false,
   "operation": {
     "name": "sys.SetBudget",
@@ -48,11 +37,7 @@
     "meta": {
       "effect": "admin",
       "irreversible": false,
-      "channels": [
-        "in_process",
-        "http",
-        "cli"
-      ]
+      "channels": ["in_process", "http", "cli"]
     }
   }
 }

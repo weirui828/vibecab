@@ -23,11 +23,6 @@
       "$ref": "https://vibecab.local/schemas/version-source.json"
     }
   },
-  "required": [
-    "artifactId",
-    "version",
-    "writeSet",
-    "source"
-  ],
+  "required": ["artifactId", "version", "writeSet", "source"],
   "additionalProperties": false
 }

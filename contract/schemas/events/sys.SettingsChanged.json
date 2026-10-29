@@ -8,8 +8,6 @@
       "$ref": "https://vibecab.local/schemas/settings.json"
     }
   },
-  "required": [
-    "settings"
-  ],
+  "required": ["settings"],
   "additionalProperties": false
 }

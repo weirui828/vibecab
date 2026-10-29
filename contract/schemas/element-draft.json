@@ -18,9 +18,7 @@
               "maximum": 6
             }
           },
-          "required": [
-            "level"
-          ],
+          "required": ["level"],
           "additionalProperties": false
         },
         "text": {
@@ -28,11 +26,7 @@
           "inlineText": true
         }
       },
-      "required": [
-        "type",
-        "props",
-        "text"
-      ],
+      "required": ["type", "props", "text"],
       "additionalProperties": false
     },
     {
@@ -52,11 +46,7 @@
           "inlineText": true
         }
       },
-      "required": [
-        "type",
-        "props",
-        "text"
-      ],
+      "required": ["type", "props", "text"],
       "additionalProperties": false
     },
     {
@@ -72,16 +62,11 @@
               "type": "boolean"
             }
           },
-          "required": [
-            "ordered"
-          ],
+          "required": ["ordered"],
           "additionalProperties": false
         }
       },
-      "required": [
-        "type",
-        "props"
-      ],
+      "required": ["type", "props"],
       "additionalProperties": false
     },
     {
@@ -101,11 +86,7 @@
           "inlineText": true
         }
       },
-      "required": [
-        "type",
-        "props",
-        "text"
-      ],
+      "required": ["type", "props", "text"],
       "additionalProperties": false
     },
     {
@@ -125,11 +106,7 @@
           "inlineText": true
         }
       },
-      "required": [
-        "type",
-        "props",
-        "text"
-      ],
+      "required": ["type", "props", "text"],
       "additionalProperties": false
     },
     {
@@ -152,11 +129,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "type",
-        "props",
-        "text"
-      ],
+      "required": ["type", "props", "text"],
       "additionalProperties": false
     },
     {
@@ -172,16 +145,11 @@
               "type": "boolean"
             }
           },
-          "required": [
-            "headerRow"
-          ],
+          "required": ["headerRow"],
           "additionalProperties": false
         }
       },
-      "required": [
-        "type",
-        "props"
-      ],
+      "required": ["type", "props"],
       "additionalProperties": false
     },
     {
@@ -197,10 +165,7 @@
           "additionalProperties": false
         }
       },
-      "required": [
-        "type",
-        "props"
-      ],
+      "required": ["type", "props"],
       "additionalProperties": false
     },
     {
@@ -220,11 +185,7 @@
           "inlineText": true
         }
       },
-      "required": [
-        "type",
-        "props",
-        "text"
-      ],
+      "required": ["type", "props", "text"],
       "additionalProperties": false
     },
     {
@@ -251,11 +212,7 @@
           "pattern": "^[a-f0-9]{64}$"
         }
       },
-      "required": [
-        "type",
-        "props",
-        "blobHash"
-      ],
+      "required": ["type", "props", "blobHash"],
       "additionalProperties": false
     },
     {
@@ -271,10 +228,7 @@
           "additionalProperties": false
         }
       },
-      "required": [
-        "type",
-        "props"
-      ],
+      "required": ["type", "props"],
       "additionalProperties": false
     },
     {
@@ -288,16 +242,10 @@
           "properties": {
             "tone": {
               "type": "string",
-              "enum": [
-                "info",
-                "note",
-                "warning"
-              ]
+              "enum": ["info", "note", "warning"]
             }
           },
-          "required": [
-            "tone"
-          ],
+          "required": ["tone"],
           "additionalProperties": false
         },
         "text": {
@@ -305,11 +253,7 @@
           "inlineText": true
         }
       },
-      "required": [
-        "type",
-        "props",
-        "text"
-      ],
+      "required": ["type", "props", "text"],
       "additionalProperties": false
     }
   ]

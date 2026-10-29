@@ -17,32 +17,17 @@
     },
     "channel": {
       "type": "string",
-      "enum": [
-        "in_process",
-        "http",
-        "cli",
-        "mcp"
-      ]
+      "enum": ["in_process", "http", "cli", "mcp"]
     },
     "scope": {
       "type": "string",
-      "enum": [
-        "read",
-        "collaborate",
-        "admin"
-      ]
+      "enum": ["read", "collaborate", "admin"]
     },
     "requestId": {
       "type": "string",
       "minLength": 1
     }
   },
-  "required": [
-    "contractVersion",
-    "principal",
-    "channel",
-    "scope",
-    "requestId"
-  ],
+  "required": ["contractVersion", "principal", "channel", "scope", "requestId"],
   "additionalProperties": false
 }

@@ -9,11 +9,7 @@
     },
     "state": {
       "type": "string",
-      "enum": [
-        "current",
-        "revised",
-        "removed"
-      ]
+      "enum": ["current", "revised", "removed"]
     },
     "range": {
       "type": "object",
@@ -27,16 +23,10 @@
           "minimum": 0
         }
       },
-      "required": [
-        "start",
-        "end"
-      ],
+      "required": ["start", "end"],
       "additionalProperties": false
     }
   },
-  "required": [
-    "anchor",
-    "state"
-  ],
+  "required": ["anchor", "state"],
   "additionalProperties": false
 }

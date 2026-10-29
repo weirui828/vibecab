@@ -15,9 +15,7 @@
           "type": "string"
         }
       },
-      "required": [
-        "commentId"
-      ],
+      "required": ["commentId"],
       "additionalProperties": false
     },
     "result": {
@@ -31,17 +29,11 @@
           "const": "declined"
         }
       },
-      "required": [
-        "commentId",
-        "state"
-      ],
+      "required": ["commentId", "state"],
       "additionalProperties": false
     }
   },
-  "required": [
-    "payload",
-    "result"
-  ],
+  "required": ["payload", "result"],
   "additionalProperties": false,
   "operation": {
     "name": "vc.Decline",
@@ -49,12 +41,7 @@
     "meta": {
       "effect": "collaborate",
       "irreversible": false,
-      "channels": [
-        "in_process",
-        "http",
-        "cli",
-        "mcp"
-      ]
+      "channels": ["in_process", "http", "cli", "mcp"]
     }
   }
 }

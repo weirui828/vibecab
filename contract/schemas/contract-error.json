@@ -32,10 +32,6 @@
       "$ref": "https://vibecab.local/schemas/json.json"
     }
   },
-  "required": [
-    "code",
-    "message",
-    "retryable"
-  ],
+  "required": ["code", "message", "retryable"],
   "additionalProperties": false
 }

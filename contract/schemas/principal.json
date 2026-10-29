@@ -10,9 +10,7 @@
           "const": "human"
         }
       },
-      "required": [
-        "kind"
-      ],
+      "required": ["kind"],
       "additionalProperties": false
     },
     {
@@ -26,10 +24,7 @@
           "minLength": 1
         }
       },
-      "required": [
-        "kind",
-        "job"
-      ],
+      "required": ["kind", "job"],
       "additionalProperties": false
     }
   ]

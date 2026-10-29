@@ -9,8 +9,6 @@
       "minLength": 1
     }
   },
-  "required": [
-    "projectId"
-  ],
+  "required": ["projectId"],
   "additionalProperties": false
 }

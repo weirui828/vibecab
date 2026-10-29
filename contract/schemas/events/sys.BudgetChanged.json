@@ -8,16 +8,10 @@
       "$ref": "https://vibecab.local/schemas/budget-account.json"
     },
     "limitMicros": {
-      "type": [
-        "integer",
-        "null"
-      ],
+      "type": ["integer", "null"],
       "minimum": 0
     }
   },
-  "required": [
-    "account",
-    "limitMicros"
-  ],
+  "required": ["account", "limitMicros"],
   "additionalProperties": false
 }

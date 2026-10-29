@@ -6,11 +6,7 @@
   "properties": {
     "effect": {
       "type": "string",
-      "enum": [
-        "read",
-        "collaborate",
-        "admin"
-      ]
+      "enum": ["read", "collaborate", "admin"]
     },
     "irreversible": {
       "type": "boolean"
@@ -19,19 +15,10 @@
       "type": "array",
       "items": {
         "type": "string",
-        "enum": [
-          "in_process",
-          "http",
-          "cli",
-          "mcp"
-        ]
+        "enum": ["in_process", "http", "cli", "mcp"]
       }
     }
   },
-  "required": [
-    "effect",
-    "irreversible",
-    "channels"
-  ],
+  "required": ["effect", "irreversible", "channels"],
   "additionalProperties": false
 }

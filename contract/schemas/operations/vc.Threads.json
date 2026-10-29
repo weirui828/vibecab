@@ -31,9 +31,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "sessionId"
-      ]
+      "required": ["sessionId"]
     },
     "result": {
       "type": "array",
@@ -42,10 +40,7 @@
       }
     }
   },
-  "required": [
-    "payload",
-    "result"
-  ],
+  "required": ["payload", "result"],
   "additionalProperties": false,
   "operation": {
     "name": "vc.Threads",
@@ -53,12 +48,7 @@
     "meta": {
       "effect": "read",
       "irreversible": false,
-      "channels": [
-        "in_process",
-        "http",
-        "cli",
-        "mcp"
-      ]
+      "channels": ["in_process", "http", "cli", "mcp"]
     }
   }
 }

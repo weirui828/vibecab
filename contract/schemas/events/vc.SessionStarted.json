@@ -9,8 +9,6 @@
       "minLength": 1
     }
   },
-  "required": [
-    "sessionId"
-  ],
+  "required": ["sessionId"],
   "additionalProperties": false
 }
