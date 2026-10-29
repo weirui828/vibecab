@@ -241,6 +241,18 @@ importers:
         specifier: workspace:*
         version: link:../../engine
 
+  adapters/mcp-client:
+    dependencies:
+      "@modelcontextprotocol/client":
+        specifier: ^2.4.0
+        version: 2.4.0
+      "@vibecab/contract":
+        specifier: workspace:*
+        version: link:../../contract
+      "@vibecab/engine":
+        specifier: workspace:*
+        version: link:../../engine
+
   adapters/mcp-server:
     dependencies:
       "@modelcontextprotocol/server":

@@ -1,0 +1,11 @@
+{
+  "name": "@vibecab/mcp-client",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": "./src/index.ts",
+  "dependencies": {
+    "@modelcontextprotocol/client": "^2.4.0",
+    "@vibecab/contract": "workspace:*",
+    "@vibecab/engine": "workspace:*"
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/vc.RefreshToolServer.json",
+  "title": "RefreshToolServerOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": {
+        "serverId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "additionalProperties": false,
+      "required": ["serverId"]
+    },
+    "result": {
+      "type": "object",
+      "properties": {
+        "serverId": {
+          "type": "string"
+        },
+        "status": {
+          "const": "connecting"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["serverId", "status"]
+    }
+  },
+  "required": ["payload", "result"],
+  "additionalProperties": false,
+  "operation": {
+    "name": "vc.RefreshToolServer",
+    "kind": "command",
+    "meta": {
+      "effect": "admin",
+      "irreversible": false,
+      "channels": ["in_process", "http", "cli"]
+    }
+  }
+}

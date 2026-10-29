@@ -13,6 +13,8 @@ export interface Settings {
     defaultTurnTokenLimit?: number;
     realtimeDebounceSeconds?: number;
     toolCallLimit?: number;
+    toolTimeoutMs?: number;
+    toolResultByteLimit?: number;
   };
   sessions: {
     [k: string]: SessionSettings;

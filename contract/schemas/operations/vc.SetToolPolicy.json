@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/vc.SetToolPolicy.json",
+  "title": "SetToolPolicyOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": {
+        "serverId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "tools": {
+          "type": "object",
+          "additionalProperties": {
+            "enum": ["allowed", "needs_grant", "blocked"]
+          }
+        }
+      },
+      "additionalProperties": false,
+      "required": ["serverId", "tools"]
+    },
+    "result": {
+      "type": "object",
+      "properties": {
+        "serverId": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "required": ["serverId"]
+    }
+  },
+  "required": ["payload", "result"],
+  "additionalProperties": false,
+  "operation": {
+    "name": "vc.SetToolPolicy",
+    "kind": "command",
+    "meta": {
+      "effect": "admin",
+      "irreversible": false,
+      "channels": ["in_process", "http", "cli"]
+    }
+  }
+}

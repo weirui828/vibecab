@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/tool-server-view.json",
+  "title": "ToolServerView",
+  "type": "object",
+  "properties": {
+    "serverId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "sessionIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "projectIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "status": {
+      "enum": ["connecting", "connected", "failed", "disconnected"]
+    },
+    "tools": {
+      "type": "array",
+      "items": {
+        "$ref": "https://vibecab.local/schemas/tool-definition.json"
+      },
+      "uniqueItems": true
+    },
+    "policies": {
+      "type": "object",
+      "additionalProperties": {
+        "enum": ["allowed", "needs_grant", "blocked"]
+      }
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": ["serverId", "name", "scope", "status", "tools", "policies", "updatedAt"],
+  "additionalProperties": false
+}

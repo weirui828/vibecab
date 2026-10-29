@@ -33,6 +33,7 @@ export class LifecycleRuntime extends LifecycleJobsRuntime {
       "agent.trigger": (current) => this.runTrigger(current),
       "agent.update.trigger": (current) => this.runUpdateTrigger(current),
       "agent.update": (current) => this.runUpdate(current),
+      "agent.tool_server.refresh": (current) => this.runToolServerRefresh(current),
       digest: (current) => this.runDigest(current),
       export: (current) => this.runExport(current),
       backup: (current) => this.runBackup(current),

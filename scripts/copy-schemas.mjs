@@ -13,6 +13,7 @@ for (const name of [
   "adapters/http",
   "adapters/cli",
   "adapters/mcp-server",
+  "adapters/mcp-client",
 ]) {
   const output = resolve("dist", name);
   await mkdir(output, { recursive: true });

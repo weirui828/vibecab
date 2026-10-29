@@ -13,6 +13,9 @@
         "capabilities": {
           "$ref": "https://vibecab.local/schemas/grant.json#/properties/capabilities"
         },
+        "tools": {
+          "$ref": "https://vibecab.local/schemas/grant.json#/properties/tools"
+        },
         "limits": {
           "$ref": "https://vibecab.local/schemas/grant.json#/properties/limits"
         },

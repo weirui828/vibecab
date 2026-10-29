@@ -22,7 +22,20 @@
     "capabilities": {
       "type": "array",
       "items": {
-        "enum": ["auto_agree_own_proposals", "start_review", "create_output_set"]
+        "enum": ["auto_agree_own_proposals", "start_review", "create_output_set", "use_tool"]
+      },
+      "uniqueItems": true
+    },
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "serverId": { "type": "string", "minLength": 1 },
+          "tool": { "type": "string", "minLength": 1 }
+        },
+        "required": ["serverId", "tool"],
+        "additionalProperties": false
       },
       "uniqueItems": true
     },

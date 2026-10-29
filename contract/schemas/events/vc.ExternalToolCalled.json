@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/events/vc.ExternalToolCalled.json",
+  "title": "ExternalToolCalled",
+  "type": "object",
+  "properties": {
+    "callId": {
+      "type": "string"
+    },
+    "turnId": {
+      "type": "string"
+    },
+    "serverId": {
+      "type": "string"
+    },
+    "tool": {
+      "type": "string"
+    },
+    "argsHash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "resultHash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "requestBytes": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "resultBytes": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "durationMs": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "outcome": {
+      "enum": ["success", "error", "timeout"]
+    }
+  },
+  "required": ["callId", "turnId", "serverId", "tool", "argsHash", "requestBytes", "durationMs", "outcome"],
+  "additionalProperties": false
+}

@@ -17,7 +17,9 @@
         "defaultTurnLimitMicros": { "type": "integer", "minimum": 0 },
         "defaultTurnTokenLimit": { "type": "integer", "minimum": 1 },
         "realtimeDebounceSeconds": { "type": "integer", "minimum": 1 },
-        "toolCallLimit": { "type": "integer", "minimum": 1 }
+        "toolCallLimit": { "type": "integer", "minimum": 1 },
+        "toolTimeoutMs": { "type": "integer", "minimum": 1 },
+        "toolResultByteLimit": { "type": "integer", "minimum": 1 }
       },
       "additionalProperties": false
     },

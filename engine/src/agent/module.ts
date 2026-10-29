@@ -6,9 +6,22 @@ export function agentModule(host: EngineModuleHost) {
   const engineModule = createModule(
     "agent",
     host,
-    ["vc.AskAgent", "vc.CreateGrant", "vc.RevokeGrant"],
-    ["vc.AgentTurns", "vc.Manifest", "vc.DeliveryState", "vc.Grants"],
-    { "agent.reply": "rerun", "agent.trigger": "rerun", "agent.update.trigger": "rerun" },
+    [
+      "vc.AskAgent",
+      "vc.CreateGrant",
+      "vc.RevokeGrant",
+      "vc.ConnectToolServer",
+      "vc.RefreshToolServer",
+      "vc.DisconnectToolServer",
+      "vc.SetToolPolicy",
+    ],
+    ["vc.AgentTurns", "vc.Manifest", "vc.DeliveryState", "vc.Grants", "vc.ToolServers", "vc.ToolCalls"],
+    {
+      "agent.reply": "rerun",
+      "agent.trigger": "rerun",
+      "agent.update.trigger": "rerun",
+      "agent.tool_server.refresh": "rerun",
+    },
   );
   engineModule.recover = (context) => {
     for (const job of context.repository.jobs()) {

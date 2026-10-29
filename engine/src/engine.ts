@@ -19,6 +19,7 @@ import type { EngineModuleHost } from "./kernel/module-registry.js";
 import type { CallAuth, CallMetadata, TrustedHostCredential } from "./auth.js";
 
 export type { CallAuth, CallMetadata } from "./auth.js";
+export type { ToolTransport } from "./agent/tool-transport.js";
 
 export interface Engine {
   readonly inProcessAuth: TrustedHostCredential;

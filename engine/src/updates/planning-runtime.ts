@@ -10,7 +10,7 @@ import type {
   Update,
 } from "../../../contract/src/index.js";
 import { estimateInputTokens, estimateReservationMicros } from "../gateway/ledger.js";
-import type { ModelRequest as GatewayRequest } from "../gateway/types.js";
+import type { ModelEvent as GatewayEvent, ModelRequest as GatewayRequest } from "../gateway/types.js";
 import { UpdatePreparationRuntime } from "./preparation-runtime.js";
 import { storeRequestIndex } from "./helpers.js";
 
@@ -109,9 +109,26 @@ export abstract class UpdatePlanningRuntime extends UpdatePreparationRuntime {
       promptHash = createHash("sha256").update(prompt).digest("hex");
     const sessionSettings = settings.sessions[this.updateSessionId(update)],
       tokenLimit = sessionSettings?.tokenLimit ?? settings.budgets.defaultTurnTokenLimit ?? 8192;
+    const sessionId = this.updateSessionId(update),
+      externalTools = this.externalToolRuntime(),
+      offeredExternal = externalTools.offered(sessionId, "update"),
+      externalByName = new Map(offeredExternal.map((tool) => [tool.name, tool])),
+      previousToolCalls = this.available()
+        .feedbackList("tool-call")
+        .map((raw) => this.contract.read<import("../../../contract/src/index.js").ToolCall>("tool-call", raw))
+        .filter((call) => call.turnId === update.updateId).length;
     const request: GatewayRequest = {
       modelRef: alias,
       messages: [{ role: "system", content: prompt }, ...messages],
+      ...(offeredExternal.length
+        ? {
+            tools: offeredExternal.map((tool) => ({
+              name: tool.name,
+              description: tool.description,
+              parameters: tool.parameters,
+            })),
+          }
+        : {}),
       output: {
         kind: "json",
         schema: this.contract.schema(schemaName),
@@ -163,13 +180,90 @@ export abstract class UpdatePlanningRuntime extends UpdatePreparationRuntime {
       estimateReservationMicros(request, model),
     );
     let output: Json | undefined;
+    const events: GatewayEvent[] = [];
     for await (const event of this.gateway.call(request, {
       reservationId,
       idempotencyKey: `${update.updateId}:${promptName}:${manifest.requestIndex}`,
       signal: new AbortController().signal,
     })) {
+      events.push(event);
       if (event.type === "output") output = this.contract.read<Json>(schemaName, event.json);
       if (event.type === "error") fail(event.code === "rate_limited" ? "rate_limited" : "unavailable", event.message);
+    }
+    const calls = events.filter(
+      (event): event is Extract<GatewayEvent, { type: "tool_call" }> => event.type === "tool_call",
+    );
+    if (calls.length) {
+      const limit = this.settings().sessions[sessionId]?.toolCallLimit ?? settings.budgets.toolCallLimit ?? 12,
+        toolResults: Array<{ id: string; name: string; content: string }> = [],
+        manifestItems: ContextManifest["items"] = [];
+      for (const [index, event] of calls.entries()) {
+        const offered = externalByName.get(event.call.name);
+        if (!offered || previousToolCalls + index >= limit) {
+          toolResults.push({
+            id: event.call.id,
+            name: event.call.name,
+            content: "External tool is not allowed in this Update.",
+          });
+          continue;
+        }
+        const outcome = await externalTools.call(
+          update.updateId,
+          sessionId,
+          "update",
+          offered,
+          event.call.arguments,
+          settings.budgets.toolTimeoutMs ?? 20_000,
+          settings.budgets.toolResultByteLimit ?? 32_768,
+        );
+        toolResults.push({
+          id: event.call.id,
+          name: event.call.name,
+          content: `<untrusted-mcp-result server="${offered.serverId}" tool="${offered.tool}">\n${outcome.content}\n</untrusted-mcp-result>`,
+        });
+        manifestItems.push(outcome.manifest);
+      }
+      const followRequest: GatewayRequest = {
+        modelRef: alias,
+        messages: [
+          ...request.messages,
+          { role: "assistant", content: "", toolCalls: calls.map((event) => event.call) },
+          ...toolResults.map((tool) => ({ role: "tool" as const, toolCallId: tool.id, content: tool.content })),
+        ],
+        output: request.output,
+        maxOutputTokens: request.maxOutputTokens,
+      };
+      if (estimateInputTokens(followRequest) + followRequest.maxOutputTokens > tokenLimit)
+        fail("budget_exceeded", "Update tool context exceeds its configured token limit");
+      const followManifestId = this.deps.ids.next("manifest_"),
+        followManifest = this.contract.read<ContextManifest>("context-manifest", {
+          manifestId: followManifestId,
+          turnId: update.updateId,
+          requestIndex: manifest.requestIndex + 1,
+          items: [...manifest.items, ...manifestItems],
+          dropped: [],
+          promptHash,
+          createdAt: this.deps.clock.now(),
+        });
+      await this.queue.run(() =>
+        this.available().transaction(() =>
+          this.available().saveFeedback("manifest", followManifestId, this.contract.read<Json>("json", followManifest)),
+        ),
+      );
+      const followReservationId = this.deps.ids.next("reservation_");
+      this.budgets?.reserve(
+        followReservationId,
+        [{ kind: "turn", key: update.updateId }, { kind: "session", key: sessionId }, { kind: "daily" }],
+        estimateReservationMicros(followRequest, model),
+      );
+      for await (const event of this.gateway.call(followRequest, {
+        reservationId: followReservationId,
+        idempotencyKey: `${update.updateId}:${promptName}:${followManifest.requestIndex}`,
+        signal: new AbortController().signal,
+      })) {
+        if (event.type === "output") output = this.contract.read<Json>(schemaName, event.json);
+        if (event.type === "error") fail(event.code === "rate_limited" ? "rate_limited" : "unavailable", event.message);
+      }
     }
     return output;
   }

@@ -13,6 +13,7 @@ import type {
   VcImportContentOperation,
   VcRestoreVersionOperation,
   SysCreateAccessTokenOperation,
+  ToolServer,
 } from "../../../contract/src/index.js";
 import { importContent } from "../content/import.js";
 import { createGrant, revokeGrant } from "../agent/grants.js";
@@ -147,6 +148,120 @@ export abstract class CommandOperations extends StorageAccessRuntime {
           payload: this.contract.read<Json>("events/sys.AccessTokenRevoked", { tokenId: p.tokenId }),
         });
         return { tokenId: p.tokenId, revoked: true };
+      }
+      case "vc.ConnectToolServer": {
+        const p = this.contract.read<import("../../../contract/src/index.js").ConnectToolServerOperation["payload"]>(
+            "operations/vc.ConnectToolServer",
+            cmd.payload,
+            "#/properties/payload",
+          ),
+          serverId = this.deps.ids.next("tool_server_"),
+          server = this.contract.read<ToolServer>("tool-server", {
+            ...p,
+            serverId,
+            status: "connecting",
+            tools: [],
+            policies: {},
+            updatedAt: this.deps.clock.now(),
+          });
+        store.saveFeedback("tool-server", serverId, this.contract.read<Json>("json", server));
+        store.enqueue(
+          "agent.tool_server.refresh",
+          serverId,
+          this.contract.read<Json>("json", { serverId }),
+          this.deps.clock.now(),
+        );
+        store.appendEvent({
+          ts: this.deps.clock.now(),
+          type: "vc.ToolServerChanged",
+          entity: { kind: "tool_server", id: serverId },
+          payload: this.contract.read<Json>("events/vc.ToolServerChanged", {
+            serverId,
+            name: p.name,
+            status: "connecting",
+          }),
+        });
+        return { serverId, status: "connecting" };
+      }
+      case "vc.RefreshToolServer": {
+        const p = this.contract.read<{ serverId: string }>(
+            "operations/vc.RefreshToolServer",
+            cmd.payload,
+            "#/properties/payload",
+          ),
+          server = this.contract.read<ToolServer>("tool-server", store.feedback("tool-server", p.serverId));
+        if (server.status === "disconnected") fail("conflict", "Disconnected tool servers cannot be refreshed");
+        store.saveFeedback(
+          "tool-server",
+          p.serverId,
+          this.contract.read<Json>("json", { ...server, status: "connecting", updatedAt: this.deps.clock.now() }),
+        );
+        store.enqueue(
+          "agent.tool_server.refresh",
+          p.serverId,
+          this.contract.read<Json>("json", p),
+          this.deps.clock.now(),
+        );
+        store.appendEvent({
+          ts: this.deps.clock.now(),
+          type: "vc.ToolServerChanged",
+          entity: { kind: "tool_server", id: p.serverId },
+          payload: this.contract.read<Json>("events/vc.ToolServerChanged", {
+            serverId: p.serverId,
+            name: server.name,
+            status: "connecting",
+          }),
+        });
+        return { serverId: p.serverId, status: "connecting" };
+      }
+      case "vc.DisconnectToolServer": {
+        const p = this.contract.read<{ serverId: string }>(
+            "operations/vc.DisconnectToolServer",
+            cmd.payload,
+            "#/properties/payload",
+          ),
+          server = this.contract.read<ToolServer>("tool-server", store.feedback("tool-server", p.serverId));
+        store.saveFeedback(
+          "tool-server",
+          p.serverId,
+          this.contract.read<Json>("json", { ...server, status: "disconnected", updatedAt: this.deps.clock.now() }),
+        );
+        store.appendEvent({
+          ts: this.deps.clock.now(),
+          type: "vc.ToolServerChanged",
+          entity: { kind: "tool_server", id: p.serverId },
+          payload: this.contract.read<Json>("events/vc.ToolServerChanged", {
+            serverId: p.serverId,
+            name: server.name,
+            status: "disconnected",
+          }),
+        });
+        return { serverId: p.serverId, status: "disconnected" };
+      }
+      case "vc.SetToolPolicy": {
+        const p = this.contract.read<{
+            serverId: string;
+            tools: Record<string, "allowed" | "needs_grant" | "blocked">;
+          }>("operations/vc.SetToolPolicy", cmd.payload, "#/properties/payload"),
+          server = this.contract.read<ToolServer>("tool-server", store.feedback("tool-server", p.serverId));
+        if (Object.keys(p.tools).some((name) => !server.tools.some((tool) => tool.name === name)))
+          fail("invalid", "Tool policy names an unknown server tool");
+        const updated = this.contract.read<ToolServer>("tool-server", {
+          ...server,
+          policies: { ...server.policies, ...p.tools },
+          updatedAt: this.deps.clock.now(),
+        });
+        store.saveFeedback("tool-server", p.serverId, this.contract.read<Json>("json", updated));
+        store.appendEvent({
+          ts: this.deps.clock.now(),
+          type: "vc.ToolPolicyChanged",
+          entity: { kind: "tool_server", id: p.serverId },
+          payload: this.contract.read<Json>("events/vc.ToolPolicyChanged", {
+            serverId: p.serverId,
+            toolNames: Object.keys(p.tools).sort(),
+          }),
+        });
+        return { serverId: p.serverId };
       }
       case "vc.CreateArtifact": {
         const p = this.contract.read<VcCreateArtifactOperation["payload"]>(

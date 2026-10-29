@@ -15,6 +15,7 @@ export function createGrant(
   const payload = contract.read<{
     scope: { sessionIds?: string[]; artifactIds?: string[] };
     capabilities: string[];
+    tools?: Array<{ serverId: string; tool: string }>;
     limits: { spendMicros?: number; maxReviews?: number };
     expiresAt?: string;
   }>("operations/vc.CreateGrant", raw, "#/properties/payload");

@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/tool-server.json",
+  "title": "ToolServer",
+  "type": "object",
+  "properties": {
+    "serverId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "transport": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "stdio"
+            },
+            "command": {
+              "type": "string",
+              "minLength": 1
+            },
+            "args": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "env": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false,
+          "required": ["kind", "command", "args"]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "const": "http"
+            },
+            "url": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          "additionalProperties": false,
+          "required": ["kind", "url"]
+        }
+      ]
+    },
+    "credentialRef": {
+      "type": "string",
+      "minLength": 1
+    },
+    "scope": {
+      "type": "object",
+      "properties": {
+        "sessionIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "projectIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "status": {
+      "enum": ["connecting", "connected", "failed", "disconnected"]
+    },
+    "tools": {
+      "type": "array",
+      "items": {
+        "$ref": "https://vibecab.local/schemas/tool-definition.json"
+      },
+      "uniqueItems": true
+    },
+    "policies": {
+      "type": "object",
+      "additionalProperties": {
+        "enum": ["allowed", "needs_grant", "blocked"]
+      }
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "additionalProperties": false,
+  "required": ["serverId", "name", "transport", "scope", "status", "tools", "policies", "updatedAt"]
+}

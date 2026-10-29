@@ -1,6 +1,7 @@
 import { monotonicFactory } from "ulid";
 import type { KeyStore, ModelProvider } from "./gateway/types.js";
 import { NativeKeyStore } from "./gateway/keys.js";
+import type { ToolTransport } from "./agent/tool-transport.js";
 export interface Clock {
   now(): string;
 }
@@ -13,6 +14,7 @@ export interface Dependencies {
   seed: number;
   trustedHostScope: "read" | "collaborate" | "admin";
   keyStore: KeyStore;
+  toolTransport?: ToolTransport;
   modelProviders: Record<string, ModelProvider>;
   updateCheckpoint?: (updateId: string, stage: "checking") => Promise<void>;
 }

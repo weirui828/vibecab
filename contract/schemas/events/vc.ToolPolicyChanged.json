@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/events/vc.ToolPolicyChanged.json",
+  "title": "ToolPolicyChanged",
+  "type": "object",
+  "properties": {
+    "serverId": {
+      "type": "string"
+    },
+    "toolNames": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": ["serverId", "toolNames"],
+  "additionalProperties": false
+}

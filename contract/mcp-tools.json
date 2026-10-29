@@ -215,6 +215,14 @@
     "toolName": "list_threads",
     "description": "List discussion threads in a session."
   },
+  "vc.ToolCalls": {
+    "toolName": "tool_calls",
+    "description": "Read external tool call audit records."
+  },
+  "vc.ToolServers": {
+    "toolName": "tool_servers",
+    "description": "List configured external tool servers and their discovered tools."
+  },
   "vc.Trash": {
     "toolName": "trash",
     "description": "Move an item to trash."

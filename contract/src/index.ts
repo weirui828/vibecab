@@ -156,6 +156,7 @@ export class Contract {
               properties: {
                 effect: { enum: ["read", "collaborate", "admin"] },
                 irreversible: { type: "boolean" },
+                destructive: { type: "boolean" },
                 channels: {
                   type: "array",
                   items: { enum: ["in_process", "http", "cli", "mcp"] },

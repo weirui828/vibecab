@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/events/vc.ToolServerChanged.json",
+  "title": "ToolServerChanged",
+  "type": "object",
+  "properties": {
+    "serverId": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "status": {
+      "enum": ["connecting", "connected", "failed", "disconnected"]
+    }
+  },
+  "required": ["serverId", "name", "status"],
+  "additionalProperties": false
+}

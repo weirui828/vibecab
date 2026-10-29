@@ -18,4 +18,9 @@ export interface ManifestItem {
   hash?: string;
   tokens: number;
   reason: string;
+  serverId?: string;
+  tool?: string;
+  argsHash?: string;
+  resultHash?: string;
+  bytes?: number;
 }

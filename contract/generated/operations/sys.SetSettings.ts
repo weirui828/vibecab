@@ -37,6 +37,8 @@ export interface Budgets {
   defaultTurnTokenLimit?: number;
   realtimeDebounceSeconds?: number;
   toolCallLimit?: number;
+  toolTimeoutMs?: number;
+  toolResultByteLimit?: number;
 }
 export interface Sessions {
   [k: string]: SessionSettings;

@@ -10,7 +10,11 @@ export interface Grant {
     sessionIds?: string[];
     artifactIds?: string[];
   };
-  capabilities: ("auto_agree_own_proposals" | "start_review" | "create_output_set")[];
+  capabilities: ("auto_agree_own_proposals" | "start_review" | "create_output_set" | "use_tool")[];
+  tools?: {
+    serverId: string;
+    tool: string;
+  }[];
   limits: {
     spendMicros?: number;
     maxReviews?: number;

@@ -16,12 +16,6 @@ export const unsupportedGroups: readonly {
     queries: "Grants",
     effect: "admin",
   },
-  {
-    prefix: "sys",
-    commands: "ConnectToolServer DisconnectToolServer SetToolPolicy",
-    queries: "ToolServers ToolCalls",
-    effect: "admin",
-  },
   { prefix: "vc", commands: "RequestReview", queries: "" },
   {
     prefix: "tmr",

@@ -131,7 +131,9 @@ export abstract class QueryOperations extends CommandOperations {
       case "vc.AgentTurns":
       case "vc.Manifest":
       case "vc.DeliveryState":
-      case "vc.Grants": {
+      case "vc.Grants":
+      case "vc.ToolServers":
+      case "vc.ToolCalls": {
         this.contract.read("operations/" + q.name, q.args, "#/properties/payload");
         if (q.name === "vc.AgentTurns") {
           const p = this.contract.read<{ sessionId?: string }>(
@@ -152,6 +154,41 @@ export abstract class QueryOperations extends CommandOperations {
             .filter((x) => x.turnId === p.turnId);
         }
         if (q.name === "vc.Grants") return store.feedbackList("grant");
+        if (q.name === "vc.ToolServers") {
+          const p = this.contract.read<{ serverId?: string }>(
+            "operations/vc.ToolServers",
+            q.args,
+            "#/properties/payload",
+          );
+          return store
+            .feedbackList("tool-server")
+            .map((x) => this.contract.read<import("../../../contract/src/index.js").ToolServer>("tool-server", x))
+            .filter((server) => p.serverId === undefined || server.serverId === p.serverId)
+            .map(({ serverId, name, scope, status, tools, policies, updatedAt }) => ({
+              serverId,
+              name,
+              scope,
+              status,
+              tools,
+              policies,
+              updatedAt,
+            }));
+        }
+        if (q.name === "vc.ToolCalls") {
+          const p = this.contract.read<{ serverId?: string; turnId?: string }>(
+            "operations/vc.ToolCalls",
+            q.args,
+            "#/properties/payload",
+          );
+          return store
+            .feedbackList("tool-call")
+            .map((x) => this.contract.read<import("../../../contract/src/index.js").ToolCall>("tool-call", x))
+            .filter(
+              (call) =>
+                (p.serverId === undefined || call.serverId === p.serverId) &&
+                (p.turnId === undefined || call.turnId === p.turnId),
+            );
+        }
         const p = this.contract.read<{ commentIds: string[] }>(
           "operations/vc.DeliveryState",
           q.args,

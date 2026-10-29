@@ -33,6 +33,11 @@ export interface ManifestItem {
   hash?: string;
   tokens: number;
   reason: string;
+  serverId?: string;
+  tool?: string;
+  argsHash?: string;
+  resultHash?: string;
+  bytes?: number;
 }
 export interface ManifestDropped {
   kind: string;
