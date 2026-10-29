@@ -8,6 +8,7 @@ export type { Agreement } from './agreement.js';
 export type { AnchorResolution } from './anchor-resolution.js';
 export type { Anchor } from './anchor.js';
 export type { AttentionItem } from './attention-item.js';
+export type { BackupManifest } from './backup-manifest.js';
 export type { BackupRecord } from './backup-record.js';
 export type { BudgetAccount } from './budget-account.js';
 export type { BudgetReservation } from './budget-reservation.js';

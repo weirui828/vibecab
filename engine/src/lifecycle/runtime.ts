@@ -1,15 +1,16 @@
 import { createHash } from "node:crypto";
-import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { cp, lstat, mkdir, mkdtemp, readFile, readdir, realpath, rename, rm, rmdir, writeFile } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { join, relative } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 
 import { canonical } from "../content/hash.js";
 import { estimateInputTokens, estimateReservationMicros } from "../gateway/ledger.js";
 import type { ModelRequest } from "../gateway/types.js";
-import { CONTRACT_VERSION, fail } from "../../../contract/src/index.js";
+import { BoundaryError, CONTRACT_VERSION, fail } from "../../../contract/src/index.js";
 import type {
   Agreement,
+  BackupManifest,
   CallContext,
   ContextManifest,
   DigestContent,
@@ -38,6 +39,94 @@ function field(value: unknown, key: string): unknown {
 }
 
 export class LifecycleRuntime extends UpdateRuntime {
+  async restoreBackup(archivePath: string, destinationDir: string): Promise<void> {
+    if (this.store || this.lock || this.starting || this.accepting)
+      fail("unavailable", "Stop the engine before restoring a backup");
+    if (!archivePath || !destinationDir) fail("invalid", "Archive and destination paths are required");
+
+    const archiveStat = await lstat(archivePath).catch(() => undefined);
+    if (!archiveStat?.isFile() || archiveStat.isSymbolicLink())
+      fail("invalid", "Backup archive must be a regular file");
+    const absoluteDestination = resolve(destinationDir),
+      destinationName = basename(absoluteDestination);
+    if (!destinationName) fail("invalid", "Destination must name a workspace directory");
+    const parent = await realpath(dirname(absoluteDestination)),
+      destination = join(parent, destinationName);
+    let destinationExists = false;
+    try {
+      const info = await lstat(destination);
+      if (!info.isDirectory() || info.isSymbolicLink()) fail("invalid", "Restore destination must be a directory");
+      if ((await readdir(destination)).length > 0) fail("conflict", "Restore destination must be empty");
+      destinationExists = true;
+    } catch (error) {
+      if (field(error, "code") !== "ENOENT") throw error;
+    }
+
+    const staging = await mkdtemp(join(parent, `.${destinationName}.restore-`));
+    try {
+      const listing = await runFile("tar", ["-tzf", archivePath]),
+        members = listing.stdout.split("\n").filter(Boolean);
+      if (members.length === 0) fail("invalid", "Backup archive is empty");
+      for (const member of members) {
+        const normalized = member.replace(/^(\.\/)+/, "").replace(/\/+$/, "");
+        const allowed =
+          normalized === "" ||
+          normalized === "blobs" ||
+          normalized === "workspace.sqlite" ||
+          normalized === "manifest.json" ||
+          /^blobs\/[a-f0-9]{2}(?:\/[a-f0-9]{2}(?:\/[a-f0-9]{60}(?:\.meta\.json)?)?)?$/.test(normalized);
+        if (!allowed) fail("invalid", "Backup archive contains an unexpected path");
+      }
+      const details = await runFile("tar", ["-tvzf", archivePath]);
+      if (
+        details.stdout
+          .split("\n")
+          .filter(Boolean)
+          .some((line) => !["d", "-"].includes(line[0] ?? ""))
+      )
+        fail("invalid", "Backup archive contains links or special files");
+      await runFile("tar", ["-xzf", archivePath, "-C", staging]);
+
+      const manifestBytes = await readFile(join(staging, "manifest.json")),
+        decoded: unknown = JSON.parse(manifestBytes.toString("utf8")),
+        manifest = this.contract.read<BackupManifest>("backup-manifest", decoded),
+        actualFiles = (await this.listFiles(staging))
+          .map((path) => relative(staging, path))
+          .filter((path) => path !== "manifest.json")
+          .sort(),
+        expectedFiles = Object.keys(manifest.files).sort();
+      if (
+        !actualFiles.includes("workspace.sqlite") ||
+        !actualFiles.every((path, index) => path === expectedFiles[index]) ||
+        actualFiles.length !== expectedFiles.length
+      )
+        fail("invalid", "Backup manifest does not match the archive contents");
+      for (const path of actualFiles) {
+        const hash = createHash("sha256")
+          .update(await readFile(join(staging, path)))
+          .digest("hex");
+        if (manifest.files[path] !== hash) fail("invalid", `Backup hash mismatch for ${path}`);
+      }
+      await lstat(join(staging, "blobs"));
+
+      if (destinationExists) await rmdir(destination);
+      else {
+        try {
+          await lstat(destination);
+          fail("conflict", "Restore destination changed during validation");
+        } catch (error) {
+          if (field(error, "code") !== "ENOENT") throw error;
+        }
+      }
+      await rename(staging, destination);
+    } catch (error) {
+      if (error instanceof BoundaryError) throw error;
+      fail("invalid", "Backup archive could not be verified or extracted");
+    } finally {
+      await rm(staging, { recursive: true, force: true });
+    }
+  }
+
   protected dispatchLifecycleCommand(name: string, raw: Json, ctx: CallContext): unknown {
     const store = this.available();
     switch (name) {

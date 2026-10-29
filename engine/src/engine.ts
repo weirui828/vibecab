@@ -15,6 +15,7 @@ export interface Engine {
   start(workspaceDir: string): Promise<void>;
   drain(graceMs: number): Promise<void>;
   stop(): Promise<void>;
+  restoreBackup(archivePath: string, destinationDir: string): Promise<void>;
   command(ctx: CallContext, cmd: CommandEnvelope): Promise<CommandResult>;
   query(ctx: CallContext, q: QueryEnvelope): Promise<Json>;
   subscribe(ctx: CallContext, sub: Subscription): AsyncIterable<EventEnvelope>;

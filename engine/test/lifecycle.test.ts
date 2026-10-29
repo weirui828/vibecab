@@ -1,7 +1,9 @@
 import { expect, it } from "vitest";
 import Database from "better-sqlite3";
 import { join } from "node:path";
-import { readFile } from "node:fs/promises";
+import { appendFile, mkdtemp, readFile, readdir, rm } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { Contract } from "../../contract/src/index.js";
 import type { Element, OutputSet, ProviderModel, SessionDigest, Json } from "../../contract/src/index.js";
 import { ctx, fixture } from "./helpers.js";
@@ -20,6 +22,7 @@ const model: ProviderModel = {
   },
   pricing: { inputMicrosPerMillion: 0, outputMicrosPerMillion: 0 },
 };
+const runFile = promisify(execFile);
 
 async function importArtifact(engine: import("../src/engine.js").Engine, content: string) {
   const result = await engine.command(ctx, {
@@ -460,5 +463,61 @@ it("trashes recoverably, previews purge contents, and removes the selected conte
     }
   } finally {
     await f.close();
+  }
+});
+
+it("restores a verified backup through the stopped lifecycle and rejects tampered archives", async () => {
+  const f = await fixture();
+  try {
+    const sourceArtifact = await importArtifact(f.engine, "restore continuity text");
+    const sourceResult = await f.engine.query(ctx, {
+      name: "vc.Artifact",
+      args: { artifactId: sourceArtifact.artifactId },
+    });
+    const result = await f.engine.command(ctx, {
+      commandId: "restore-backup-create",
+      type: "sys.Backup",
+      payload: {},
+    });
+    expect(result.ok).toBe(true);
+    const backupId = new Contract().read<{ backupId: string }>(
+      "operations/sys.Backup",
+      result.ok ? result.result : {},
+      "#/properties/result",
+    ).backupId;
+    let archivePath = "";
+    for (let i = 0; i < 100 && !archivePath; i++) {
+      const backups = new Contract().read<import("../../contract/src/index.js").BackupRecord[]>(
+        "operations/sys.Backups",
+        await f.engine.query(ctx, { name: "sys.Backups", args: {} }),
+        "#/properties/result",
+      );
+      archivePath = backups.find((backup) => backup.backupId === backupId)?.archivePath ?? "";
+      if (!archivePath) await new Promise<void>((resolve) => setTimeout(resolve, 10));
+    }
+    expect(archivePath).not.toBe("");
+    const corruptedArchive = join(f.dir, "tampered.tar.gz"),
+      tamperRoot = await mkdtemp(join(f.dir, "tamper-"));
+    try {
+      await runFile("tar", ["-xzf", archivePath, "-C", tamperRoot]);
+      await appendFile(join(tamperRoot, "workspace.sqlite"), "tampered");
+      await runFile("tar", ["-czf", corruptedArchive, "-C", tamperRoot, "."]);
+    } finally {
+      await rm(tamperRoot, { recursive: true, force: true });
+    }
+    const destination = join(f.dir, "restored-workspace");
+    await f.engine.stop();
+    await expect(f.engine.restoreBackup(corruptedArchive, destination)).rejects.toThrow();
+    expect(await readdir(f.dir)).not.toContain("restored-workspace");
+    await f.engine.restoreBackup(archivePath, destination);
+    await f.engine.start(destination);
+    const restored = await f.engine.query(ctx, {
+      name: "vc.Artifact",
+      args: { artifactId: sourceArtifact.artifactId },
+    });
+    expect(restored).toEqual(sourceResult);
+  } finally {
+    await f.close();
+    await rm(join(f.dir, "restored-workspace"), { recursive: true, force: true });
   }
 });
