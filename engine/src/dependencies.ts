@@ -1,7 +1,6 @@
 import { monotonicFactory } from "ulid";
-import type { KeyStore } from "../gateway/types.js";
-import { NativeKeyStore } from "../gateway/keys.js";
-import type { ModelProvider } from "../gateway/types.js";
+import type { KeyStore, ModelProvider } from "./gateway/types.js";
+import { NativeKeyStore } from "./gateway/keys.js";
 export interface Clock {
   now(): string;
 }

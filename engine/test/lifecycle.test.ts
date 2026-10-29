@@ -461,6 +461,26 @@ it("trashes recoverably, previews purge contents, and removes the selected conte
     } finally {
       db.close();
     }
+    await f.engine.stop();
+    const checkpoint = new Database(join(f.dir, "workspace.sqlite"));
+    try {
+      checkpoint.pragma("wal_checkpoint(TRUNCATE)");
+    } finally {
+      checkpoint.close();
+    }
+    const files = [join(f.dir, "workspace.sqlite"), join(f.dir, "workspace.sqlite-wal")],
+      visit = async (directory: string): Promise<void> => {
+        for (const entry of await readdir(directory, { withFileTypes: true }).catch(() => [])) {
+          const path = join(directory, entry.name);
+          if (entry.isDirectory()) await visit(path);
+          else if (entry.isFile()) files.push(path);
+        }
+      };
+    await visit(join(f.dir, "blobs"));
+    for (const path of files) {
+      const bytes = await readFile(path).catch(() => Buffer.alloc(0));
+      expect(bytes.includes(Buffer.from(secret)), `${path} retained purged text`).toBe(false);
+    }
   } finally {
     await f.close();
   }

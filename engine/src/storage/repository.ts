@@ -44,4 +44,5 @@ export interface Repository {
   saveCallLog(log: CallLog): void;
   search(sessionId: string, query: string): SearchHit[];
   close(): void;
+  compact(): void;
 }

@@ -14,6 +14,32 @@ export default tseslint.config(
     },
   },
   {
+    files: ["engine/src/**/*.ts"],
+    rules: {
+      "max-lines": ["error", { max: 500, skipComments: false, skipBlankLines: false }],
+    },
+  },
+  {
+    files: ["engine/src/kernel/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            "../content/**",
+            "../feedback/**",
+            "../agent/**",
+            "../updates/**",
+            "../gateway/**",
+            "../lifecycle/**",
+            "../tmr/**",
+            "../integration/**",
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ["engine/src/{content,feedback,updates,agent,tmr,integration}/**/*.ts"],
     rules: {
       "no-restricted-imports": ["error", { paths: ["better-sqlite3"], patterns: ["adapters/*", "**/adapters/*"] }],

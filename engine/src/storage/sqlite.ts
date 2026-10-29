@@ -62,6 +62,12 @@ export class SqliteStore implements Repository {
   async backup(path: string): Promise<void> {
     await this.db.backup(path);
   }
+  compact(): void {
+    if (this.db.inTransaction) throw Error("Cannot compact storage during a transaction");
+    this.db.pragma("wal_checkpoint(TRUNCATE)");
+    this.db.exec("VACUUM");
+    this.db.pragma("wal_checkpoint(TRUNCATE)");
+  }
   private writing() {
     if (!this.db.inTransaction) throw Error("Write outside command transaction");
   }

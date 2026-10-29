@@ -1,5 +1,5 @@
 import { fail, type Contract } from "../../../contract/src/index.js";
-import type { Clock } from "../kernel/dependencies.js";
+import type { Clock } from "../dependencies.js";
 import type { BudgetLedger } from "./ledger.js";
 import { estimateInputTokens, reportedCostMicros } from "./ledger.js";
 import type {

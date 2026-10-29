@@ -1,8 +1,8 @@
 import { Contract, fail } from "../../../contract/src/index.js";
 import type { CallContext, Json } from "../../../contract/src/index.js";
-import type { IdGenerator } from "../kernel/dependencies.js";
+import type { IdGenerator } from "../dependencies.js";
 import type { Repository } from "../storage/repository.js";
-import type { Clock } from "../kernel/dependencies.js";
+import type { Clock } from "../dependencies.js";
 
 export function createGrant(
   store: Repository,

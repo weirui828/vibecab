@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createEngine } from "../src/engine.js";
 import type { CallContext, ElementDraft } from "../../contract/src/index.js";
-import type { Dependencies } from "../src/kernel/dependencies.js";
+import type { Dependencies } from "../src/dependencies.js";
 export const ctx: CallContext = {
   contractVersion: "1.0",
   principal: { kind: "human" },

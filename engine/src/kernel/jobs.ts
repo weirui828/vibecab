@@ -1,6 +1,6 @@
 import type { Job } from "../../../contract/src/index.js";
 import type { Repository } from "../storage/repository.js";
-import type { Clock } from "./dependencies.js";
+import type { Clock } from "../dependencies.js";
 type Mutate = <T>(action: () => T) => Promise<T>;
 const idempotent = Object.freeze([
   "test.noop",
@@ -23,12 +23,16 @@ export class JobRunner {
     private readonly options: {
       leaseMs: number;
       handlers: Record<string, (job: Job) => Promise<void>>;
+      lostLeasePolicies?: Readonly<Record<string, "rerun" | "uncertain">>;
       onUncertain?: (job: Job) => void;
       onInterrupted?: (job: Job) => void;
     },
   ) {}
   private recoverState(job: Job): Job["state"] {
     if (job.kind === "model.call") return "uncertain";
+    const policy = this.options.lostLeasePolicies?.[job.kind];
+    if (policy === "uncertain") return "uncertain";
+    if (policy === "rerun") return "pending";
     return idempotent.includes(job.kind) ? "pending" : "interrupted";
   }
   async recover() {
@@ -36,9 +40,9 @@ export class JobRunner {
       for (const job of this.store.jobs()) {
         if (job.state === "leased" || job.state === "interrupted") {
           const state = this.recoverState(job);
+          this.store.jobState(job.id, state);
           if (state === "uncertain") this.options.onUncertain?.(job);
           if (state === "interrupted") this.options.onInterrupted?.(job);
-          this.store.jobState(job.id, state);
         }
       }
     });
@@ -118,12 +122,11 @@ export class JobRunner {
     await this.mutate(() => {
       for (const job of this.store.jobs())
         if (job.state === "leased") {
+          this.store.jobState(job.id, job.kind === "model.call" ? "uncertain" : "interrupted");
           if (job.kind === "model.call") {
             this.options.onUncertain?.(job);
-            this.store.jobState(job.id, "uncertain");
           } else {
             this.options.onInterrupted?.(job);
-            this.store.jobState(job.id, "interrupted");
           }
         }
     });

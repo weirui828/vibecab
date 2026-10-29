@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import { ids } from "./helpers.js";
-import { random } from "../src/kernel/dependencies.js";
+import { random } from "../src/dependencies.js";
 it("generates deterministic unique test IDs using the ULID alphabet", () => {
   const a = ids(),
     b = ids(),

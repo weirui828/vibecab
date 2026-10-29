@@ -1,0 +1,245 @@
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
+import { fail } from "../../../contract/src/index.js";
+import type {
+  Json,
+  ContextManifest,
+  FeedbackComment,
+  FeedbackConflict,
+  Agreement,
+  Update,
+} from "../../../contract/src/index.js";
+import { estimateInputTokens, estimateReservationMicros } from "../gateway/ledger.js";
+import type { ModelRequest as GatewayRequest } from "../gateway/types.js";
+import { UpdatePreparationRuntime } from "./preparation-runtime.js";
+import { storeRequestIndex } from "./helpers.js";
+
+export abstract class UpdatePlanningRuntime extends UpdatePreparationRuntime {
+  protected async judgeUpdateConflicts(
+    update: Update,
+    agreements: Agreement[],
+  ): Promise<{ agreements: Agreement[]; blocked: Update["itemResults"] }> {
+    const store = this.available(),
+      conflicts = store
+        .feedbackList("conflict")
+        .map((x) => this.contract.read<FeedbackConflict>("feedback-conflict", x))
+        .filter(
+          (x) =>
+            x.state === "open" &&
+            x.artifactId === update.artifactId &&
+            x.itemIds.some((id) => update.itemIds.includes(id)),
+        );
+    const blocked: Update["itemResults"] = [],
+      eligible = new Set(agreements.map((a) => a.agreementId)),
+      alias = this.settings().models.judge ? "judge" : undefined;
+    for (const conflict of conflicts) {
+      const pair = conflict.itemIds
+        .map((id) => agreements.find((a) => a.agreementId === id))
+        .filter((x): x is Agreement => x !== undefined);
+      if (pair.length < 2) continue;
+      let verdict: "compatible" | "conflicting" | "unclear" = "unclear",
+        reason = "No conflict judge model is configured.";
+      if (alias) {
+        const messages: GatewayRequest["messages"] = [
+          {
+            role: "user",
+            content: JSON.stringify(
+              pair.map((a) => ({
+                instruction: a.instruction,
+                comment: store.feedback("comment", a.commentId),
+              })),
+            ),
+          },
+        ];
+        const output = await this.modelJson(alias, "conflict-judgement", update, messages, "judge");
+        if (output) {
+          const judged = this.contract.read<import("../../../contract/src/index.js").ConflictJudgement>(
+            "conflict-judgement",
+            output,
+          );
+          verdict = judged.verdict;
+          reason = judged.reason;
+        }
+      }
+      if (verdict === "compatible")
+        await this.queue.run(() =>
+          store.transaction(() => {
+            const current = this.contract.read<FeedbackConflict>(
+              "feedback-conflict",
+              store.feedback("conflict", conflict.conflictId),
+            );
+            store.saveFeedback(
+              "conflict",
+              conflict.conflictId,
+              this.contract.read<Json>("feedback-conflict", {
+                ...current,
+                state: "resolved",
+                judgement: { verdict, reason, judgedAt: this.deps.clock.now() },
+              }),
+            );
+          }),
+        );
+      else
+        for (const agreement of pair) {
+          eligible.delete(agreement.agreementId);
+          blocked.push({
+            itemId: agreement.agreementId,
+            status: "not_addressed",
+            reason: `Conflict remains ${verdict}: ${reason}`,
+          });
+        }
+    }
+    return {
+      agreements: agreements.filter((a) => eligible.has(a.agreementId)),
+      blocked,
+    };
+  }
+
+  protected async modelJson(
+    alias: string,
+    schemaName: string,
+    update: Update,
+    messages: GatewayRequest["messages"],
+    promptName: string,
+  ): Promise<Json | undefined> {
+    const settings = this.settings(),
+      model = this.gateway && settings.models[alias];
+    if (!model || !this.gateway) return undefined;
+    const prompt = await readFile(new URL(`../agent/prompts/${promptName}.md`, import.meta.url), "utf8"),
+      promptHash = createHash("sha256").update(prompt).digest("hex");
+    const sessionSettings = settings.sessions[this.updateSessionId(update)],
+      tokenLimit = sessionSettings?.tokenLimit ?? settings.budgets.defaultTurnTokenLimit ?? 8192;
+    const request: GatewayRequest = {
+      modelRef: alias,
+      messages: [{ role: "system", content: prompt }, ...messages],
+      output: {
+        kind: "json",
+        schema: this.contract.schema(schemaName),
+        name: schemaName,
+      },
+      maxOutputTokens: Math.min(3000, tokenLimit),
+    };
+    if (estimateInputTokens(request) + request.maxOutputTokens > tokenLimit)
+      fail("budget_exceeded", "Update context exceeds its configured token limit");
+    const contextItems = messages.map((message, index) => ({
+      kind: "retrieval" as const,
+      id: `${schemaName}:${index}`,
+      hash: createHash("sha256").update(message.content).digest("hex"),
+      tokens: Math.ceil(message.content.length / 3),
+      reason: `${message.role} context`,
+    }));
+    const manifestId = this.deps.ids.next("manifest_"),
+      manifest = this.contract.read<ContextManifest>("context-manifest", {
+        manifestId,
+        turnId: update.updateId,
+        requestIndex: storeRequestIndex(this.available(), update.updateId),
+        items: [
+          {
+            kind: "system_prompt",
+            id: `${promptName}.md`,
+            hash: promptHash,
+            tokens: Math.ceil(prompt.length / 3),
+            reason: "Update prompt",
+          },
+          ...contextItems,
+        ],
+        dropped: [],
+        promptHash,
+        createdAt: this.deps.clock.now(),
+      });
+    await this.queue.run(() =>
+      this.available().transaction(() =>
+        this.available().saveFeedback("manifest", manifestId, this.contract.read<Json>("json", manifest)),
+      ),
+    );
+    const reservationId = this.deps.ids.next("reservation_");
+    this.budgets?.reserve(
+      reservationId,
+      [
+        { kind: "turn", key: update.updateId },
+        { kind: "session", key: this.updateSessionId(update) },
+        { kind: "daily" },
+      ],
+      estimateReservationMicros(request, model),
+    );
+    let output: Json | undefined;
+    for await (const event of this.gateway.call(request, {
+      reservationId,
+      idempotencyKey: `${update.updateId}:${promptName}:${manifest.requestIndex}`,
+      signal: new AbortController().signal,
+    })) {
+      if (event.type === "output") output = this.contract.read<Json>(schemaName, event.json);
+      if (event.type === "error") fail(event.code === "rate_limited" ? "rate_limited" : "unavailable", event.message);
+    }
+    return output;
+  }
+
+  protected updateSessionId(update: Update): string {
+    const store = this.available();
+    for (const id of update.itemIds) {
+      const raw = store.feedback("agreement", id);
+      if (raw) {
+        const agreement = this.contract.read<Agreement>("agreement", raw),
+          comment = store.feedback("comment", agreement.commentId);
+        if (comment) return this.contract.read<FeedbackComment>("feedback-comment", comment).sessionId;
+      }
+    }
+    fail("not_found", "Update has no session context");
+  }
+
+  protected async planUpdate(
+    update: Update,
+    items: Agreement[],
+    comments: FeedbackComment[],
+    elements: import("../../../contract/src/index.js").Element[],
+    alreadyChanged: import("../../../contract/src/index.js").CommitInput["changes"],
+  ): Promise<import("../../../contract/src/index.js").UpdatePlan | undefined> {
+    const already = new Set(alreadyChanged.flatMap((c) => (c.op === "add" ? [] : [c.elementId])));
+    for (const raw of this.available().feedbackList("hold"))
+      if (this.activeHold(raw)) {
+        const hold = this.contract.read<{
+          artifactId: string;
+          elementId: string;
+        }>("hold", raw);
+        if (hold.artifactId === update.artifactId) already.add(hold.elementId);
+      }
+    const known = new Set(elements.map((e) => e.elementId));
+    const messages: GatewayRequest["messages"] = [
+      {
+        role: "user",
+        content: JSON.stringify({
+          items: items.map((a) => ({
+            itemId: a.agreementId,
+            instruction: a.instruction,
+            comment: comments.find((c) => c.commentId === a.commentId),
+          })),
+          elements,
+        }),
+      },
+    ];
+    const alias = this.settings().models.planner ? "planner" : "default";
+    const output = await this.modelJson(alias, "update-plan", update, messages, "plan");
+    if (output === undefined) return undefined;
+    const plan = this.contract.read<import("../../../contract/src/index.js").UpdatePlan>("update-plan", output),
+      expected = new Set(items.map((x) => x.agreementId));
+    if (
+      plan.items.length !== expected.size ||
+      new Set(plan.items.map((x) => x.itemId)).size !== expected.size ||
+      plan.items.some((x) => !expected.has(x.itemId))
+    )
+      fail("invalid", "Planner did not account for every Update item");
+    for (const item of plan.items) {
+      if (
+        item.elementIds.some((id) => !known.has(id) || already.has(id)) ||
+        item.newUnder?.some((id) => !known.has(id) || already.has(id))
+      )
+        fail("invalid", "Planner referenced an unknown, held, or already changed element");
+      if (item.action === "none" && (item.elementIds.length || item.newUnder?.length))
+        fail("invalid", "A no-op plan cannot declare a write set");
+      if (item.action === "add" && !item.newUnder?.length) fail("invalid", "An add plan must name a permitted parent");
+      if (["edit", "move", "remove"].includes(item.action) && !item.elementIds.length)
+        fail("invalid", "A modifying plan must name existing elements");
+    }
+    return plan;
+  }
+}

@@ -930,6 +930,120 @@ it("partially commits only non-stale items when a direct edit lands during plann
   }
 });
 
+it("leaves agreements made during an active Update for the next Update", async () => {
+  const provider = new GateFirstProvider(
+    [
+      {
+        type: "output",
+        json: {
+          items: [{ itemId: "first", action: "edit", elementIds: ["first-element"], note: "First edit." }],
+        },
+      },
+      { type: "usage", inputTokens: 40, outputTokens: 20, quality: "reported" },
+      { type: "done", finishReason: "stop" },
+    ],
+    [],
+  );
+  const f = await fixture({ modelProviders: { "openai-compatible": provider } });
+  try {
+    await f.engine.command(ctx, {
+      commandId: "concurrent-update-settings",
+      type: "sys.SetSettings",
+      payload: new Contract().read<Json>("json", {
+        patch: { models: { planner: model, writer: model }, budgets: { defaultTurnLimitMicros: 100_000 } },
+      }),
+    });
+    const scenario = await addAgreedInstruction(f.engine, "concurrent-update", "First block.\n\nSecond block.");
+    provider.firstEvents[0] = {
+      type: "output",
+      json: {
+        items: [
+          {
+            itemId: scenario.agreementId,
+            action: "edit",
+            elementIds: [scenario.elements[0]!.elementId],
+            note: "Edit only the first block.",
+          },
+        ],
+      },
+    };
+    provider.laterEvents.push(
+      {
+        type: "output",
+        json: {
+          changes: [
+            {
+              op: "update",
+              elementId: scenario.elements[0]!.elementId,
+              element: { type: "paragraph", props: {}, text: "Updated first block." },
+            },
+          ],
+          itemResults: [
+            { itemId: scenario.agreementId, status: "addressed", elementIds: [scenario.elements[0]!.elementId] },
+          ],
+        },
+      },
+      { type: "usage", inputTokens: 40, outputTokens: 20, quality: "reported" },
+      { type: "done", finishReason: "stop" },
+    );
+    const running = await f.engine.command(ctx, {
+      commandId: "concurrent-update-start",
+      type: "vc.StartUpdate",
+      payload: { artifactId: scenario.artifactId },
+    });
+    if (!running.ok) throw Error(running.error.message);
+    const updateId = new Contract().read<{ updateId: string }>(
+      "operations/vc.StartUpdate",
+      running.result,
+      "#/properties/result",
+    ).updateId;
+    await provider.entered;
+    const nextAgreementId = await addAgreementForElement(
+      f.engine,
+      "concurrent-next",
+      scenario.sessionId,
+      scenario.artifactId,
+      scenario.elements[1]!.elementId,
+    );
+    provider.release();
+    const completed = await waitForUpdate(f.engine, updateId);
+    expect(completed.itemIds).toEqual([scenario.agreementId]);
+    const agreement = new Contract().read<import("../../contract/src/index.js").Agreement[]>(
+      "operations/vc.DecisionRecord",
+      await f.engine.query(ctx, { name: "vc.DecisionRecord", args: { artifactId: scenario.artifactId } }),
+      "#/properties/result",
+    );
+    expect(agreement.find((item) => item.agreementId === nextAgreementId)?.state).toBe("agreed");
+    const next = await f.engine.command(ctx, {
+      commandId: "concurrent-next-update",
+      type: "vc.StartUpdate",
+      payload: { artifactId: scenario.artifactId },
+    });
+    expect(next.ok).toBe(true);
+    const nextUpdateId = new Contract().read<{ updateId: string }>(
+      "operations/vc.StartUpdate",
+      next.ok ? next.result : {},
+      "#/properties/result",
+    ).updateId;
+    const nextDetail = await f.engine.query(ctx, {
+      name: "vc.UpdateDetail",
+      args: { updateId: nextUpdateId },
+    });
+    expect(
+      new Contract().read<{ itemIds: string[] }>("operations/vc.UpdateDetail", nextDetail, "#/properties/result")
+        .itemIds,
+    ).toEqual([nextAgreementId]);
+    await f.engine.command(ctx, {
+      commandId: "concurrent-next-cancel",
+      type: "vc.CancelUpdate",
+      payload: { updateId: nextUpdateId },
+    });
+  } finally {
+    provider.release();
+    await f.close();
+  }
+});
+
 it.each([
   {
     name: "no matching quote",

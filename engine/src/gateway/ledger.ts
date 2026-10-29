@@ -1,6 +1,6 @@
 import { fail, type Contract } from "../../../contract/src/index.js";
 import type { BudgetState } from "../../../contract/src/index.js";
-import type { Clock } from "../kernel/dependencies.js";
+import type { Clock } from "../dependencies.js";
 import type { Repository } from "../storage/repository.js";
 import type { BudgetReservation, BudgetScope, CallLog, ModelRequest, ProviderModel } from "./types.js";
 

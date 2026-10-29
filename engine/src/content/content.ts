@@ -9,7 +9,7 @@ import type {
   VersionSource,
 } from "../../../contract/src/index.js";
 import type { Repository } from "../storage/repository.js";
-import type { Clock, IdGenerator } from "../kernel/dependencies.js";
+import type { Clock, IdGenerator } from "../dependencies.js";
 import { canonical, revisionHash } from "./hash.js";
 import { importContent } from "./import.js";
 export class Content {
