@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operation-meta.json",
+  "title": "OperationMeta",
+  "type": "object",
+  "properties": {
+    "effect": {
+      "type": "string",
+      "enum": [
+        "read",
+        "collaborate",
+        "admin"
+      ]
+    },
+    "irreversible": {
+      "type": "boolean"
+    },
+    "channels": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "in_process",
+          "http",
+          "cli",
+          "mcp"
+        ]
+      }
+    }
+  },
+  "required": [
+    "effect",
+    "irreversible",
+    "channels"
+  ],
+  "additionalProperties": false
+}

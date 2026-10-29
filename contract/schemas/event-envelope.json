@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/event-envelope.json",
+  "title": "EventEnvelope",
+  "type": "object",
+  "properties": {
+    "seq": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "ts": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "entity": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "minLength": 1
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "kind",
+        "id"
+      ],
+      "additionalProperties": false
+    },
+    "payload": {
+      "$ref": "https://vibecab.local/schemas/json.json"
+    }
+  },
+  "required": [
+    "seq",
+    "ts",
+    "type",
+    "entity",
+    "payload"
+  ],
+  "additionalProperties": false
+}

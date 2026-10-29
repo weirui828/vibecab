@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/element.json",
+  "title": "Element",
+  "oneOf": [
+    {
+      "$ref": "https://vibecab.local/schemas/doc/heading.json"
+    },
+    {
+      "$ref": "https://vibecab.local/schemas/doc/paragraph.json"
+    },
+    {
+      "$ref": "https://vibecab.local/schemas/doc/list.json"
+    },
+    {
+      "$ref": "https://vibecab.local/schemas/doc/list-item.json"
+    },
+    {
+      "$ref": "https://vibecab.local/schemas/doc/quote.json"
+    },
+    {
+      "$ref": "https://vibecab.local/schemas/doc/code-block.json"
+    },
+    {
+      "$ref": "https://vibecab.local/schemas/doc/table.json"
+    },
+    {
+      "$ref": "https://vibecab.local/schemas/doc/table-row.json"
+    },
+    {
+      "$ref": "https://vibecab.local/schemas/doc/table-cell.json"
+    },
+    {
+      "$ref": "https://vibecab.local/schemas/doc/image.json"
+    },
+    {
+      "$ref": "https://vibecab.local/schemas/doc/divider.json"
+    },
+    {
+      "$ref": "https://vibecab.local/schemas/doc/callout.json"
+    }
+  ],
+  "docChildren": {
+    "list": [
+      "list_item"
+    ],
+    "list_item": [
+      "list"
+    ],
+    "table": [
+      "table_row"
+    ],
+    "table_row": [
+      "table_cell"
+    ]
+  }
+}

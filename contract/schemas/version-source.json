@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/version-source.json",
+  "title": "VersionSource",
+  "type": "object",
+  "properties": {
+    "updateId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "editId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "importId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "restoreOf": {
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "required": [],
+  "additionalProperties": false
+}

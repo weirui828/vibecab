@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/json.json",
+  "title": "Json",
+  "anyOf": [
+    {
+      "type": "string"
+    },
+    {
+      "type": "number"
+    },
+    {
+      "type": "boolean"
+    },
+    {
+      "type": "null"
+    },
+    {
+      "type": "array",
+      "items": {
+        "$ref": "https://vibecab.local/schemas/json.json"
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "https://vibecab.local/schemas/json.json"
+      }
+    }
+  ]
+}

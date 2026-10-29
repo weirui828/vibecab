@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/contract-error.json",
+  "title": "ContractError",
+  "type": "object",
+  "properties": {
+    "code": {
+      "type": "string",
+      "enum": [
+        "invalid",
+        "unauthenticated",
+        "forbidden",
+        "not_found",
+        "conflict",
+        "stale_base",
+        "locked",
+        "budget_exceeded",
+        "rate_limited",
+        "unsupported",
+        "unavailable",
+        "uncertain",
+        "internal"
+      ]
+    },
+    "message": {
+      "type": "string"
+    },
+    "retryable": {
+      "type": "boolean"
+    },
+    "details": {
+      "$ref": "https://vibecab.local/schemas/json.json"
+    }
+  },
+  "required": [
+    "code",
+    "message",
+    "retryable"
+  ],
+  "additionalProperties": false
+}

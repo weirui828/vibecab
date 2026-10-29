@@ -1,0 +1,316 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/element-draft.json",
+  "title": "ElementDraft",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "heading"
+        },
+        "props": {
+          "type": "object",
+          "properties": {
+            "level": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 6
+            }
+          },
+          "required": [
+            "level"
+          ],
+          "additionalProperties": false
+        },
+        "text": {
+          "type": "string",
+          "inlineText": true
+        }
+      },
+      "required": [
+        "type",
+        "props",
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "paragraph"
+        },
+        "props": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        },
+        "text": {
+          "type": "string",
+          "inlineText": true
+        }
+      },
+      "required": [
+        "type",
+        "props",
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "list"
+        },
+        "props": {
+          "type": "object",
+          "properties": {
+            "ordered": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "ordered"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "type",
+        "props"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "list_item"
+        },
+        "props": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        },
+        "text": {
+          "type": "string",
+          "inlineText": true
+        }
+      },
+      "required": [
+        "type",
+        "props",
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "quote"
+        },
+        "props": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        },
+        "text": {
+          "type": "string",
+          "inlineText": true
+        }
+      },
+      "required": [
+        "type",
+        "props",
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "code_block"
+        },
+        "props": {
+          "type": "object",
+          "properties": {
+            "language": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "props",
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "table"
+        },
+        "props": {
+          "type": "object",
+          "properties": {
+            "headerRow": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "headerRow"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "type",
+        "props"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "table_row"
+        },
+        "props": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "type",
+        "props"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "table_cell"
+        },
+        "props": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        },
+        "text": {
+          "type": "string",
+          "inlineText": true
+        }
+      },
+      "required": [
+        "type",
+        "props",
+        "text"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "image"
+        },
+        "props": {
+          "type": "object",
+          "properties": {
+            "alt": {
+              "type": "string"
+            },
+            "caption": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "blobHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "type",
+        "props",
+        "blobHash"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "divider"
+        },
+        "props": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "type",
+        "props"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "callout"
+        },
+        "props": {
+          "type": "object",
+          "properties": {
+            "tone": {
+              "type": "string",
+              "enum": [
+                "info",
+                "note",
+                "warning"
+              ]
+            }
+          },
+          "required": [
+            "tone"
+          ],
+          "additionalProperties": false
+        },
+        "text": {
+          "type": "string",
+          "inlineText": true
+        }
+      },
+      "required": [
+        "type",
+        "props",
+        "text"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/vc.Artifact.json",
+  "title": "vcArtifactOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": {
+        "artifactId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "artifactId"
+      ],
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "properties": {
+        "artifactId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "title": {
+          "type": "string"
+        },
+        "mediaKind": {
+          "const": "doc"
+        },
+        "headVersion": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "artifactId",
+        "title",
+        "mediaKind",
+        "headVersion",
+        "createdAt"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "payload",
+    "result"
+  ],
+  "additionalProperties": false,
+  "operation": {
+    "name": "vc.Artifact",
+    "kind": "query",
+    "meta": {
+      "effect": "read",
+      "irreversible": false,
+      "channels": [
+        "in_process",
+        "http",
+        "cli",
+        "mcp"
+      ]
+    }
+  }
+}

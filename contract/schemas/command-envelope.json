@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/command-envelope.json",
+  "title": "CommandEnvelope",
+  "type": "object",
+  "properties": {
+    "commandId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "payload": {
+      "$ref": "https://vibecab.local/schemas/json.json"
+    }
+  },
+  "required": [
+    "commandId",
+    "type",
+    "payload"
+  ],
+  "additionalProperties": false
+}

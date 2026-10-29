@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/vc.RestoreVersion.json",
+  "title": "vcRestoreVersionOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": {
+        "artifactId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "artifactId",
+        "version"
+      ],
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "properties": {
+        "artifactId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "idMap": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "artifactId",
+        "version"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "payload",
+    "result"
+  ],
+  "additionalProperties": false,
+  "operation": {
+    "name": "vc.RestoreVersion",
+    "kind": "command",
+    "meta": {
+      "effect": "collaborate",
+      "irreversible": false,
+      "channels": [
+        "in_process",
+        "http",
+        "cli",
+        "mcp"
+      ]
+    }
+  }
+}

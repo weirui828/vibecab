@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/job.json",
+  "title": "Job",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kind": {
+      "type": "string",
+      "minLength": 1
+    },
+    "payload": {
+      "$ref": "https://vibecab.local/schemas/json.json"
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "pending",
+        "leased",
+        "completed",
+        "interrupted",
+        "uncertain"
+      ]
+    },
+    "leaseUntil": {
+      "anyOf": [
+        {
+          "type": "string",
+          "format": "date-time"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "attempts": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "id",
+    "kind",
+    "payload",
+    "state",
+    "leaseUntil",
+    "attempts",
+    "createdAt"
+  ],
+  "additionalProperties": false
+}

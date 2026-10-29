@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/vc.ResolveAnchors.json",
+  "title": "vcResolveAnchorsOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": {
+        "anchors": {
+          "type": "array",
+          "items": {
+            "$ref": "https://vibecab.local/schemas/anchor.json"
+          }
+        }
+      },
+      "required": [
+        "anchors"
+      ],
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "array",
+      "items": {
+        "$ref": "https://vibecab.local/schemas/anchor-resolution.json"
+      }
+    }
+  },
+  "required": [
+    "payload",
+    "result"
+  ],
+  "additionalProperties": false,
+  "operation": {
+    "name": "vc.ResolveAnchors",
+    "kind": "query",
+    "meta": {
+      "effect": "read",
+      "irreversible": false,
+      "channels": [
+        "in_process",
+        "http",
+        "cli",
+        "mcp"
+      ]
+    }
+  }
+}

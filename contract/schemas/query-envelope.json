@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/query-envelope.json",
+  "title": "QueryEnvelope",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "args": {
+      "$ref": "https://vibecab.local/schemas/json.json"
+    }
+  },
+  "required": [
+    "name",
+    "args"
+  ],
+  "additionalProperties": false
+}

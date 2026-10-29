@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/doc-tree.json",
+  "title": "DocTree",
+  "type": "array",
+  "items": {
+    "$ref": "https://vibecab.local/schemas/element.json"
+  },
+  "docTree": true
+}

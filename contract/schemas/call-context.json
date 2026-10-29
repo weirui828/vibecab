@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/call-context.json",
+  "title": "CallContext",
+  "type": "object",
+  "properties": {
+    "contractVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+$"
+    },
+    "workspaceId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "principal": {
+      "$ref": "https://vibecab.local/schemas/principal.json"
+    },
+    "channel": {
+      "type": "string",
+      "enum": [
+        "in_process",
+        "http",
+        "cli",
+        "mcp"
+      ]
+    },
+    "scope": {
+      "type": "string",
+      "enum": [
+        "read",
+        "collaborate",
+        "admin"
+      ]
+    },
+    "requestId": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "contractVersion",
+    "principal",
+    "channel",
+    "scope",
+    "requestId"
+  ],
+  "additionalProperties": false
+}

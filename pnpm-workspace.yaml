@@ -1,0 +1,8 @@
+packages:
+  - contract
+  - engine
+  - adapters/*
+onlyBuiltDependencies:
+  - node
+  - better-sqlite3
+  - esbuild

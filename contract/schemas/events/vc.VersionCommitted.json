@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/events/vc.VersionCommitted.json",
+  "title": "VersionCommitted",
+  "type": "object",
+  "properties": {
+    "artifactId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "writeSet": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "source": {
+      "$ref": "https://vibecab.local/schemas/version-source.json"
+    }
+  },
+  "required": [
+    "artifactId",
+    "version",
+    "writeSet",
+    "source"
+  ],
+  "additionalProperties": false
+}

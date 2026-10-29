@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/commit-input.json",
+  "title": "CommitInput",
+  "type": "object",
+  "properties": {
+    "artifactId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "baseVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "changes": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "const": "add"
+              },
+              "tempId": {
+                "type": "string",
+                "pattern": "^new:[0-9]+$"
+              },
+              "parentId": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "after": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "element": {
+                "$ref": "https://vibecab.local/schemas/element-draft.json"
+              }
+            },
+            "required": [
+              "op",
+              "tempId",
+              "parentId",
+              "element"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "const": "update"
+              },
+              "elementId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "element": {
+                "$ref": "https://vibecab.local/schemas/element-draft.json"
+              }
+            },
+            "required": [
+              "op",
+              "elementId",
+              "element"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "const": "move"
+              },
+              "elementId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "parentId": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "after": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "op",
+              "elementId",
+              "parentId"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "op": {
+                "const": "remove"
+              },
+              "elementId": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "op",
+              "elementId"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "createdBy": {
+      "$ref": "https://vibecab.local/schemas/principal.json"
+    },
+    "source": {
+      "$ref": "https://vibecab.local/schemas/version-source.json"
+    }
+  },
+  "required": [
+    "artifactId",
+    "baseVersion",
+    "changes",
+    "createdBy",
+    "source"
+  ],
+  "additionalProperties": false
+}

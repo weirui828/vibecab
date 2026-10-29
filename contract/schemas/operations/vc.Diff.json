@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/vc.Diff.json",
+  "title": "vcDiffOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": {
+        "artifactId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "from": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "to": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "artifactId",
+        "from",
+        "to"
+      ],
+      "additionalProperties": false
+    },
+    "result": {
+      "$ref": "https://vibecab.local/schemas/diff-result.json"
+    }
+  },
+  "required": [
+    "payload",
+    "result"
+  ],
+  "additionalProperties": false,
+  "operation": {
+    "name": "vc.Diff",
+    "kind": "query",
+    "meta": {
+      "effect": "read",
+      "irreversible": false,
+      "channels": [
+        "in_process",
+        "http",
+        "cli",
+        "mcp"
+      ]
+    }
+  }
+}

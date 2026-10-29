@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/anchor-resolution.json",
+  "title": "AnchorResolution",
+  "type": "object",
+  "properties": {
+    "anchor": {
+      "$ref": "https://vibecab.local/schemas/anchor.json"
+    },
+    "state": {
+      "type": "string",
+      "enum": [
+        "current",
+        "revised",
+        "removed"
+      ]
+    },
+    "range": {
+      "type": "object",
+      "properties": {
+        "start": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "end": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "anchor",
+    "state"
+  ],
+  "additionalProperties": false
+}

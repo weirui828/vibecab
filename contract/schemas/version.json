@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/version.json",
+  "title": "Version",
+  "type": "object",
+  "properties": {
+    "artifactId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "parentVersion": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "manifest": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      }
+    },
+    "createdBy": {
+      "$ref": "https://vibecab.local/schemas/principal.json"
+    },
+    "source": {
+      "$ref": "https://vibecab.local/schemas/version-source.json"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    }
+  },
+  "required": [
+    "artifactId",
+    "version",
+    "parentVersion",
+    "manifest",
+    "createdBy",
+    "source",
+    "createdAt"
+  ],
+  "additionalProperties": false
+}

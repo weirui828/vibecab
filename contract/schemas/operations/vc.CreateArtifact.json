@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/vc.CreateArtifact.json",
+  "title": "vcCreateArtifactOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mediaKind": {
+          "const": "doc"
+        }
+      },
+      "required": [
+        "title",
+        "mediaKind"
+      ],
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "properties": {
+        "artifactId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "idMap": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "required": [
+        "artifactId",
+        "version"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "payload",
+    "result"
+  ],
+  "additionalProperties": false,
+  "operation": {
+    "name": "vc.CreateArtifact",
+    "kind": "command",
+    "meta": {
+      "effect": "collaborate",
+      "irreversible": false,
+      "channels": [
+        "in_process",
+        "http",
+        "cli",
+        "mcp"
+      ]
+    }
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/sys.Capabilities.json",
+  "title": "sysCapabilitiesOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "properties": {
+        "contractVersion": {
+          "type": "string"
+        },
+        "mediaKinds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "operations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "command",
+                  "query"
+                ]
+              },
+              "supported": {
+                "type": "boolean"
+              },
+              "meta": {
+                "$ref": "https://vibecab.local/schemas/operation-meta.json"
+              }
+            },
+            "required": [
+              "name",
+              "kind",
+              "supported",
+              "meta"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "contractVersion",
+        "mediaKinds",
+        "operations"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "payload",
+    "result"
+  ],
+  "additionalProperties": false,
+  "operation": {
+    "name": "sys.Capabilities",
+    "kind": "query",
+    "meta": {
+      "effect": "read",
+      "irreversible": false,
+      "channels": [
+        "in_process",
+        "http",
+        "cli",
+        "mcp"
+      ]
+    }
+  }
+}

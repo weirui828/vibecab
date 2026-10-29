@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/anchor.json",
+  "title": "Anchor",
+  "type": "object",
+  "properties": {
+    "artifactId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "elementId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "seenVersion": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "seenHash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "locator": {
+      "type": "object",
+      "properties": {
+        "quote": {
+          "type": "string",
+          "minLength": 1
+        },
+        "prefix": {
+          "type": "string"
+        },
+        "suffix": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "quote",
+        "prefix",
+        "suffix"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "artifactId",
+    "elementId",
+    "seenVersion",
+    "seenHash"
+  ],
+  "additionalProperties": false
+}

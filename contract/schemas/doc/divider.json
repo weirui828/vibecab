@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/doc/divider.json",
+  "title": "DividerElement",
+  "type": "object",
+  "properties": {
+    "elementId": {
+      "type": "string",
+      "pattern": "^el_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "type": {
+      "const": "divider"
+    },
+    "parentId": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "order": {
+      "type": "string",
+      "minLength": 1
+    },
+    "props": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  "required": [
+    "elementId",
+    "type",
+    "parentId",
+    "order",
+    "props"
+  ],
+  "additionalProperties": false
+}
