@@ -15,6 +15,15 @@ export interface SearchHit {
   artifactId?: string;
   text: string;
 }
+export interface StoredAccessToken {
+  tokenId: string;
+  name: string;
+  channel: "http" | "cli" | "mcp";
+  scope: "read" | "collaborate" | "admin";
+  secretHash: string;
+  createdAt: string;
+  revokedAt?: string;
+}
 export interface Repository {
   transaction<T>(action: () => T): T;
   artifact(id: string): Artifact;
@@ -43,6 +52,9 @@ export interface Repository {
   callLogs(): CallLog[];
   saveCallLog(log: CallLog): void;
   search(sessionId: string, query: string): SearchHit[];
+  accessTokens(): StoredAccessToken[];
+  createAccessToken(token: StoredAccessToken): void;
+  revokeAccessToken(tokenId: string, revokedAt: string): void;
   close(): void;
   compact(): void;
 }

@@ -23,7 +23,7 @@ const model: ProviderModel = {
   pricing: { inputMicrosPerMillion: 0, outputMicrosPerMillion: 0 },
 };
 
-async function waitForUpdate(engine: import("../src/engine.js").Engine, updateId: string) {
+async function waitForUpdate(engine: import("./helpers.js").TestEngine, updateId: string) {
   for (let i = 0; i < 100; i++) {
     const value = await engine.query(ctx, {
       name: "vc.UpdateDetail",
@@ -41,7 +41,7 @@ async function waitForUpdate(engine: import("../src/engine.js").Engine, updateId
 }
 
 async function waitForUpdateStatus(
-  engine: import("../src/engine.js").Engine,
+  engine: import("./helpers.js").TestEngine,
   updateId: string,
   status: import("../../contract/src/index.js").Update["status"],
 ) {
@@ -61,7 +61,7 @@ async function waitForUpdateStatus(
 }
 
 async function addAgreedInstruction(
-  engine: import("../src/engine.js").Engine,
+  engine: import("./helpers.js").TestEngine,
   prefix: string,
   content: string,
   elementIndex = 0,
@@ -155,7 +155,7 @@ async function addAgreedInstruction(
 }
 
 async function addAgreementForElement(
-  engine: import("../src/engine.js").Engine,
+  engine: import("./helpers.js").TestEngine,
   prefix: string,
   sessionId: string,
   artifactId: string,

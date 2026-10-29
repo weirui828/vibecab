@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/sys.RevokeAccessToken.json",
+  "title": "sysRevokeAccessTokenOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": { "tokenId": { "type": "string", "minLength": 1 } },
+      "required": ["tokenId"],
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "properties": {
+        "tokenId": { "type": "string", "minLength": 1 },
+        "revoked": { "const": true }
+      },
+      "required": ["tokenId", "revoked"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["payload", "result"],
+  "additionalProperties": false,
+  "operation": {
+    "name": "sys.RevokeAccessToken",
+    "kind": "command",
+    "meta": { "effect": "admin", "irreversible": false, "channels": ["in_process", "http", "cli"] }
+  }
+}

@@ -1,11 +1,8 @@
 import { createServer } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { randomBytes, timingSafeEqual, createHash } from "node:crypto";
-import { readFile, open, chmod } from "node:fs/promises";
-import { join } from "node:path";
+import { createHash } from "node:crypto";
 import { Contract, CONTRACT_VERSION, errorOf, fail } from "../../../contract/src/index.js";
 import type {
-  CallContext,
   CommandEnvelope,
   CommandResult,
   ContractError,
@@ -15,17 +12,12 @@ import type {
   Subscription,
 } from "../../../contract/src/index.js";
 import type { Engine } from "../../../engine/src/engine.js";
-export interface Tokens {
-  read: string;
-  collaborate: string;
-  admin: string;
-}
+import type { CallAuth, CallMetadata } from "../../../engine/src/engine.js";
 export interface HttpOptions {
-  workspaceDir: string;
   port?: number;
   host?: string;
   appOrigin?: string;
-  tokenFactory?: () => string;
+  transport?: "http" | "cli";
 }
 const statuses: Record<ContractError["code"], number> = {
   invalid: 400,
@@ -42,41 +34,6 @@ const statuses: Record<ContractError["code"], number> = {
   uncertain: 503,
   internal: 500,
 };
-function isTokens(value: unknown): value is Tokens {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "read" in value &&
-    typeof value.read === "string" &&
-    "collaborate" in value &&
-    typeof value.collaborate === "string" &&
-    "admin" in value &&
-    typeof value.admin === "string" &&
-    new Set([value.read, value.collaborate, value.admin]).size === 3 &&
-    [value.read, value.collaborate, value.admin].every((s) => s.length >= 16)
-  );
-}
-async function tokensAt(dir: string, factory = () => randomBytes(32).toString("hex")): Promise<Tokens> {
-  const path = join(dir, "access-tokens.json");
-  try {
-    const parsed: unknown = JSON.parse(await readFile(path, "utf8"));
-    if (!isTokens(parsed)) fail("unavailable", "Token store is invalid");
-    await chmod(path, 0o600);
-    return parsed;
-  } catch (error) {
-    if (!(typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT")) throw error;
-  }
-  const tokens = { read: factory(), collaborate: factory(), admin: factory() };
-  if (!isTokens(tokens)) fail("invalid", "Token factory produced invalid credentials");
-  const file = await open(path, "wx", 0o600);
-  try {
-    await file.writeFile(JSON.stringify(tokens));
-    await file.sync();
-  } finally {
-    await file.close();
-  }
-  return tokens;
-}
 async function body(req: IncomingMessage): Promise<Buffer> {
   const chunks: Buffer[] = [];
   let size = 0;
@@ -106,8 +63,7 @@ function send(res: ServerResponse, status: number, value: unknown) {
 }
 export async function startHttp(engine: Engine, options: HttpOptions) {
   if (options.host !== undefined && options.host !== "127.0.0.1") fail("invalid", "HTTP must bind to 127.0.0.1");
-  const tokens = await tokensAt(options.workspaceDir, options.tokenFactory),
-    contract = new Contract();
+  const contract = new Contract();
   let port = 0,
     requestNumber = 0;
   const streams = new Set<AsyncIterator<EventEnvelope>>();
@@ -121,26 +77,17 @@ export async function startHttp(engine: Engine, options: HttpOptions) {
     if (!["127.0.0.1:" + port, "localhost:" + port].includes(req.headers.host ?? "")) fail("forbidden", "Invalid Host");
     if (req.headers.origin !== undefined && req.headers.origin !== options.appOrigin)
       fail("forbidden", "Origin is not permitted");
-    const auth = req.headers.authorization;
-    if (!auth?.startsWith("Bearer ")) fail("unauthenticated", "Access token required");
-    const supplied = Buffer.from(auth.slice(7));
-    let scope: CallContext["scope"] | undefined;
-    for (const name of ["read", "collaborate", "admin"] satisfies CallContext["scope"][]) {
-      const secret = Buffer.from(tokens[name]);
-      if (secret.length === supplied.length && timingSafeEqual(secret, supplied)) scope = name;
-    }
-    if (!scope) fail("unauthenticated", "Invalid access token");
-    const ctx: CallContext = {
-      contractVersion: req.headers["x-contract-version"]?.toString() ?? CONTRACT_VERSION,
-      principal: { kind: "human" },
-      channel: "http",
-      scope,
-      requestId: "http-" + ++requestNumber,
-    };
+    const header = req.headers.authorization;
+    if (!header?.startsWith("Bearer ")) fail("unauthenticated", "Access token required");
+    const auth: CallAuth = { kind: "token", secret: header.slice(7), transport: options.transport ?? "http" },
+      metadata: CallMetadata = {
+        contractVersion: req.headers["x-contract-version"]?.toString() ?? CONTRACT_VERSION,
+        requestId: "http-" + ++requestNumber,
+      };
     const url = new URL(req.url ?? "/", "http://127.0.0.1:" + port),
       path = url.pathname;
     if (req.method === "GET" && path === "/v1/capabilities") {
-      send(res, 200, await engine.query(ctx, { name: "sys.Capabilities", args: {} }));
+      send(res, 200, await engine.query(auth, metadata, { name: "sys.Capabilities", args: {} }));
       return;
     }
     if (req.method === "POST" && path.startsWith("/v1/commands/")) {
@@ -151,7 +98,7 @@ export async function startHttp(engine: Engine, options: HttpOptions) {
         ...input,
         type,
       });
-      const result = await engine.command(ctx, cmd);
+      const result = await engine.command(auth, metadata, cmd);
       if (result.ok) send(res, 200, result);
       else send(res, statuses[result.error.code], result.error);
       return;
@@ -164,7 +111,7 @@ export async function startHttp(engine: Engine, options: HttpOptions) {
         ...input,
         name,
       });
-      send(res, 200, await engine.query(ctx, q));
+      send(res, 200, await engine.query(auth, metadata, q));
       return;
     }
     if (req.method === "GET" && path === "/v1/events") {
@@ -175,7 +122,7 @@ export async function startHttp(engine: Engine, options: HttpOptions) {
           afterSeq: Number(raw),
           ...(filter === null ? {} : { filter: parseJson(Buffer.from(filter)) }),
         }),
-        iterator = engine.subscribe(ctx, subscription)[Symbol.asyncIterator]();
+        iterator = engine.subscribe(auth, metadata, subscription)[Symbol.asyncIterator]();
       streams.add(iterator);
       res.writeHead(200, {
         "Content-Type": "text/event-stream",
@@ -221,12 +168,17 @@ export async function startHttp(engine: Engine, options: HttpOptions) {
         const bytes = await body(req);
         if (createHash("sha256").update(bytes).digest("hex") !== hash)
           fail("invalid", "Blob hash does not match content");
-        const stored = await engine.putBlob(ctx, bytes, req.headers["content-type"] ?? "application/octet-stream");
+        const stored = await engine.putBlob(
+          auth,
+          metadata,
+          bytes,
+          req.headers["content-type"] ?? "application/octet-stream",
+        );
         send(res, 200, { hash: stored });
         return;
       }
       if (req.method === "GET") {
-        const bytes = await engine.getBlob(ctx, hash);
+        const bytes = await engine.getBlob(auth, metadata, hash);
         res.writeHead(200, {
           "Content-Type": "application/octet-stream",
           "Cache-Control": "no-store",
@@ -249,7 +201,6 @@ export async function startHttp(engine: Engine, options: HttpOptions) {
   port = address.port;
   return {
     url: "http://127.0.0.1:" + port,
-    tokens,
     close: async () => {
       for (const stream of streams) await stream.return?.();
       server.closeAllConnections();
@@ -258,16 +209,19 @@ export async function startHttp(engine: Engine, options: HttpOptions) {
   };
 }
 // This client mechanically maps the same contract and is used by the shared conformance suite.
-export function httpClient(base: string, tokens: Tokens) {
+export function httpClient(base: string, token: string) {
   const contract = new Contract();
-  const headers = (ctx: CallContext) => ({
-    Authorization: "Bearer " + tokens[ctx.scope],
-    "X-Contract-Version": ctx.contractVersion,
+  let requestNumber = 0;
+  const metadata = (input?: CallMetadata): CallMetadata =>
+    input ?? { contractVersion: CONTRACT_VERSION, requestId: "http-client-" + ++requestNumber };
+  const headers = (input?: CallMetadata) => ({
+    Authorization: "Bearer " + token,
+    "X-Contract-Version": metadata(input).contractVersion,
   });
-  async function json(ctx: CallContext, path: string, body?: unknown): Promise<unknown> {
+  async function json(input: CallMetadata | undefined, path: string, body?: unknown): Promise<unknown> {
     const res = await fetch(base + path, {
       method: body === undefined ? "GET" : "POST",
-      headers: { ...headers(ctx), "Content-Type": "application/json" },
+      headers: { ...headers(input), "Content-Type": "application/json" },
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
     });
     const value: unknown = await res.json();
@@ -278,11 +232,11 @@ export function httpClient(base: string, tokens: Tokens) {
     return value;
   }
   return {
-    async command(ctx: CallContext, cmd: CommandEnvelope): Promise<CommandResult> {
+    async command(cmd: CommandEnvelope, input?: CallMetadata): Promise<CommandResult> {
       try {
         return contract.read<CommandResult>(
           "command-result",
-          await json(ctx, "/v1/commands/" + encodeURIComponent(cmd.type), {
+          await json(input, "/v1/commands/" + encodeURIComponent(cmd.type), {
             commandId: cmd.commandId,
             payload: cmd.payload,
           }),
@@ -291,16 +245,16 @@ export function httpClient(base: string, tokens: Tokens) {
         return { ok: false, error: errorOf(error) };
       }
     },
-    async query(ctx: CallContext, q: QueryEnvelope): Promise<Json> {
+    async query(q: QueryEnvelope, input?: CallMetadata): Promise<Json> {
       return contract.read<Json>(
         "operations/" + q.name,
-        await json(ctx, "/v1/queries/" + encodeURIComponent(q.name), {
+        await json(input, "/v1/queries/" + encodeURIComponent(q.name), {
           args: q.args,
         }),
         "#/properties/result",
       );
     },
-    subscribe(ctx: CallContext, sub: Subscription): AsyncIterable<EventEnvelope> {
+    subscribe(sub: Subscription, input?: CallMetadata): AsyncIterable<EventEnvelope> {
       const abort = new AbortController();
       let iterator: AsyncIterator<EventEnvelope> | undefined;
       async function* events() {
@@ -308,7 +262,7 @@ export function httpClient(base: string, tokens: Tokens) {
         const res = await fetch(
           base + "/v1/events?after=0" + (sub.filter ? "&filter=" + encodeURIComponent(JSON.stringify(sub.filter)) : ""),
           {
-            headers: { ...headers(ctx), "Last-Event-ID": String(sub.afterSeq) },
+            headers: { ...headers(input), "Last-Event-ID": String(sub.afterSeq) },
             signal: abort.signal,
           },
         );
@@ -351,11 +305,11 @@ export function httpClient(base: string, tokens: Tokens) {
         },
       };
     },
-    async putBlob(ctx: CallContext, bytes: Uint8Array, mediaType: string): Promise<string> {
+    async putBlob(bytes: Uint8Array, mediaType: string, input?: CallMetadata): Promise<string> {
       const hash = createHash("sha256").update(bytes).digest("hex");
       const res = await fetch(base + "/v1/blobs/" + hash, {
         method: "PUT",
-        headers: { ...headers(ctx), "Content-Type": mediaType },
+        headers: { ...headers(input), "Content-Type": mediaType },
         body: Buffer.from(bytes),
       });
       if (!res.ok) {
@@ -364,9 +318,9 @@ export function httpClient(base: string, tokens: Tokens) {
       }
       return hash;
     },
-    async getBlob(ctx: CallContext, hash: string): Promise<Uint8Array> {
+    async getBlob(hash: string, input?: CallMetadata): Promise<Uint8Array> {
       const res = await fetch(base + "/v1/blobs/" + hash, {
-        headers: headers(ctx),
+        headers: headers(input),
       });
       if (!res.ok) {
         const e = contract.read<ContractError>("contract-error", await res.json());

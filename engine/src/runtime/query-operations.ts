@@ -105,6 +105,17 @@ export abstract class QueryOperations extends CommandOperations {
         if (!budgets) fail("unavailable", "Budget ledger is not started");
         return budgets.states();
       }
+      case "sys.AccessTokens": {
+        read();
+        return store.accessTokens().map(({ tokenId, name, channel, scope, createdAt, revokedAt }) => ({
+          tokenId,
+          name,
+          channel,
+          scope,
+          createdAt,
+          ...(revokedAt ? { revokedAt } : {}),
+        }));
+      }
       case "vc.Ideas":
       case "vc.Projects":
       case "vc.Sessions":

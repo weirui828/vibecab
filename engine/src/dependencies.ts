@@ -11,6 +11,7 @@ export interface Dependencies {
   clock: Clock;
   ids: IdGenerator;
   seed: number;
+  trustedHostScope: "read" | "collaborate" | "admin";
   keyStore: KeyStore;
   modelProviders: Record<string, ModelProvider>;
   updateCheckpoint?: (updateId: string, stage: "checking") => Promise<void>;
@@ -21,6 +22,7 @@ export function defaults(): Dependencies {
     clock: { now: () => new Date().toISOString() },
     ids: { next: (prefix) => prefix + next() },
     seed: 0,
+    trustedHostScope: "admin",
     keyStore: new NativeKeyStore(),
     modelProviders: {},
   };

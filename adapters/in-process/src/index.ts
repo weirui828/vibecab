@@ -1,5 +1,5 @@
 import { CONTRACT_VERSION } from "../../../contract/src/index.js";
-import type { CallContext, CommandEnvelope, QueryEnvelope, Subscription } from "../../../contract/src/index.js";
+import type { CommandEnvelope, QueryEnvelope, Subscription } from "../../../contract/src/index.js";
 import type { Engine } from "../../../engine/src/engine.js";
 export interface InProcessClient {
   command(cmd: CommandEnvelope): ReturnType<Engine["command"]>;
@@ -11,23 +11,21 @@ export interface InProcessClient {
 export function inProcess(
   engine: Engine,
   options: {
-    scope?: CallContext["scope"];
+    scope?: "read" | "collaborate" | "admin";
     contractVersion?: string;
   } = {},
 ): InProcessClient {
   let n = 0;
-  const context = (): CallContext => ({
+  const metadata = () => ({
     contractVersion: options.contractVersion ?? CONTRACT_VERSION,
-    principal: { kind: "human" },
-    channel: "in_process",
-    scope: options.scope ?? "admin",
     requestId: "in-process-" + ++n,
   });
+  const auth = engine.trustedHostAuth(options.scope ?? "admin");
   return {
-    command: (cmd: CommandEnvelope) => engine.command(context(), cmd),
-    query: (query: QueryEnvelope) => engine.query(context(), query),
-    subscribe: (sub: Subscription) => engine.subscribe(context(), sub),
-    putBlob: (bytes: Uint8Array, mediaType: string) => engine.putBlob(context(), bytes, mediaType),
-    getBlob: (hash: string) => engine.getBlob(context(), hash),
+    command: (cmd: CommandEnvelope) => engine.command(auth, metadata(), cmd),
+    query: (query: QueryEnvelope) => engine.query(auth, metadata(), query),
+    subscribe: (sub: Subscription) => engine.subscribe(auth, metadata(), sub),
+    putBlob: (bytes: Uint8Array, mediaType: string) => engine.putBlob(auth, metadata(), bytes, mediaType),
+    getBlob: (hash: string) => engine.getBlob(auth, metadata(), hash),
   };
 }

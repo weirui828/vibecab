@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/events/sys.AccessTokenCreated.json",
+  "title": "sysAccessTokenCreatedEvent",
+  "type": "object",
+  "properties": { "accessToken": { "$ref": "https://vibecab.local/schemas/access-token.json" } },
+  "required": ["accessToken"],
+  "additionalProperties": false
+}

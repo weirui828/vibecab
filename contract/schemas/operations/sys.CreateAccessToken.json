@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/sys.CreateAccessToken.json",
+  "title": "sysCreateAccessTokenOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "channel": { "enum": ["http", "cli", "mcp"] },
+        "scope": { "enum": ["read", "collaborate", "admin"] }
+      },
+      "required": ["name", "channel", "scope"],
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "properties": {
+        "token": { "type": "string", "minLength": 32 },
+        "accessToken": { "$ref": "https://vibecab.local/schemas/access-token.json" }
+      },
+      "required": ["token", "accessToken"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["payload", "result"],
+  "additionalProperties": false,
+  "operation": {
+    "name": "sys.CreateAccessToken",
+    "kind": "command",
+    "meta": { "effect": "admin", "irreversible": false, "channels": ["in_process", "http", "cli"] }
+  }
+}

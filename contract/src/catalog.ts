@@ -40,11 +40,5 @@ export const unsupportedGroups: readonly {
     queries: "",
     effect: "admin",
   },
-  {
-    prefix: "sys",
-    commands: "CreateAccessToken RevokeAccessToken",
-    queries: "AccessTokens",
-    effect: "admin",
-  },
   { prefix: "sys", commands: "", queries: "", effect: "admin" },
 ];

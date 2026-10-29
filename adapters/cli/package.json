@@ -1,0 +1,16 @@
+{
+  "name": "@vibecab/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "vibecab": "bin/vibecab.mjs"
+  },
+  "exports": "./src/index.ts",
+  "dependencies": {
+    "@napi-rs/keyring": "^2.1.2",
+    "@vibecab/contract": "workspace:*",
+    "@vibecab/engine": "workspace:*",
+    "@vibecab/http": "workspace:*",
+    "@vibecab/in-process": "workspace:*"
+  }
+}

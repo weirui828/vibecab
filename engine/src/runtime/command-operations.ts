@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { randomBytes } from "node:crypto";
 import { fail } from "../../../contract/src/index.js";
 import type {
   CallContext,
@@ -11,6 +12,7 @@ import type {
   VcCreateArtifactOperation,
   VcImportContentOperation,
   VcRestoreVersionOperation,
+  SysCreateAccessTokenOperation,
 } from "../../../contract/src/index.js";
 import { importContent } from "../content/import.js";
 import { createGrant, revokeGrant } from "../agent/grants.js";
@@ -103,6 +105,48 @@ export abstract class CommandOperations extends StorageAccessRuntime {
           }),
         });
         return { state };
+      }
+      case "sys.CreateAccessToken": {
+        const p = this.contract.read<{
+          name: string;
+          channel: "http" | "cli" | "mcp";
+          scope: "read" | "collaborate" | "admin";
+        }>("operations/sys.CreateAccessToken", cmd.payload, "#/properties/payload");
+        if (p.channel === "mcp" && p.scope === "admin") fail("invalid", "MCP access tokens cannot have admin scope");
+        const token = randomBytes(32).toString("base64url"),
+          accessToken = this.contract.read<SysCreateAccessTokenOperation["result"]["accessToken"]>("access-token", {
+            tokenId: this.deps.ids.next("token_"),
+            name: p.name,
+            channel: p.channel,
+            scope: p.scope,
+            createdAt: this.deps.clock.now(),
+          });
+        store.createAccessToken({
+          ...accessToken,
+          secretHash: this.authentication.hash(token),
+        });
+        store.appendEvent({
+          ts: accessToken.createdAt,
+          type: "sys.AccessTokenCreated",
+          entity: { kind: "access_token", id: accessToken.tokenId },
+          payload: this.contract.read<Json>("events/sys.AccessTokenCreated", { accessToken }),
+        });
+        return { token, accessToken };
+      }
+      case "sys.RevokeAccessToken": {
+        const p = this.contract.read<{ tokenId: string }>(
+          "operations/sys.RevokeAccessToken",
+          cmd.payload,
+          "#/properties/payload",
+        );
+        store.revokeAccessToken(p.tokenId, this.deps.clock.now());
+        store.appendEvent({
+          ts: this.deps.clock.now(),
+          type: "sys.AccessTokenRevoked",
+          entity: { kind: "access_token", id: p.tokenId },
+          payload: this.contract.read<Json>("events/sys.AccessTokenRevoked", { tokenId: p.tokenId }),
+        });
+        return { tokenId: p.tokenId, revoked: true };
       }
       case "vc.CreateArtifact": {
         const p = this.contract.read<VcCreateArtifactOperation["payload"]>(

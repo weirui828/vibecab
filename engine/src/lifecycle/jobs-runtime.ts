@@ -6,7 +6,7 @@ import { promisify } from "node:util";
 import { canonical } from "../content/hash.js";
 import { estimateInputTokens, estimateReservationMicros } from "../gateway/ledger.js";
 import type { ModelRequest } from "../gateway/types.js";
-import { fail } from "../../../contract/src/index.js";
+import { CONTRACT_VERSION, fail } from "../../../contract/src/index.js";
 import type {
   Agreement,
   ContextManifest,
@@ -79,7 +79,8 @@ export abstract class LifecycleJobsRuntime extends LifecycleHelpersRuntime {
       });
     }
     const blobHash = await this.putBlob(
-      this.internalContext(`export:${exportId}`),
+      this.mintTrustedHost("admin"),
+      { contractVersion: CONTRACT_VERSION, requestId: `export:${exportId}` },
       new TextEncoder().encode(content),
       "text/plain; charset=utf-8",
     );

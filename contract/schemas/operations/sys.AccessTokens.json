@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/sys.AccessTokens.json",
+  "title": "sysAccessTokensOperation",
+  "type": "object",
+  "properties": {
+    "payload": { "type": "object", "additionalProperties": false },
+    "result": { "type": "array", "items": { "$ref": "https://vibecab.local/schemas/access-token.json" } }
+  },
+  "required": ["payload", "result"],
+  "additionalProperties": false,
+  "operation": {
+    "name": "sys.AccessTokens",
+    "kind": "query",
+    "meta": { "effect": "admin", "irreversible": false, "channels": ["in_process", "http", "cli"] }
+  }
+}

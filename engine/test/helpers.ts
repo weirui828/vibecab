@@ -2,8 +2,27 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createEngine } from "../src/engine.js";
-import type { CallContext, ElementDraft } from "../../contract/src/index.js";
+import type {
+  CallContext,
+  CommandEnvelope,
+  ElementDraft,
+  EventEnvelope,
+  QueryEnvelope,
+  Subscription,
+} from "../../contract/src/index.js";
 import type { Dependencies } from "../src/dependencies.js";
+import type { Engine } from "../src/engine.js";
+export interface TestEngine {
+  start(workspaceDir: string): Promise<void>;
+  stop(): Promise<void>;
+  drain(graceMs: number): Promise<void>;
+  restoreBackup(archivePath: string, destinationDir: string): Promise<void>;
+  command(ctx: CallContext, cmd: CommandEnvelope): ReturnType<Engine["command"]>;
+  query(ctx: CallContext, q: QueryEnvelope): ReturnType<Engine["query"]>;
+  subscribe(ctx: CallContext, sub: Subscription): AsyncIterable<EventEnvelope>;
+  putBlob(ctx: CallContext, bytes: Uint8Array, mediaType: string): Promise<string>;
+  getBlob(ctx: CallContext, hash: string): Promise<Uint8Array>;
+}
 export const ctx: CallContext = {
   contractVersion: "1.0",
   principal: { kind: "human" },
@@ -40,14 +59,34 @@ export async function fixture(options: Partial<Dependencies> = {}) {
     ...options,
   });
   await engine.start(dir);
+  const compatibilityEngine: TestEngine = {
+    start: engine.start.bind(engine),
+    stop: engine.stop.bind(engine),
+    drain: engine.drain.bind(engine),
+    restoreBackup: engine.restoreBackup.bind(engine),
+    command: (context: CallContext, command: Parameters<Engine["command"]>[2]) =>
+      engine.command(engine.trustedHostAuth(context.scope), metadata(context), command),
+    query: (context: CallContext, query: Parameters<Engine["query"]>[2]) =>
+      engine.query(engine.trustedHostAuth(context.scope), metadata(context), query),
+    subscribe: (context: CallContext, sub: Parameters<Engine["subscribe"]>[2]) =>
+      engine.subscribe(engine.trustedHostAuth(context.scope), metadata(context), sub),
+    putBlob: (context: CallContext, bytes: Uint8Array, mediaType: string) =>
+      engine.putBlob(engine.trustedHostAuth(context.scope), metadata(context), bytes, mediaType),
+    getBlob: (context: CallContext, hash: string) =>
+      engine.getBlob(engine.trustedHostAuth(context.scope), metadata(context), hash),
+  };
   return {
-    engine,
+    engine: compatibilityEngine,
+    rawEngine: engine,
     dir,
     close: async () => {
       await engine.stop();
       await rm(dir, { recursive: true, force: true });
     },
   };
+}
+function metadata(context: CallContext) {
+  return { contractVersion: context.contractVersion, requestId: context.requestId };
 }
 export function tokenFactory() {
   let n = 0;

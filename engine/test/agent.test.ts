@@ -32,7 +32,7 @@ async function waitFor<T>(read: () => Promise<T>, ready: (value: T) => boolean):
   throw Error("Agent turn did not complete");
 }
 
-async function createManualSession(engine: import("../src/engine.js").Engine, prefix: string) {
+async function createManualSession(engine: import("./helpers.js").TestEngine, prefix: string) {
   const project = await engine.command(ctx, {
     commandId: `${prefix}-project`,
     type: "vc.CreateProject",
@@ -307,15 +307,20 @@ it("does not accept adapter supplied agent principals and allows only human gran
       },
     });
     expect(grant.ok).toBe(true);
-    const system = await f.engine.command(
-      { ...ctx, principal: { kind: "system", job: "agent.reply" } },
-      {
-        commandId: "system-grant",
-        type: "vc.CreateGrant",
-        payload: { scope: {}, capabilities: ["start_review"], limits: {} },
-      },
-    );
-    expect(system).toMatchObject({ ok: false, error: { code: "forbidden" } });
+    const forged = { ...ctx, principal: { kind: "system", job: "agent.reply" }, channel: "in_process", scope: "admin" },
+      system = await Reflect.apply(f.rawEngine.command, f.rawEngine, [
+        forged,
+        {
+          contractVersion: "1.0",
+          requestId: "forged-context",
+        },
+        {
+          commandId: "system-grant",
+          type: "vc.CreateGrant",
+          payload: { scope: {}, capabilities: ["start_review"], limits: {} },
+        },
+      ]);
+    expect(system).toMatchObject({ ok: false, error: { code: "unauthenticated" } });
     expect(await f.engine.query(ctx, { name: "vc.Grants", args: {} })).toHaveLength(1);
   } finally {
     await f.close();

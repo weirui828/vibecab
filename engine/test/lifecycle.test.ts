@@ -24,7 +24,7 @@ const model: ProviderModel = {
 };
 const runFile = promisify(execFile);
 
-async function importArtifact(engine: import("../src/engine.js").Engine, content: string) {
+async function importArtifact(engine: import("./helpers.js").TestEngine, content: string) {
   const result = await engine.command(ctx, {
     commandId: "lifecycle-import",
     type: "vc.ImportContent",
@@ -38,7 +38,7 @@ async function importArtifact(engine: import("../src/engine.js").Engine, content
   );
 }
 
-async function startSession(engine: import("../src/engine.js").Engine, artifactId: string) {
+async function startSession(engine: import("./helpers.js").TestEngine, artifactId: string) {
   const project = await engine.command(ctx, {
     commandId: "lifecycle-project",
     type: "vc.CreateProject",
@@ -70,7 +70,7 @@ async function startSession(engine: import("../src/engine.js").Engine, artifactI
   return sessionId;
 }
 
-async function waitForExport(engine: import("../src/engine.js").Engine, exportId: string) {
+async function waitForExport(engine: import("./helpers.js").TestEngine, exportId: string) {
   for (let i = 0; i < 100; i++) {
     const result = await engine.query(ctx, { name: "vc.Exports", args: {} });
     const rows = new Contract().read<import("../../contract/src/index.js").ExportRecord[]>(

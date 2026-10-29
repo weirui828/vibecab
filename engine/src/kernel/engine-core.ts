@@ -1,7 +1,7 @@
 import { open, mkdir, readFile, unlink, realpath } from "node:fs/promises";
 import type { FileHandle } from "node:fs/promises";
 import { join } from "node:path";
-import { Contract, CONTRACT_VERSION, errorOf, fail } from "../../../contract/src/index.js";
+import { Contract, errorOf, fail } from "../../../contract/src/index.js";
 import type {
   CallContext,
   CommandEnvelope,
@@ -17,6 +17,8 @@ import type {
 import { SqliteStore } from "../storage/sqlite.js";
 
 import type { Dependencies } from "../dependencies.js";
+import { Authentication, randomAccessTokenKey } from "./authentication.js";
+import type { CallAuth, CallMetadata, TrustedHostCredential } from "../auth.js";
 import { SerialQueue } from "./queue.js";
 import { JobRunner } from "./jobs.js";
 import { ModuleRegistry } from "./module-registry.js";
@@ -49,7 +51,17 @@ export abstract class EngineCore {
 
   private lifecycleContext: ModuleContext | undefined;
 
-  constructor(protected readonly deps: Dependencies) {}
+  protected readonly authentication: Authentication;
+
+  constructor(protected readonly deps: Dependencies) {
+    this.authentication = new Authentication(deps.clock, deps.ids, <T>(value: unknown) =>
+      this.contract.read<T>("call-metadata", value),
+    );
+  }
+
+  protected mintTrustedHost(scope: TrustedHostCredential["scope"]): TrustedHostCredential {
+    return this.authentication.mintTrustedHost(scope);
+  }
 
   protected configureModules(modules: readonly EngineModule[]): void {
     this.registry = new ModuleRegistry(
@@ -120,10 +132,8 @@ export abstract class EngineCore {
     return this.store;
   }
 
-  protected context(raw: unknown) {
-    const ctx = this.contract.read<CallContext>("call-context", raw);
-    if (ctx.contractVersion !== CONTRACT_VERSION) fail("unsupported", "Contract version is not supported");
-    return ctx;
+  protected context(auth: CallAuth, rawMetadata: CallMetadata): CallContext {
+    return this.authentication.resolve(auth, rawMetadata, this.available());
   }
 
   protected authorize(
@@ -171,6 +181,8 @@ export abstract class EngineCore {
       await this.lock.writeFile(String(process.pid));
       await this.lock.sync();
       this.store = new SqliteStore(join(this.workspace, "workspace.sqlite"), this.contract);
+      this.authentication.configureKey(this.store.accessTokenKey(randomAccessTokenKey));
+      await this.authentication.migrateLegacyFile(this.workspace, this.store);
       this.initializeServices();
       this.jobs = new JobRunner(
         this.store,
@@ -249,13 +261,13 @@ export abstract class EngineCore {
     }
   }
 
-  async command(rawCtx: CallContext, rawCmd: CommandEnvelope): Promise<CommandResult> {
+  async command(auth: CallAuth, metadata: CallMetadata, rawCmd: CommandEnvelope): Promise<CommandResult> {
     try {
-      const ctx = this.context(rawCtx),
-        cmd = this.contract.read<CommandEnvelope>("command-envelope", rawCmd);
-      this.operation(ctx, cmd.type, "command");
+      const cmd = this.contract.read<CommandEnvelope>("command-envelope", rawCmd);
       if (!this.accepting) fail("unavailable", "Engine is not accepting commands");
       return await this.queue.run(() => {
+        const ctx = this.context(auth, metadata);
+        this.operation(ctx, cmd.type, "command");
         const store = this.available();
         const existing = store.command(cmd.commandId);
         if (existing) return existing;
@@ -270,7 +282,18 @@ export abstract class EngineCore {
           } catch (error) {
             result = { ok: false, error: errorOf(error) };
           }
-          store.saveCommand(cmd.commandId, result);
+          const durableResult =
+            cmd.type === "sys.CreateAccessToken" && result.ok
+              ? this.contract.read<CommandResult>("command-result", {
+                  ok: false,
+                  error: {
+                    code: "uncertain",
+                    message: "Access token secret is returned only once",
+                    retryable: false,
+                  },
+                })
+              : result;
+          store.saveCommand(cmd.commandId, durableResult);
           return result;
         });
         if (result.ok && (cmd.type === "sys.SetSettings" || cmd.type === "sys.SetProviderKeyRef"))
@@ -283,14 +306,15 @@ export abstract class EngineCore {
     }
   }
 
-  async query(rawCtx: CallContext, rawQ: QueryEnvelope): Promise<Json> {
+  async query(auth: CallAuth, metadata: CallMetadata, rawQ: QueryEnvelope): Promise<Json> {
     try {
-      const ctx = this.context(rawCtx),
-        q = this.contract.read<QueryEnvelope>("query-envelope", rawQ);
-      this.operation(ctx, q.name, "query");
-      await this.queue.idle();
-      const result = this.dispatchQuery(ctx, q);
-      return this.contract.read<Json>("operations/" + q.name, result, "#/properties/result");
+      const q = this.contract.read<QueryEnvelope>("query-envelope", rawQ);
+      return await this.queue.run(() => {
+        const ctx = this.context(auth, metadata);
+        this.operation(ctx, q.name, "query");
+        const result = this.dispatchQuery(ctx, q);
+        return this.contract.read<Json>("operations/" + q.name, result, "#/properties/result");
+      });
     } catch (error) {
       throwBoundary(error);
     }

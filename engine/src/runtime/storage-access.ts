@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { errorOf, fail } from "../../../contract/src/index.js";
 import type { CallContext, EventEnvelope, Json, Settings, Subscription } from "../../../contract/src/index.js";
 import { canonical } from "../content/hash.js";
+import type { CallAuth, CallMetadata } from "../auth.js";
 import { EngineCore } from "../kernel/engine-core.js";
 import type { Content } from "../content/content.js";
 import type { Feedback } from "../feedback/feedback.js";
@@ -22,12 +23,12 @@ export abstract class StorageAccessRuntime extends EngineCore {
     return settings;
   }
 
-  subscribe(rawCtx: CallContext, rawSub: Subscription): AsyncIterable<EventEnvelope> {
+  subscribe(auth: CallAuth, metadata: CallMetadata, rawSub: Subscription): AsyncIterable<EventEnvelope> {
     const currentStore = () => this.store;
     const listeners = this.listeners;
     let ctx: CallContext, sub: Subscription;
     try {
-      ctx = this.context(rawCtx);
+      ctx = this.context(auth, metadata);
       sub = this.contract.read<Subscription>("subscription", rawSub);
       this.authorize(ctx, "read");
       this.available();
@@ -78,10 +79,8 @@ export abstract class StorageAccessRuntime extends EngineCore {
     return iterator;
   }
 
-  async putBlob(rawCtx: CallContext, bytes: Uint8Array, mediaType: string): Promise<string> {
+  async putBlob(auth: CallAuth, metadata: CallMetadata, bytes: Uint8Array, mediaType: string): Promise<string> {
     try {
-      const ctx = this.context(rawCtx);
-      this.authorize(ctx, "collaborate");
       this.available();
       if (!this.accepting) fail("unavailable", "Engine is draining");
       if (!(bytes instanceof Uint8Array) || typeof mediaType !== "string" || !mediaType.length)
@@ -89,6 +88,8 @@ export abstract class StorageAccessRuntime extends EngineCore {
       const snapshot = Uint8Array.from(bytes),
         hash = createHash("sha256").update(snapshot).digest("hex");
       await this.queue.run(async () => {
+        const ctx = this.context(auth, metadata);
+        this.authorize(ctx, "collaborate");
         const dir = join(this.workspace, "blobs", hash.slice(0, 2), hash.slice(2, 4));
         await mkdir(dir, { recursive: true });
         const path = join(dir, hash),
@@ -112,16 +113,20 @@ export abstract class StorageAccessRuntime extends EngineCore {
     }
   }
 
-  async getBlob(rawCtx: CallContext, hash: string): Promise<Uint8Array> {
+  async getBlob(auth: CallAuth, metadata: CallMetadata, hash: string): Promise<Uint8Array> {
     try {
-      const ctx = this.context(rawCtx);
-      this.authorize(ctx, "read");
       this.available();
       if (!/^[a-f0-9]{64}$/.test(hash)) fail("invalid", "Invalid blob hash");
-      await this.queue.idle();
-      const bytes = await readFile(join(this.workspace, "blobs", hash.slice(0, 2), hash.slice(2, 4), hash));
-      if (createHash("sha256").update(bytes).digest("hex") !== hash) fail("internal", "Blob integrity check failed");
-      return new Uint8Array(bytes);
+      return await this.queue.run(() => {
+        const ctx = this.context(auth, metadata);
+        this.authorize(ctx, "read");
+        const bytes = readFile(join(this.workspace, "blobs", hash.slice(0, 2), hash.slice(2, 4), hash));
+        return bytes.then((value) => {
+          if (createHash("sha256").update(value).digest("hex") !== hash)
+            fail("internal", "Blob integrity check failed");
+          return new Uint8Array(value);
+        });
+      });
     } catch (error) {
       if (isCode(error, "ENOENT")) fail("not_found", "Blob not found");
       throwBoundary(error);

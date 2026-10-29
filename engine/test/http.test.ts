@@ -1,7 +1,10 @@
 import { it, expect } from "vitest";
 import { request } from "node:http";
-import { fixture, tokenFactory } from "./helpers.js";
+import { fixture } from "./helpers.js";
 import { startHttp } from "../../adapters/http/src/index.js";
+import { inProcess } from "../../adapters/in-process/src/index.js";
+import { Contract } from "../../contract/src/index.js";
+import type { SysCreateAccessTokenOperation } from "../../contract/src/index.js";
 function call(url: string, headers: Record<string, string> = {}) {
   return new Promise<{
     status: number;
@@ -16,12 +19,19 @@ function call(url: string, headers: Record<string, string> = {}) {
 }
 it("HTTP authenticates all routes, rejects rebinding and foreign origins, and emits no CORS", async () => {
   const f = await fixture();
-  const server = await startHttp(f.engine, {
-    workspaceDir: f.dir,
-    tokenFactory: tokenFactory(),
+  const created = await inProcess(f.rawEngine).command({
+    commandId: "http-test-token",
+    type: "sys.CreateAccessToken",
+    payload: { name: "HTTP test", channel: "http", scope: "admin" },
   });
+  if (!created.ok) throw Error(created.error.message);
+  const token = new Contract().read<SysCreateAccessTokenOperation["result"]>(
+    "operations/sys.CreateAccessToken",
+    created.result,
+    "#/properties/result",
+  ).token;
+  const server = await startHttp(f.rawEngine, {});
   try {
-    const token = server.tokens.admin;
     for (const [headers, status] of [
       [{}, 401],
       [{ Authorization: "Bearer bad" }, 401],
@@ -33,7 +43,7 @@ it("HTTP authenticates all routes, rejects rebinding and foreign origins, and em
       expect(response.status).toBe(status);
       expect(Object.keys(response.headers).some((h) => h.startsWith("access-control-"))).toBe(false);
     }
-    await expect(startHttp(f.engine, { workspaceDir: f.dir, host: "0.0.0.0" })).rejects.toMatchObject({
+    await expect(startHttp(f.rawEngine, { host: "0.0.0.0" })).rejects.toMatchObject({
       contract: { code: "invalid" },
     });
   } finally {

@@ -9,7 +9,7 @@ import type {
   Json,
   Version,
 } from "../../../contract/src/index.js";
-import type { Artifact, Repository, SearchHit } from "./repository.js";
+import type { Artifact, Repository, SearchHit, StoredAccessToken } from "./repository.js";
 import { canonical, revisionHash } from "../content/hash.js";
 function field(row: unknown, key: string): unknown {
   return typeof row === "object" && row !== null ? Reflect.get(row, key) : undefined;
@@ -37,6 +37,11 @@ export class SqliteStore implements Repository {
    CREATE TABLE IF NOT EXISTS vc_feedback(kind TEXT NOT NULL,id TEXT NOT NULL,json TEXT NOT NULL,PRIMARY KEY(kind,id));
    CREATE INDEX IF NOT EXISTS vc_feedback_kind ON vc_feedback(kind,id);
    CREATE TABLE IF NOT EXISTS sys_call_log(call_id TEXT PRIMARY KEY,json TEXT NOT NULL);
+   CREATE TABLE IF NOT EXISTS sys_access_tokens(
+     token_id TEXT PRIMARY KEY,name TEXT NOT NULL,channel TEXT NOT NULL,scope TEXT NOT NULL,
+     secret_hash TEXT NOT NULL,created_at TEXT NOT NULL,revoked_at TEXT
+   );
+   CREATE TABLE IF NOT EXISTS sys_meta(key TEXT PRIMARY KEY,value TEXT NOT NULL);
    CREATE VIRTUAL TABLE IF NOT EXISTS vc_search USING fts5(
      kind UNINDEXED, session_id UNINDEXED, artifact_id UNINDEXED, record_id UNINDEXED, text
    );
@@ -353,6 +358,63 @@ export class SqliteStore implements Repository {
           text,
         };
       });
+  }
+  accessTokens(): StoredAccessToken[] {
+    return this.db
+      .prepare(
+        "SELECT token_id,name,channel,scope,secret_hash,created_at,revoked_at FROM sys_access_tokens ORDER BY created_at,token_id",
+      )
+      .all()
+      .map((row) => {
+        const tokenId = field(row, "token_id"),
+          name = field(row, "name"),
+          channel = field(row, "channel"),
+          scope = field(row, "scope"),
+          secretHash = field(row, "secret_hash"),
+          createdAt = field(row, "created_at"),
+          revokedAt = field(row, "revoked_at");
+        if (
+          typeof tokenId !== "string" ||
+          typeof name !== "string" ||
+          (channel !== "http" && channel !== "cli" && channel !== "mcp") ||
+          (scope !== "read" && scope !== "collaborate" && scope !== "admin") ||
+          typeof secretHash !== "string" ||
+          typeof createdAt !== "string" ||
+          (revokedAt !== null && typeof revokedAt !== "string")
+        )
+          throw Error("Corrupt access token record");
+        return { tokenId, name, channel, scope, secretHash, createdAt, ...(revokedAt ? { revokedAt } : {}) };
+      });
+  }
+  createAccessToken(token: StoredAccessToken): void {
+    this.writing();
+    this.db
+      .prepare("INSERT INTO sys_access_tokens VALUES(?,?,?,?,?,?,?)")
+      .run(
+        token.tokenId,
+        token.name,
+        token.channel,
+        token.scope,
+        token.secretHash,
+        token.createdAt,
+        token.revokedAt ?? null,
+      );
+  }
+  revokeAccessToken(tokenId: string, revokedAt: string): void {
+    this.writing();
+    const result = this.db
+      .prepare("UPDATE sys_access_tokens SET revoked_at=? WHERE token_id=? AND revoked_at IS NULL")
+      .run(revokedAt, tokenId);
+    if (result.changes === 0 && !this.accessTokens().some((token) => token.tokenId === tokenId))
+      fail("not_found", "Access token not found");
+  }
+  accessTokenKey(factory: () => string): string {
+    const existing = this.db.prepare("SELECT value FROM sys_meta WHERE key='access_token_hmac_key'").get();
+    const value = field(existing, "value");
+    if (typeof value === "string") return value;
+    const key = factory();
+    this.db.prepare("INSERT INTO sys_meta(key,value) VALUES('access_token_hmac_key',?)").run(key);
+    return key;
   }
   private writeJob(job: Job) {
     this.contract.read("job", job);

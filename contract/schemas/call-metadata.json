@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/call-metadata.json",
+  "title": "CallMetadata",
+  "type": "object",
+  "properties": {
+    "contractVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+$" },
+    "requestId": { "type": "string", "minLength": 1 }
+  },
+  "required": ["contractVersion", "requestId"],
+  "additionalProperties": false
+}

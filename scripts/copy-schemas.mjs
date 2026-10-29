@@ -5,7 +5,7 @@ await cp("engine/src/agent/prompts", "dist/engine/src/agent/prompts", {
   recursive: true,
 });
 // pnpm installs dependencies per source package; preserve that resolution in emitted packages.
-for (const name of ["contract", "engine", "adapters/in-process", "adapters/http"]) {
+for (const name of ["contract", "engine", "adapters/in-process", "adapters/http", "adapters/cli"]) {
   const output = resolve("dist", name);
   await mkdir(output, { recursive: true });
   try {

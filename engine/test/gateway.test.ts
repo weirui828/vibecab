@@ -339,9 +339,32 @@ it("validates and persists settings, key references, budget limits, usage and bu
       }),
     });
     expect(saved.ok).toBe(true);
+    const mcpToken = await f.rawEngine.command(
+      f.rawEngine.inProcessAuth,
+      {
+        contractVersion: "1.0",
+        requestId: "create-mcp-token",
+      },
+      {
+        commandId: "create-mcp-collaborate-token",
+        type: "sys.CreateAccessToken",
+        payload: { name: "MCP collaborator", channel: "mcp", scope: "collaborate" },
+      },
+    );
+    expect(mcpToken.ok).toBe(true);
+    if (!mcpToken.ok) throw Error(mcpToken.error.message);
+    const token = new Contract().read<{ token: string }>(
+      "operations/sys.CreateAccessToken",
+      mcpToken.result,
+      "#/properties/result",
+    ).token;
     expect(
-      await f.engine.command(
-        { ...ctx, channel: "mcp" },
+      await f.rawEngine.command(
+        { kind: "token", secret: token, transport: "mcp" },
+        {
+          contractVersion: "1.0",
+          requestId: "mcp-admin-call",
+        },
         {
           commandId: "mcp-admin",
           type: "sys.SetSettings",
