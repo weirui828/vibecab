@@ -3,5 +3,6 @@
 export interface OperationMeta {
   effect: "read" | "collaborate" | "admin";
   irreversible: boolean;
+  destructive?: boolean;
   channels: ("in_process" | "http" | "cli" | "mcp")[];
 }

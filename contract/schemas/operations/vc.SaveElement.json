@@ -36,7 +36,7 @@
     "meta": {
       "effect": "collaborate",
       "irreversible": false,
-      "channels": ["in_process", "http", "cli", "mcp"]
+      "channels": ["in_process", "http", "cli"]
     }
   }
 }

@@ -162,6 +162,10 @@ export abstract class CommandOperations extends StorageAccessRuntime {
           cmd.payload,
           "#/properties/payload",
         );
+        if (ctx.channel === "mcp" && p.artifactId !== undefined)
+          fail("forbidden", "Importing into an existing artifact is not allowed through MCP", {
+            reason: "existing_artifact_import_not_allowed_through_mcp",
+          });
         if (p.format === "markdown")
           for (const change of importContent(p.content, p.format))
             if (change.element.type === "image") {

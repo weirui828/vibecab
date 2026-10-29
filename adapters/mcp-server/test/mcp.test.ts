@@ -41,14 +41,99 @@ describe("MCP server", () => {
     annotations: Record<string, { toolName: string; description: string }> = JSON.parse(
       readFileSync("contract/mcp-tools.json", "utf8"),
     ),
-    namesForScope = (scope: "read" | "collaborate") =>
-      [...catalog.operations]
-        .filter(
-          ([, operation]) =>
-            operation.meta.channels.includes("mcp") && (scope === "collaborate" || operation.meta.effect === "read"),
-        )
-        .map(([name]) => annotations[name]!.toolName)
-        .sort();
+    expectedNames: Record<"read" | "collaborate", string[]> = {
+      read: [
+        "agent_turns",
+        "artifact",
+        "attention_inbox",
+        "budgets",
+        "capabilities",
+        "conflicts",
+        "decision_record",
+        "delivery_state",
+        "diff",
+        "digest",
+        "exports",
+        "feedback_items",
+        "grants",
+        "ideas",
+        "labels",
+        "list_sessions",
+        "list_threads",
+        "manifest",
+        "outline",
+        "output_sets",
+        "projects",
+        "read_elements",
+        "resolve_anchors",
+        "resume_view",
+        "settings",
+        "update_detail",
+        "updates",
+        "usage",
+        "versions",
+      ],
+      collaborate: [
+        "agent_turns",
+        "agree",
+        "approve_plan",
+        "artifact",
+        "ask_vibecab_agent",
+        "attach_artifact",
+        "attention_inbox",
+        "budgets",
+        "cancel_update",
+        "capabilities",
+        "capture_idea",
+        "comment",
+        "conflicts",
+        "create_artifact",
+        "create_output_set",
+        "create_project",
+        "decision_record",
+        "decline",
+        "delete_comment",
+        "delivery_state",
+        "diff",
+        "digest",
+        "edit_comment",
+        "edit_digest",
+        "end_session",
+        "export",
+        "exports",
+        "feedback_items",
+        "grants",
+        "ideas",
+        "import_content",
+        "label",
+        "labels",
+        "list_sessions",
+        "list_threads",
+        "manifest",
+        "mark_handled",
+        "mark_seen",
+        "outline",
+        "output_sets",
+        "pause_session",
+        "projects",
+        "read_elements",
+        "resolve_anchors",
+        "resolve_conflict",
+        "restore",
+        "restore_version",
+        "resume_session",
+        "resume_view",
+        "set_reply_trigger",
+        "settings",
+        "start_session",
+        "start_update",
+        "trash",
+        "update_detail",
+        "updates",
+        "usage",
+        "versions",
+      ],
+    };
   const closers: Array<() => Promise<void>> = [];
   afterEach(async () => {
     await Promise.all(closers.splice(0).map((close) => close()));
@@ -72,7 +157,7 @@ describe("MCP server", () => {
         { name: "sys.Capabilities", args: {} },
       ),
     ).toMatchObject({ callContext: { channel: "mcp", scope: "collaborate" } });
-    expect([...byName.keys()].sort()).toEqual(namesForScope("collaborate"));
+    expect([...byName.keys()].sort()).toEqual(expectedNames.collaborate);
     expect(byName.has("resume_view")).toBe(true);
     expect(byName.has("list_sessions")).toBe(true);
     expect(byName.has("outline")).toBe(true);
@@ -86,6 +171,10 @@ describe("MCP server", () => {
     expect(byName.has("start_update")).toBe(true);
     expect(byName.has("approve_plan")).toBe(true);
     expect(byName.has("create_output_set")).toBe(true);
+    expect(byName.has("save_element")).toBe(false);
+    expect(byName.has("hold_element")).toBe(false);
+    expect(byName.has("release_hold")).toBe(false);
+    expect(byName.get("trash")?.annotations).toMatchObject({ destructiveHint: true, idempotentHint: true });
     expect([...byName.keys()].some((name) => /purge|token/i.test(name))).toBe(false);
     expect(byName.get("outline")?.annotations).toMatchObject({ readOnlyHint: true });
     expect(byName.get("comment")?.annotations).toMatchObject({
@@ -98,7 +187,7 @@ describe("MCP server", () => {
       expect(operation).toBeDefined();
       expect(operation?.meta.effect).not.toBe("admin");
       expect(tool.annotations?.readOnlyHint).toBe(operation?.kind === "query");
-      expect(tool.annotations?.destructiveHint).toBe(false);
+      expect(tool.annotations?.destructiveHint).toBe(operation?.meta.destructive ?? false);
     }
 
     const readToken = await tokenFor(f, "read"),
@@ -108,10 +197,67 @@ describe("MCP server", () => {
       await readConnection.server.close();
     });
     const readTools = (await readConnection.client.listTools()).tools;
-    expect(readTools.map((tool) => tool.name).sort()).toEqual(namesForScope("read"));
+    expect(readTools.map((tool) => tool.name).sort()).toEqual(expectedNames.read);
     expect(readTools.length).toBeGreaterThan(0);
     expect(readTools.every((tool) => tool.annotations?.readOnlyHint === true)).toBe(true);
     expect(readTools.some((tool) => tool.name === "comment")).toBe(false);
+  });
+
+  it("rejects direct MCP editing operations and existing-artifact imports in the engine", async () => {
+    const f = await fixture(),
+      token = await tokenFor(f, "collaborate"),
+      connection = await connectedClient(f.rawEngine, token);
+    closers.push(async () => {
+      await connection.client.close();
+      await connection.server.close();
+      await f.close();
+    });
+    const created = await inProcess(f.rawEngine).command({
+      commandId: "mcp-restrictions-artifact",
+      type: "vc.ImportContent",
+      payload: { title: "Protected", format: "text", content: "Original" },
+    });
+    expect(created.ok).toBe(true);
+    if (!created.ok) return;
+    const artifactId = new Contract().read<{ artifactId: string }>(
+      "operations/vc.ImportContent",
+      created.result,
+      "#/properties/result",
+    ).artifactId;
+    const operations = [
+      [
+        "vc.SaveElement",
+        { artifactId, elementId: "element", baseVersion: 1, element: { type: "paragraph", props: {}, text: "Edit" } },
+      ],
+      ["vc.HoldElement", { artifactId, elementId: "element" }],
+      ["vc.ReleaseHold", { artifactId, elementId: "element" }],
+    ] as const;
+    for (const [type, payload] of operations) {
+      const result = await f.rawEngine.command(
+        { kind: "token", secret: token, transport: "mcp" },
+        { contractVersion: "1.0", requestId: `mcp-forbidden-${type}` },
+        { commandId: `mcp-forbidden-${type}`, type, payload },
+      );
+      expect(result).toMatchObject({ ok: false, error: { code: "forbidden" } });
+    }
+
+    const deniedImport = await connection.client.callTool({
+      name: "import_content",
+      arguments: { artifactId, format: "text", content: "Injected" },
+    });
+    expect(deniedImport.isError).toBe(true);
+    const errorText = deniedImport.content.find((item) => item.type === "text");
+    expect(errorText && errorText.type === "text" ? JSON.parse(errorText.text) : undefined).toMatchObject({
+      details: { reason: "existing_artifact_import_not_allowed_through_mcp" },
+    });
+    const versions = await inProcess(f.rawEngine).query({ name: "vc.Versions", args: { artifactId } });
+    expect(new Contract().read<unknown[]>("operations/vc.Versions", versions, "#/properties/result")).toHaveLength(1);
+
+    const newImport = await connection.client.callTool({
+      name: "import_content",
+      arguments: { format: "text", content: "New artifact" },
+    });
+    expect(newImport.isError).not.toBe(true);
   });
 
   it("routes tool calls through engine auth and records MCP attribution", async () => {

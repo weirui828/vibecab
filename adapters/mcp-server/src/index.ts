@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { createMcpHandler, fromJsonSchema, McpServer, ResourceTemplate } from "@modelcontextprotocol/server";
 import type { JsonSchemaType, jsonSchemaValidator } from "@modelcontextprotocol/server";
 import { CONTRACT_VERSION, Contract, errorOf, fail } from "../../../contract/src/index.js";
-import type { CommandEnvelope, Json, QueryEnvelope } from "../../../contract/src/index.js";
+import type { CommandEnvelope, Json, OperationMeta, QueryEnvelope } from "../../../contract/src/index.js";
 import type { CallAuth, CallMetadata, Engine } from "../../../engine/src/engine.js";
 
 type Scope = "read" | "collaborate" | "admin";
@@ -62,7 +62,8 @@ function registerServer(engine: Engine, auth: CallAuth, scope: Scope): McpServer
   const operations = [...contract.operations].filter(
     ([, operation]) => operation.meta.channels.includes("mcp") && scopeRank[operation.meta.effect] <= scopeRank[scope],
   );
-  for (const [name, operation] of operations) registerOperationTool(server, engine, auth, name, operation.kind);
+  for (const [name, operation] of operations)
+    registerOperationTool(server, engine, auth, name, operation.kind, operation.meta);
   registerResources(server, engine, auth);
   return server;
 }
@@ -73,6 +74,7 @@ function registerOperationTool(
   auth: CallAuth,
   operationName: string,
   kind: "command" | "query",
+  meta: OperationMeta,
 ) {
   const annotation = annotations[operationName];
   if (!annotation) throw new Error(`Missing MCP tool annotation: ${operationName}`);
@@ -91,7 +93,7 @@ function registerOperationTool(
       outputSchema,
       annotations: {
         readOnlyHint: kind === "query",
-        destructiveHint: false,
+        destructiveHint: meta.destructive ?? false,
         ...(kind === "command" ? { idempotentHint: true, openWorldHint: false } : {}),
       },
     },

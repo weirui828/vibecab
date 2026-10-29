@@ -127,10 +127,6 @@
     "toolName": "grants",
     "description": "Read grants."
   },
-  "vc.HoldElement": {
-    "toolName": "hold_element",
-    "description": "Hold a document block during collaboration."
-  },
   "vc.Ideas": {
     "toolName": "ideas",
     "description": "List saved ideas."
@@ -175,10 +171,6 @@
     "toolName": "projects",
     "description": "List workspace projects."
   },
-  "vc.ReleaseHold": {
-    "toolName": "release_hold",
-    "description": "Release a held document block."
-  },
   "vc.ResolveAnchors": {
     "toolName": "resolve_anchors",
     "description": "Read resolve anchors."
@@ -202,10 +194,6 @@
   "vc.ResumeView": {
     "toolName": "resume_view",
     "description": "Summarize recent changes, comments, replies, and open decisions for a session."
-  },
-  "vc.SaveElement": {
-    "toolName": "save_element",
-    "description": "Save an edited document block."
   },
   "vc.Sessions": {
     "toolName": "list_sessions",

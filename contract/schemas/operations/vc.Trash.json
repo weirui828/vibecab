@@ -27,6 +27,11 @@
   "operation": {
     "name": "vc.Trash",
     "kind": "command",
-    "meta": { "effect": "collaborate", "irreversible": false, "channels": ["in_process", "http", "cli", "mcp"] }
+    "meta": {
+      "effect": "collaborate",
+      "irreversible": false,
+      "destructive": true,
+      "channels": ["in_process", "http", "cli", "mcp"]
+    }
   }
 }

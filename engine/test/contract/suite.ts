@@ -86,20 +86,24 @@ export function contractSuite(
           ],
         }),
       ).toMatchObject([{ state: "current" }]);
-      expect(
-        (
-          await cmd("vc.ImportContent", {
-            artifactId: a.artifactId,
-            content: "Appended",
-            format: "text",
-          })
-        ).ok,
-      ).toBe(true);
-      expect(await query("vc.Diff", { artifactId: a.artifactId, from: 1, to: 2 })).toMatchObject({
-        removed: [],
-        changed: [],
-        moved: [],
+      const appended = await cmd("vc.ImportContent", {
+        artifactId: a.artifactId,
+        content: "Appended",
+        format: "text",
       });
+      if (client.channel === "mcp") {
+        expect(appended).toMatchObject({
+          ok: false,
+          error: { code: "forbidden", details: { reason: "existing_artifact_import_not_allowed_through_mcp" } },
+        });
+        expect(await query("vc.Versions", { artifactId: a.artifactId })).toHaveLength(1);
+      } else expect(appended.ok).toBe(true);
+      if (client.channel !== "mcp")
+        expect(await query("vc.Diff", { artifactId: a.artifactId, from: 1, to: 2 })).toMatchObject({
+          removed: [],
+          changed: [],
+          moved: [],
+        });
       expect(
         (
           await cmd("vc.RestoreVersion", {
@@ -108,8 +112,10 @@ export function contractSuite(
           })
         ).ok,
       ).toBe(true);
-      expect(await query("vc.Versions", { artifactId: a.artifactId })).toHaveLength(3);
-      expect(await query("vc.Elements", { artifactId: a.artifactId, version: 3 })).toEqual(elements);
+      expect(await query("vc.Versions", { artifactId: a.artifactId })).toHaveLength(client.channel === "mcp" ? 2 : 3);
+      expect(
+        await query("vc.Elements", { artifactId: a.artifactId, version: client.channel === "mcp" ? 2 : 3 }),
+      ).toEqual(elements);
       expect(await query("sys.Capabilities")).toMatchObject({
         contractVersion: "1.0",
         mediaKinds: ["doc"],
@@ -165,11 +171,8 @@ export function contractSuite(
     });
     it("replays and resumes events without gaps or duplicates", async () => {
       const a = await imported();
-      await cmd("vc.ImportContent", {
-        artifactId: a.artifactId,
-        format: "text",
-        content: "Next",
-      });
+      if (client.channel === "mcp") await cmd("vc.CreateArtifact", { title: "Next", mediaKind: "doc" });
+      else await cmd("vc.ImportContent", { artifactId: a.artifactId, format: "text", content: "Next" });
       const iterator = client.subscribe({ afterSeq: 0 })[Symbol.asyncIterator]();
       const seqs: number[] = [];
       for (let i = 0; i < 3; i++) seqs.push((await iterator.next()).value!.seq);
@@ -177,11 +180,8 @@ export function contractSuite(
       await iterator.return?.();
       const resumed = client.subscribe({ afterSeq: 3 })[Symbol.asyncIterator]();
       const live = resumed.next();
-      await cmd("vc.ImportContent", {
-        artifactId: a.artifactId,
-        format: "text",
-        content: "Live",
-      });
+      if (client.channel === "mcp") await cmd("vc.CreateArtifact", { title: "Live", mediaKind: "doc" });
+      else await cmd("vc.ImportContent", { artifactId: a.artifactId, format: "text", content: "Live" });
       expect((await live).value!.seq).toBe(4);
       await resumed.return?.();
     });

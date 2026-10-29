@@ -11,6 +11,9 @@
     "irreversible": {
       "type": "boolean"
     },
+    "destructive": {
+      "type": "boolean"
+    },
     "channels": {
       "type": "array",
       "items": {
