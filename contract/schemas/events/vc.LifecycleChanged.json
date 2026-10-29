@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/events/vc.LifecycleChanged.json",
+  "title": "LifecycleChanged",
+  "type": "object",
+  "properties": {
+    "kind": { "type": "string", "minLength": 1 },
+    "id": { "type": "string", "minLength": 1 },
+    "action": { "type": "string", "minLength": 1 },
+    "status": { "type": "string" }
+  },
+  "required": ["kind", "id", "action"],
+  "additionalProperties": false
+}

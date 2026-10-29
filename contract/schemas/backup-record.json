@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/backup-record.json",
+  "title": "BackupRecord",
+  "type": "object",
+  "properties": {
+    "backupId": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["queued", "completed", "failed"] },
+    "archivePath": { "type": "string", "minLength": 1 },
+    "archiveHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "createdAt": { "type": "string", "format": "date-time" }
+  },
+  "required": ["backupId", "status", "createdAt"],
+  "additionalProperties": false
+}

@@ -61,4 +61,5 @@ export interface Settings {
   };
   budgets: Budgets;
   sessions: Sessions;
+  trashRetentionDays?: number;
 }

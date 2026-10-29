@@ -18,7 +18,8 @@
         "to": {
           "type": "integer",
           "minimum": 1
-        }
+        },
+        "includeTrashed": { "type": "boolean" }
       },
       "required": ["artifactId", "from", "to"],
       "additionalProperties": false

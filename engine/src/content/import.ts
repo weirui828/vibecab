@@ -87,7 +87,14 @@ export function importContent(content: string, format: "markdown" | "text"): Add
           add({ type: "heading", props: { level: node.depth }, text: text(node) }, parentId);
           break;
         case "paragraph":
-          add({ type: "paragraph", props: {}, text: text(node) }, parentId);
+          if (
+            node.children.length === 1 &&
+            node.children[0]?.type === "image" &&
+            /^blob:[a-f0-9]{64}$/.test(node.children[0].url)
+          ) {
+            const image = node.children[0];
+            add({ type: "image", props: { alt: image.alt ?? "" }, blobHash: image.url.slice(5) }, parentId);
+          } else add({ type: "paragraph", props: {}, text: text(node) }, parentId);
           break;
         case "blockquote":
           add(
@@ -206,6 +213,8 @@ export function outlineMarkdown(nodes: Add[]): string {
           );
         return rows.join("\n");
       }
+      case "image":
+        return `![${e.props.alt ?? ""}](blob:${e.blobHash})`;
       default:
         return "text" in e ? e.text : "";
     }

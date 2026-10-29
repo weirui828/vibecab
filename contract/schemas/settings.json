@@ -26,7 +26,8 @@
       "additionalProperties": {
         "$ref": "https://vibecab.local/schemas/session-settings.json"
       }
-    }
+    },
+    "trashRetentionDays": { "type": "integer", "minimum": 1, "maximum": 3650 }
   },
   "required": ["models", "budgets", "sessions"],
   "additionalProperties": false

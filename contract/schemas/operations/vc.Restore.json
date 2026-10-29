@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/vc.Restore.json",
+  "title": "vcRestoreOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "type": "object",
+          "properties": {
+            "kind": { "enum": ["artifact", "session", "comment", "idea", "project"] },
+            "id": { "type": "string", "minLength": 1 }
+          },
+          "required": ["kind", "id"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["target"],
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "properties": { "restored": { "type": "boolean" } },
+      "required": ["restored"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["payload", "result"],
+  "additionalProperties": false,
+  "operation": {
+    "name": "vc.Restore",
+    "kind": "command",
+    "meta": { "effect": "collaborate", "irreversible": false, "channels": ["in_process", "http", "cli", "mcp"] }
+  }
+}

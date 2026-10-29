@@ -59,6 +59,9 @@ export class SqliteStore implements Repository {
   transaction<T>(action: () => T): T {
     return this.db.transaction(action)();
   }
+  async backup(path: string): Promise<void> {
+    await this.db.backup(path);
+  }
   private writing() {
     if (!this.db.inTransaction) throw Error("Write outside command transaction");
   }
@@ -273,6 +276,38 @@ export class SqliteStore implements Repository {
             .run("element", link.sessionId, link.artifactId, element.elementId, element.text);
         }
     }
+  }
+  deleteFeedback(kind: string, id: string) {
+    this.writing();
+    this.db.prepare("DELETE FROM vc_feedback WHERE kind=? AND id=?").run(kind, id);
+    if (kind === "comment") this.db.prepare("DELETE FROM vc_search WHERE kind='comment' AND record_id=?").run(id);
+  }
+  deleteArtifact(id: string) {
+    this.writing();
+    this.artifact(id);
+    this.db.prepare("DELETE FROM vc_search WHERE kind='element' AND artifact_id=?").run(id);
+    this.db.prepare("DELETE FROM vc_version_entries WHERE artifact_id=?").run(id);
+    this.db.prepare("DELETE FROM vc_versions WHERE artifact_id=?").run(id);
+    this.db.prepare("DELETE FROM vc_artifacts WHERE artifact_id=?").run(id);
+    this.pruneElementRevisions();
+  }
+  pruneElementRevisions(): string[] {
+    this.writing();
+    const hashes = this.db
+      .prepare("SELECT hash FROM vc_element_revisions WHERE hash NOT IN (SELECT revision_hash FROM vc_version_entries)")
+      .all();
+    const removed = hashes.map((row) => field(row, "hash")).filter((hash): hash is string => typeof hash === "string");
+    this.db
+      .prepare("DELETE FROM vc_element_revisions WHERE hash NOT IN (SELECT revision_hash FROM vc_version_entries)")
+      .run();
+    return removed;
+  }
+  artifactIds(): string[] {
+    return this.db
+      .prepare("SELECT artifact_id FROM vc_artifacts ORDER BY artifact_id")
+      .all()
+      .map((row) => field(row, "artifact_id"))
+      .filter((id): id is string => typeof id === "string");
   }
   callLogs(): CallLog[] {
     return this.db

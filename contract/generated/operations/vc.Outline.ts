@@ -6,6 +6,7 @@ export interface VcOutlineOperation {
   payload: {
     artifactId: string;
     version?: number;
+    includeTrashed?: boolean;
   };
   result: Outline;
 }

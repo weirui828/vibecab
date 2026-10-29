@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/vc.PurgePreview.json",
+  "title": "vcPurgePreviewOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "type": "object",
+          "properties": {
+            "kind": { "enum": ["artifact", "session", "comment", "idea", "project"] },
+            "id": { "type": "string", "minLength": 1 }
+          },
+          "required": ["kind", "id"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["target"],
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "properties": {
+        "target": { "type": "object" },
+        "recordIds": { "type": "array", "items": { "type": "string" } },
+        "revisionHashes": { "type": "array", "items": { "type": "string" } },
+        "blobHashes": { "type": "array", "items": { "type": "string" } },
+        "manifestIds": { "type": "array", "items": { "type": "string" } },
+        "digestIds": { "type": "array", "items": { "type": "string" } },
+        "commentIds": { "type": "array", "items": { "type": "string" } },
+        "agreementIds": { "type": "array", "items": { "type": "string" } },
+        "updateIds": { "type": "array", "items": { "type": "string" } },
+        "conflictIds": { "type": "array", "items": { "type": "string" } },
+        "outputSetIds": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": [
+        "target",
+        "recordIds",
+        "revisionHashes",
+        "blobHashes",
+        "manifestIds",
+        "digestIds",
+        "commentIds",
+        "agreementIds",
+        "updateIds",
+        "conflictIds",
+        "outputSetIds"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": ["payload", "result"],
+  "additionalProperties": false,
+  "operation": {
+    "name": "vc.PurgePreview",
+    "kind": "query",
+    "meta": { "effect": "read", "irreversible": false, "channels": ["in_process", "http", "cli"] }
+  }
+}

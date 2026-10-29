@@ -10,7 +10,8 @@
         "artifactId": {
           "type": "string",
           "minLength": 1
-        }
+        },
+        "includeTrashed": { "type": "boolean" }
       },
       "required": ["artifactId"],
       "additionalProperties": false

@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/vc.MarkSeen.json",
+  "title": "vcMarkSeenOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": { "sessionId": { "type": "string", "minLength": 1 } },
+      "required": ["sessionId"],
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "properties": { "sessionId": { "type": "string" }, "lastSeenSeq": { "type": "integer", "minimum": 0 } },
+      "required": ["sessionId", "lastSeenSeq"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["payload", "result"],
+  "additionalProperties": false,
+  "operation": {
+    "name": "vc.MarkSeen",
+    "kind": "command",
+    "meta": { "effect": "collaborate", "irreversible": false, "channels": ["in_process", "http", "cli", "mcp"] }
+  }
+}

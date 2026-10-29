@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/trash-record.json",
+  "title": "TrashRecord",
+  "type": "object",
+  "properties": {
+    "kind": { "enum": ["artifact", "session", "comment", "idea", "project"] },
+    "id": { "type": "string", "minLength": 1 },
+    "trashedAt": { "type": "string", "format": "date-time" },
+    "purgeAt": { "type": "string", "format": "date-time" }
+  },
+  "required": ["kind", "id", "trashedAt", "purgeAt"],
+  "additionalProperties": false
+}

@@ -14,6 +14,7 @@ export interface Settings {
   sessions: {
     [k: string]: SessionSettings;
   };
+  trashRetentionDays?: number;
 }
 export interface ProviderModel {
   provider: "openai-compatible";

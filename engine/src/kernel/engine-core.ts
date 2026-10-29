@@ -1,4 +1,5 @@
-import { open, mkdir, readFile, unlink, realpath, rename } from "node:fs/promises";
+import { open, mkdir, readFile, unlink, realpath, rename, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import type { FileHandle } from "node:fs/promises";
 import { join } from "node:path";
 import { Contract, CONTRACT_VERSION, errorOf, fail } from "../../../contract/src/index.js";
@@ -29,6 +30,8 @@ import type {
 import { unsupportedGroups } from "../../../contract/src/catalog.js";
 import { SqliteStore } from "../storage/sqlite.js";
 import { Content } from "../content/content.js";
+import { canonical } from "../content/hash.js";
+import { importContent } from "../content/import.js";
 import { outline, diffVersions, resolveAnchors } from "../content/diff.js";
 
 import type { Dependencies } from "./dependencies.js";
@@ -276,6 +279,11 @@ export abstract class EngineCore {
             "agent.trigger": (job) => this.runTrigger(job),
             "agent.update.trigger": (job) => this.runUpdateTrigger(job),
             "agent.update": (job) => this.runUpdate(job),
+            digest: (job) => this.runDigest(job),
+            export: (job) => this.runExport(job),
+            backup: (job) => this.runBackup(job),
+            purge: (job) => this.runPurge(job),
+            "trash.sweep": () => this.runTrashSweep(),
           },
           onInterrupted: (job) => this.recoverInterruptedJob(job),
           onUncertain: (job) => {
@@ -307,7 +315,12 @@ export abstract class EngineCore {
         },
       );
       await this.jobs.recover();
-      await this.queue.run(() => this.available().transaction(() => this.recoverAwaitingPlanReviews()));
+      await this.queue.run(() =>
+        this.available().transaction(() => {
+          this.recoverAwaitingPlanReviews();
+          this.ensureTrashSweep();
+        }),
+      );
       this.accepting = true;
       this.workerTimer = setInterval(() => {
         void this.jobs?.tick();
@@ -487,6 +500,13 @@ export abstract class EngineCore {
           cmd.payload,
           "#/properties/payload",
         );
+        if (p.format === "markdown")
+          for (const change of importContent(p.content, p.format))
+            if (change.element.type === "image") {
+              const hash = change.element.blobHash,
+                path = join(this.workspace, "blobs", hash.slice(0, 2), hash.slice(2, 4), hash);
+              if (!existsSync(path)) fail("not_found", "Markdown image blob was not found in this workspace");
+            }
         const r = content.import(p, ctx.principal);
         return {
           artifactId: r.artifactId,
@@ -527,9 +547,7 @@ export abstract class EngineCore {
       }
       case "vc.CaptureIdea":
       case "vc.CreateProject":
-      case "vc.StartSession":
       case "vc.AttachArtifact":
-      case "vc.PauseSession":
       case "vc.ResumeSession":
       case "vc.EndSession":
       case "vc.Comment":
@@ -542,6 +560,40 @@ export abstract class EngineCore {
       case "vc.MarkHandled":
         if (!this.feedback) fail("unavailable", "Engine is stopped");
         return this.feedback.command(cmd.type, cmd.payload, ctx.principal);
+      case "vc.StartSession": {
+        if (!this.feedback) fail("unavailable", "Engine is stopped");
+        const result = this.feedback.command(cmd.type, cmd.payload, ctx.principal),
+          sessionId = this.contract.read<{ sessionId: string }>(
+            "operations/vc.StartSession",
+            result,
+            "#/properties/result",
+          ).sessionId,
+          lastSeenSeq = store.lastSeq();
+        store.saveFeedback(
+          "session-seen",
+          sessionId,
+          this.contract.read<Json>("session-seen", { sessionId, lastSeenSeq, updatedAt: this.deps.clock.now() }),
+        );
+        return result;
+      }
+      case "vc.PauseSession": {
+        if (!this.feedback) fail("unavailable", "Engine is stopped");
+        const p = this.contract.read<{ sessionId: string }>(
+            "operations/vc.PauseSession",
+            cmd.payload,
+            "#/properties/payload",
+          ),
+          result = this.feedback.command(cmd.type, cmd.payload, ctx.principal),
+          digestId = this.deps.ids.next("digest_");
+        store.saveFeedback("digest-request", digestId, this.contract.read<Json>("json", { sessionId: p.sessionId }));
+        store.enqueue(
+          "digest",
+          digestId,
+          this.contract.read<Json>("json", { digestId, sessionId: p.sessionId }),
+          this.deps.clock.now(),
+        );
+        return result;
+      }
       case "vc.CreateGrant": {
         return createGrant(store, this.contract, this.deps.ids, ctx.principal, cmd.payload);
       }
@@ -652,7 +704,7 @@ export abstract class EngineCore {
         if (ctx.principal.kind !== "human") fail("forbidden", "ApprovePlan requires a human principal");
         return this.approvePlan(cmd.payload, cmd.commandId);
       default:
-        fail("unsupported", "Operation is not supported");
+        return this.dispatchLifecycleCommand(cmd.type, cmd.payload, ctx);
     }
   }
 
@@ -701,21 +753,45 @@ export abstract class EngineCore {
           operations,
         };
       }
-      case "vc.Artifact":
-        return store.artifact(read<VcArtifactOperation["payload"]>().artifactId);
+      case "vc.Artifact": {
+        const p = read<VcArtifactOperation["payload"]>();
+        this.assertLifecycleVisible("artifact", p.artifactId, p.includeTrashed);
+        return store.artifact(p.artifactId);
+      }
       case "vc.Outline": {
         const p = read<VcOutlineOperation["payload"]>();
+        this.assertLifecycleVisible("artifact", p.artifactId, p.includeTrashed);
         return outline(store.elements(p.artifactId, p.version));
       }
       case "vc.Elements": {
         const p = read<VcElementsOperation["payload"]>(),
           elements = store.elements(p.artifactId, p.version);
+        this.assertLifecycleVisible("artifact", p.artifactId, p.includeTrashed);
         return p.elementIds ? elements.filter((e) => p.elementIds!.includes(e.elementId)) : elements;
       }
-      case "vc.Versions":
-        return store.versions(read<VcArtifactOperation["payload"]>().artifactId);
+      case "vc.Versions": {
+        const p = read<VcArtifactOperation["payload"]>();
+        this.assertLifecycleVisible("artifact", p.artifactId, p.includeTrashed);
+        const sets = store
+          .feedbackList("output-set")
+          .map((value) =>
+            this.contract.read<{ outputSetId: string; members: Array<{ artifactId: string; version: number }> }>(
+              "output-set",
+              value,
+            ),
+          );
+        return store.versions(p.artifactId).map((version) => ({
+          ...version,
+          outputSetIds: sets
+            .filter((set) =>
+              set.members.some((member) => member.artifactId === p.artifactId && member.version === version.version),
+            )
+            .map((set) => set.outputSetId),
+        }));
+      }
       case "vc.Diff": {
         const p = read<VcDiffOperation["payload"]>();
+        this.assertLifecycleVisible("artifact", p.artifactId, p.includeTrashed);
         return diffVersions(store, p.artifactId, p.from, p.to);
       }
       case "vc.ResolveAnchors":
@@ -744,7 +820,7 @@ export abstract class EngineCore {
       case "vc.Conflicts":
       case "vc.AttentionInbox":
         if (!this.feedback) fail("unavailable", "Engine is stopped");
-        return this.feedback.query(q.name, q.args);
+        return this.dispatchLifecycleQuery(q.name, q.args);
       case "vc.AgentTurns":
       case "vc.Manifest":
       case "vc.DeliveryState":
@@ -806,7 +882,7 @@ export abstract class EngineCore {
         return this.contract.read<Update>("update", found);
       }
       default:
-        fail("unsupported", "Operation is not supported");
+        return this.dispatchLifecycleQuery(q.name, q.args);
     }
   }
 
@@ -898,6 +974,7 @@ export abstract class EngineCore {
           await file.sync();
           await file.close();
           await rename(temporary, path);
+          await writeFile(join(dir, `${hash}.meta.json`), canonical({ mediaType }), { mode: 0o600 });
         } catch (error) {
           await file.close().catch(() => undefined);
           await unlink(temporary).catch(() => undefined);
@@ -980,6 +1057,19 @@ export abstract class EngineCore {
     changes: import("../../../contract/src/index.js").CommitInput["changes"],
     expectedVersion?: number,
   ): Promise<void>;
+  protected abstract dispatchLifecycleCommand(name: string, payload: Json, ctx: CallContext): unknown;
+  protected abstract dispatchLifecycleQuery(name: string, args: Json): unknown;
+  protected abstract runDigest(job: Job): Promise<void>;
+  protected abstract runExport(job: Job): Promise<void>;
+  protected abstract runBackup(job: Job): Promise<void>;
+  protected abstract runPurge(job: Job): Promise<void>;
+  protected abstract runTrashSweep(): Promise<void>;
+  protected abstract ensureTrashSweep(): void;
+  protected abstract assertLifecycleVisible(
+    kind: "artifact" | "session" | "comment" | "idea" | "project",
+    id: string,
+    includeTrashed?: boolean,
+  ): void;
 }
 
 function isCode(error: unknown, code: string): boolean {

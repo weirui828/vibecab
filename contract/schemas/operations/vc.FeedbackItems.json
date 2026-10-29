@@ -17,7 +17,8 @@
         },
         "state": {
           "enum": ["open", "discussing", "agreed", "scheduled", "applied", "declined", "superseded"]
-        }
+        },
+        "includeTrashed": { "type": "boolean" }
       },
       "additionalProperties": false
     },

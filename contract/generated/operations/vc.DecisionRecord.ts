@@ -4,6 +4,7 @@ export interface VcDecisionRecordOperation {
   payload: {
     artifactId: string;
     elementId?: string;
+    includeTrashed?: boolean;
   };
   result: Agreement[];
 }

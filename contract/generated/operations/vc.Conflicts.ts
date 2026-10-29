@@ -4,6 +4,7 @@ export interface VcConflictsOperation {
   payload: {
     sessionId?: string;
     artifactId?: string;
+    includeTrashed?: boolean;
   };
   result: FeedbackConflict[];
 }

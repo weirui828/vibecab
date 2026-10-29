@@ -8,6 +8,7 @@ const idempotent = Object.freeze([
   "digest",
   "export",
   "purge",
+  "trash.sweep",
   "agent.trigger",
   "agent.update.trigger",
 ]);

@@ -3,6 +3,7 @@
 export interface VcSessionsOperation {
   payload: {
     sessionId?: string;
+    includeTrashed?: boolean;
   };
   result: Session[];
 }

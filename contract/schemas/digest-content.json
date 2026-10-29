@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/digest-content.json",
+  "title": "DigestContent",
+  "type": "object",
+  "properties": {
+    "purpose": { "type": "string" },
+    "whereItStands": { "type": "string" },
+    "openQuestions": { "type": "array", "items": { "type": "string" } },
+    "nextSteps": { "type": "array", "items": { "type": "string" } }
+  },
+  "required": ["purpose", "whereItStands", "openQuestions", "nextSteps"],
+  "additionalProperties": false
+}

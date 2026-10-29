@@ -10,7 +10,8 @@
         "sessionId": {
           "type": "string",
           "minLength": 1
-        }
+        },
+        "includeTrashed": { "type": "boolean" }
       },
       "additionalProperties": false
     },

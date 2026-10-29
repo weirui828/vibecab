@@ -20,6 +20,9 @@
         },
         "includeDeleted": {
           "type": "boolean"
+        },
+        "includeTrashed": {
+          "type": "boolean"
         }
       },
       "additionalProperties": false,

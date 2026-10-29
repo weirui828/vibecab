@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/session-digest.json",
+  "title": "SessionDigest",
+  "type": "object",
+  "properties": {
+    "digestId": { "type": "string", "minLength": 1 },
+    "sessionId": { "type": "string", "minLength": 1 },
+    "version": { "type": "integer", "minimum": 1 },
+    "purpose": { "type": "string" },
+    "whereItStands": { "type": "string" },
+    "openQuestions": { "type": "array", "items": { "type": "string" } },
+    "nextSteps": { "type": "array", "items": { "type": "string" } },
+    "createdBy": { "enum": ["machine", "human"] },
+    "createdAt": { "type": "string", "format": "date-time" }
+  },
+  "required": [
+    "digestId",
+    "sessionId",
+    "version",
+    "purpose",
+    "whereItStands",
+    "openQuestions",
+    "nextSteps",
+    "createdBy",
+    "createdAt"
+  ],
+  "additionalProperties": false
+}

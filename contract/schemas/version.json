@@ -39,6 +39,11 @@
     "createdAt": {
       "type": "string",
       "format": "date-time"
+    },
+    "outputSetIds": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 },
+      "uniqueItems": true
     }
   },
   "required": ["artifactId", "version", "parentVersion", "manifest", "createdBy", "source", "createdAt"],

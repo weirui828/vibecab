@@ -5,7 +5,15 @@ export interface VcAttentionInboxOperation {
   result: AttentionItem[];
 }
 export interface AttentionItem {
-  kind: "conflict" | "agreed_item" | "unread_reply";
+  kind:
+    | "conflict"
+    | "agreed_item"
+    | "unread_reply"
+    | "proposal"
+    | "new_version"
+    | "running_update"
+    | "failed_update"
+    | "output_set";
   id: string;
   sessionId?: string;
   artifactId?: string;

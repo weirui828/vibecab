@@ -29,6 +29,9 @@ import type {
   VcStartSessionOperation,
   VcThreadsOperation,
   Settings,
+  OutputSet,
+  Update,
+  SessionSeen,
 } from "../../../contract/src/index.js";
 import { fail, type Contract } from "../../../contract/src/index.js";
 import type { Clock, IdGenerator } from "../kernel/dependencies.js";
@@ -811,7 +814,67 @@ export class Feedback {
             sessionId: c.sessionId,
             ...(c.anchor ? { artifactId: c.anchor.artifactId } : {}),
           }));
-        return [...conflicts, ...agreements, ...replies];
+        const proposals = this.list<FeedbackComment>("comment", "feedback-comment")
+            .filter(
+              (comment) =>
+                comment.author.kind === "agent" &&
+                comment.proposal !== undefined &&
+                ["open", "discussing"].includes(comment.state),
+            )
+            .map((comment) => ({
+              kind: "proposal",
+              id: comment.commentId,
+              sessionId: comment.sessionId,
+              ...(comment.anchor ? { artifactId: comment.anchor.artifactId } : {}),
+            })),
+          outputSets = this.list<OutputSet>("output-set", "output-set").map((set) => ({
+            kind: "output_set",
+            id: set.outputSetId,
+            ...(set.sessionId ? { sessionId: set.sessionId } : {}),
+          })),
+          updates = this.list<Update>("update", "update")
+            .filter((update) =>
+              [
+                "queued",
+                "planning",
+                "awaiting_plan_review",
+                "writing",
+                "checking",
+                "failed",
+                "partially_committed",
+              ].includes(update.status),
+            )
+            .map((update) => ({
+              kind: ["failed", "partially_committed"].includes(update.status) ? "failed_update" : "running_update",
+              id: update.updateId,
+              artifactId: update.artifactId,
+            })),
+          newVersions = this.list<SessionSeen>("session-seen", "session-seen").flatMap((seen) => {
+            const attached = this.list<SessionArtifact>("attachment", "session-artifact")
+              .filter((link) => link.sessionId === seen.sessionId)
+              .map((link) => link.artifactId);
+            return this.store
+              .eventsAfter(seen.lastSeenSeq)
+              .filter(
+                (event) =>
+                  event.type === "vc.VersionCommitted" &&
+                  event.entity.kind === "artifact" &&
+                  attached.includes(event.entity.id),
+              )
+              .map((event) => {
+                const payload = this.contract.read<{ artifactId: string; version: number }>(
+                  "events/vc.VersionCommitted",
+                  event.payload,
+                );
+                return {
+                  kind: "new_version",
+                  id: `${payload.artifactId}:${payload.version}`,
+                  sessionId: seen.sessionId,
+                  artifactId: payload.artifactId,
+                };
+              });
+          });
+        return [...conflicts, ...agreements, ...replies, ...proposals, ...newVersions, ...updates, ...outputSets];
       }
       default:
         fail("unsupported", "Operation is not supported");

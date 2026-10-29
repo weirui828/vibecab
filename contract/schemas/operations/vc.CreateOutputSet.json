@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/vc.CreateOutputSet.json",
+  "title": "vcCreateOutputSetOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": {
+        "sessionId": { "type": "string", "minLength": 1 },
+        "label": { "type": "string", "minLength": 1 },
+        "artifactIds": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "required": ["artifactIds"],
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "properties": { "outputSetId": { "type": "string" } },
+      "required": ["outputSetId"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["payload", "result"],
+  "additionalProperties": false,
+  "operation": {
+    "name": "vc.CreateOutputSet",
+    "kind": "command",
+    "meta": { "effect": "collaborate", "irreversible": false, "channels": ["in_process", "http", "cli", "mcp"] }
+  }
+}

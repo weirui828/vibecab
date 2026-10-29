@@ -6,7 +6,7 @@ export const unsupportedGroups: readonly {
   effect?: OperationMeta["effect"];
 }[] = [
   { prefix: "sys", commands: "OpenWorkspace", queries: "", effect: "admin" },
-  { prefix: "vc", commands: "", queries: "ResumeView" },
+  { prefix: "vc", commands: "", queries: "" },
   { prefix: "vc", commands: "", queries: "" },
   { prefix: "vc", commands: "MarkHandled", queries: "DeliveryState" },
   { prefix: "vc", commands: "", queries: "" },
@@ -28,15 +28,15 @@ export const unsupportedGroups: readonly {
     commands: "CancelRun ResumeRun",
     queries: "Runs Run Report Findings",
   },
-  { prefix: "vc", commands: "CreateOutputSet Label", queries: "OutputSets" },
+  { prefix: "vc", commands: "", queries: "" },
   {
     prefix: "vc",
-    commands: "Trash Restore Export",
-    queries: "Exports PurgePreview",
+    commands: "",
+    queries: "",
   },
   {
     prefix: "sys",
-    commands: "Purge Backup RestoreBackup",
+    commands: "RestoreBackup",
     queries: "",
     effect: "admin",
   },

@@ -6,6 +6,7 @@ export interface VcThreadsOperation {
     artifactId?: string;
     state?: "open" | "discussing" | "agreed" | "scheduled" | "applied" | "declined" | "superseded";
     includeDeleted?: boolean;
+    includeTrashed?: boolean;
   };
   result: Thread[];
 }

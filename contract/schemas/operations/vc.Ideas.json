@@ -6,7 +6,7 @@
   "properties": {
     "payload": {
       "type": "object",
-      "properties": {},
+      "properties": { "includeTrashed": { "type": "boolean" } },
       "additionalProperties": false
     },
     "result": {

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/vc.Label.json",
+  "title": "vcLabelOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": {
+        "target": { "$ref": "https://vibecab.local/schemas/label.json#/properties/target" },
+        "label": { "type": "string", "minLength": 1 }
+      },
+      "required": ["target", "label"],
+      "additionalProperties": false
+    },
+    "result": { "$ref": "https://vibecab.local/schemas/label.json" }
+  },
+  "required": ["payload", "result"],
+  "additionalProperties": false,
+  "operation": {
+    "name": "vc.Label",
+    "kind": "command",
+    "meta": { "effect": "collaborate", "irreversible": false, "channels": ["in_process", "http", "cli", "mcp"] }
+  }
+}

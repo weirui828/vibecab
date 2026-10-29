@@ -9,7 +9,7 @@ import type {
 } from "../../contract/src/index.js";
 import type { Dependencies } from "./kernel/dependencies.js";
 import { defaults } from "./kernel/dependencies.js";
-import { UpdateRuntime } from "./updates/runtime.js";
+import { LifecycleRuntime } from "./lifecycle/runtime.js";
 
 export interface Engine {
   start(workspaceDir: string): Promise<void>;
@@ -22,7 +22,7 @@ export interface Engine {
   getBlob(ctx: CallContext, hash: string): Promise<Uint8Array>;
 }
 
-class LocalEngine extends UpdateRuntime implements Engine {}
+class LocalEngine extends LifecycleRuntime implements Engine {}
 export function createEngine(options: Partial<Dependencies> = {}): Engine {
   return new LocalEngine({ ...defaults(), ...options });
 }

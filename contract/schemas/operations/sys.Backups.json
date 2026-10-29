@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/sys.Backups.json",
+  "title": "sysBackupsOperation",
+  "type": "object",
+  "properties": {
+    "payload": { "type": "object", "properties": {}, "additionalProperties": false },
+    "result": { "type": "array", "items": { "$ref": "https://vibecab.local/schemas/backup-record.json" } }
+  },
+  "required": ["payload", "result"],
+  "additionalProperties": false,
+  "operation": {
+    "name": "sys.Backups",
+    "kind": "query",
+    "meta": { "effect": "read", "irreversible": false, "channels": ["in_process", "http", "cli"] }
+  }
+}

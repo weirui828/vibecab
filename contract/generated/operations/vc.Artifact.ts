@@ -3,6 +3,7 @@
 export interface VcArtifactOperation {
   payload: {
     artifactId: string;
+    includeTrashed?: boolean;
   };
   result: {
     artifactId: string;

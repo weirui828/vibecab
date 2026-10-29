@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/export-record.json",
+  "title": "ExportRecord",
+  "type": "object",
+  "properties": {
+    "exportId": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["queued", "completed", "failed"] },
+    "target": { "type": "object" },
+    "format": { "enum": ["markdown", "html", "json"] },
+    "blobHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "error": { "type": "string" },
+    "createdAt": { "type": "string", "format": "date-time" }
+  },
+  "required": ["exportId", "status", "target", "format", "createdAt"],
+  "additionalProperties": false
+}

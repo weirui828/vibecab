@@ -36,6 +36,10 @@ export interface Repository {
   feedback(kind: string, id: string): Json | undefined;
   feedbackList(kind: string): Json[];
   saveFeedback(kind: string, id: string, value: Json): void;
+  deleteFeedback(kind: string, id: string): void;
+  deleteArtifact(id: string): void;
+  pruneElementRevisions(): string[];
+  artifactIds(): string[];
   callLogs(): CallLog[];
   saveCallLog(log: CallLog): void;
   search(sessionId: string, query: string): SearchHit[];

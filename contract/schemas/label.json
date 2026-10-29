@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/label.json",
+  "title": "Label",
+  "type": "object",
+  "properties": {
+    "labelId": { "type": "string", "minLength": 1 },
+    "target": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": { "outputSetId": { "type": "string", "minLength": 1 } },
+          "required": ["outputSetId"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "artifactId": { "type": "string", "minLength": 1 },
+            "version": { "type": "integer", "minimum": 1 }
+          },
+          "required": ["artifactId", "version"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "label": { "type": "string", "minLength": 1 },
+    "createdAt": { "type": "string", "format": "date-time" }
+  },
+  "required": ["labelId", "target", "label", "createdAt"],
+  "additionalProperties": false
+}

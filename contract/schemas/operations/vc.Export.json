@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/vc.Export.json",
+  "title": "vcExportOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": {
+        "target": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "artifactId": { "type": "string", "minLength": 1 },
+                "version": { "type": "integer", "minimum": 1 }
+              },
+              "required": ["artifactId"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": { "outputSetId": { "type": "string", "minLength": 1 } },
+              "required": ["outputSetId"],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "format": { "enum": ["markdown", "html", "json"] },
+        "include": {
+          "type": "object",
+          "properties": { "threads": { "type": "boolean" }, "decisionRecord": { "type": "boolean" } },
+          "additionalProperties": false
+        }
+      },
+      "required": ["target", "format"],
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "properties": { "exportId": { "type": "string" }, "status": { "const": "queued" } },
+      "required": ["exportId", "status"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["payload", "result"],
+  "additionalProperties": false,
+  "operation": {
+    "name": "vc.Export",
+    "kind": "command",
+    "meta": { "effect": "collaborate", "irreversible": false, "channels": ["in_process", "http", "cli", "mcp"] }
+  }
+}

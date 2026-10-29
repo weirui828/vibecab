@@ -5,6 +5,7 @@ export interface VcFeedbackItemsOperation {
     sessionId?: string;
     artifactId?: string;
     state?: "open" | "discussing" | "agreed" | "scheduled" | "applied" | "declined" | "superseded";
+    includeTrashed?: boolean;
   };
   result: FeedbackComment[];
 }

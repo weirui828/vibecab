@@ -14,7 +14,8 @@
         "version": {
           "type": "integer",
           "minimum": 1
-        }
+        },
+        "includeTrashed": { "type": "boolean" }
       },
       "required": ["artifactId"],
       "additionalProperties": false

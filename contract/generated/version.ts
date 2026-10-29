@@ -25,6 +25,7 @@ export interface Version {
   createdBy: VersionAuthor;
   source: VersionSource;
   createdAt: string;
+  outputSetIds?: string[];
 }
 export interface VersionSource {
   updateId?: string;

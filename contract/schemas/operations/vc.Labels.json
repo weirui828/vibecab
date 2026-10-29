@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/vc.Labels.json",
+  "title": "vcLabelsOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": { "outputSetId": { "type": "string" }, "artifactId": { "type": "string" } },
+      "additionalProperties": false
+    },
+    "result": { "type": "array", "items": { "$ref": "https://vibecab.local/schemas/label.json" } }
+  },
+  "required": ["payload", "result"],
+  "additionalProperties": false,
+  "operation": {
+    "name": "vc.Labels",
+    "kind": "query",
+    "meta": { "effect": "read", "irreversible": false, "channels": ["in_process", "http", "cli", "mcp"] }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/sys.Backup.json",
+  "title": "sysBackupOperation",
+  "type": "object",
+  "properties": {
+    "payload": { "type": "object", "properties": {}, "additionalProperties": false },
+    "result": {
+      "type": "object",
+      "properties": { "backupId": { "type": "string" }, "status": { "const": "queued" } },
+      "required": ["backupId", "status"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["payload", "result"],
+  "additionalProperties": false,
+  "operation": {
+    "name": "sys.Backup",
+    "kind": "command",
+    "meta": { "effect": "admin", "irreversible": false, "channels": ["in_process", "http", "cli"] }
+  }
+}

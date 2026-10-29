@@ -17,7 +17,7 @@ import type { ModelRequest as GatewayRequest } from "../gateway/types.js";
 
 import { AgentRuntime } from "../agent/runtime.js";
 
-export class UpdateRuntime extends AgentRuntime {
+export abstract class UpdateRuntime extends AgentRuntime {
   protected directEditingEnabled(artifactId: string): boolean {
     return this.available()
       .feedbackList("attachment")

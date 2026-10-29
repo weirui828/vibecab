@@ -19,6 +19,7 @@ export interface VcElementsOperation {
     artifactId: string;
     version?: number;
     elementIds?: string[];
+    includeTrashed?: boolean;
   };
   result: Element[];
 }

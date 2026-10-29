@@ -1,7 +1,14 @@
 import { readFile } from "node:fs/promises";
 
 import { fail } from "../../../contract/src/index.js";
-import type { Json, AgentTurn, ContextManifest, FeedbackComment, Job } from "../../../contract/src/index.js";
+import type {
+  Json,
+  AgentTurn,
+  ContextManifest,
+  FeedbackComment,
+  Job,
+  SessionDigest,
+} from "../../../contract/src/index.js";
 
 import { outline } from "../content/diff.js";
 
@@ -187,6 +194,11 @@ export abstract class AgentRuntime extends EngineCore {
       .map((id) => store.feedback("comment", id))
       .filter((x): x is Json => x !== undefined)
       .map((x) => this.contract.read<FeedbackComment>("feedback-comment", x));
+    const digest = store
+      .feedbackList("digest")
+      .map((value) => this.contract.read<SessionDigest>("session-digest", value))
+      .filter((value) => value.sessionId === turn.sessionId)
+      .sort((a, b) => b.version - a.version)[0];
     const prompt = await readFile(new URL("./prompts/reply.md", import.meta.url), "utf8");
     const promptHash = createHash("sha256").update(prompt).digest("hex");
     const messages: GatewayRequest["messages"] = [
@@ -194,6 +206,7 @@ export abstract class AgentRuntime extends EngineCore {
       {
         role: "user",
         content:
+          (digest ? `<derived-session-digest>\n${JSON.stringify(digest)}\n</derived-session-digest>\n` : "") +
           "<untrusted-comments>\n" +
           selected.map((c) => `${c.author.kind}: ${c.body}`).join("\n") +
           "\n</untrusted-comments>",
@@ -219,6 +232,18 @@ export abstract class AgentRuntime extends EngineCore {
           tokens: Math.ceil(c.body.length / 3),
           reason: "triggering comment",
         })),
+        ...(digest
+          ? [
+              {
+                kind: "digest" as const,
+                id: digest.digestId,
+                version: digest.version,
+                hash: createHash("sha256").update(JSON.stringify(digest)).digest("hex"),
+                tokens: Math.ceil(JSON.stringify(digest).length / 3),
+                reason: "latest derived session digest",
+              },
+            ]
+          : []),
       ],
       dropped: [],
       promptHash,

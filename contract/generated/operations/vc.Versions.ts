@@ -18,6 +18,7 @@ export type Principal =
 export interface VcVersionsOperation {
   payload: {
     artifactId: string;
+    includeTrashed?: boolean;
   };
   result: Version[];
 }
@@ -31,6 +32,7 @@ export interface Version {
   createdBy: VersionAuthor;
   source: VersionSource;
   createdAt: string;
+  outputSetIds?: string[];
 }
 export interface VersionSource {
   updateId?: string;

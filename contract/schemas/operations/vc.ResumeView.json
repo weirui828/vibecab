@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/vc.ResumeView.json",
+  "title": "vcResumeViewOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": { "sessionId": { "type": "string", "minLength": 1 }, "since": { "type": "integer", "minimum": 0 } },
+      "required": ["sessionId"],
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "properties": {
+        "sessionId": { "type": "string" },
+        "fromSeq": { "type": "integer", "minimum": 0 },
+        "toSeq": { "type": "integer", "minimum": 0 },
+        "versions": { "type": "array", "items": { "type": "object" } },
+        "comments": { "type": "array", "items": { "type": "object" } },
+        "replies": { "type": "array", "items": { "type": "object" } },
+        "awaitingAgreement": { "type": "array", "items": { "type": "object" } },
+        "conflicts": { "type": "array", "items": { "type": "object" } },
+        "updates": { "type": "array", "items": { "type": "object" } },
+        "lastOutputSet": { "$ref": "https://vibecab.local/schemas/output-set.json" },
+        "changesSinceOutputSet": { "type": "array", "items": { "type": "object" } }
+      },
+      "required": [
+        "sessionId",
+        "fromSeq",
+        "toSeq",
+        "versions",
+        "comments",
+        "replies",
+        "awaitingAgreement",
+        "conflicts",
+        "updates",
+        "changesSinceOutputSet"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": ["payload", "result"],
+  "additionalProperties": false,
+  "operation": {
+    "name": "vc.ResumeView",
+    "kind": "query",
+    "meta": { "effect": "read", "irreversible": false, "channels": ["in_process", "http", "cli", "mcp"] }
+  }
+}

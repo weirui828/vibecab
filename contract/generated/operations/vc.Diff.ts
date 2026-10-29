@@ -5,6 +5,7 @@ export interface VcDiffOperation {
     artifactId: string;
     from: number;
     to: number;
+    includeTrashed?: boolean;
   };
   result: DiffResult;
 }
