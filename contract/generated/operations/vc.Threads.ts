@@ -34,6 +34,7 @@ export interface FeedbackComment {
         kind: "agent";
         turnId: string;
       };
+  channel?: "in_process" | "http" | "cli" | "mcp";
   anchor?: Anchor;
   body: string;
   suggestion?: {

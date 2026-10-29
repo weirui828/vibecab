@@ -9,6 +9,7 @@ import type {
 } from "../../../contract/src/index.js";
 import { Contract } from "../../../contract/src/index.js";
 export interface Client {
+  channel?: "in_process" | "http" | "cli" | "mcp";
   command(cmd: CommandEnvelope): Promise<CommandResult>;
   query(q: QueryEnvelope): Promise<Json>;
   subscribe(sub: Subscription): AsyncIterable<EventEnvelope>;
@@ -147,14 +148,15 @@ export function contractSuite(
         "#/properties/result",
       );
       for (const op of capabilities.operations.filter((op) => op.supported)) {
+        const channelAllowed = op.meta.channels.includes(client.channel ?? "in_process");
         if (op.kind === "command")
           expect(await cmd(op.name, [])).toMatchObject({
             ok: false,
-            error: { code: "invalid" },
+            error: { code: channelAllowed ? "invalid" : "forbidden" },
           });
         else
           await expect(query(op.name, [])).rejects.toMatchObject({
-            contract: { code: "invalid" },
+            contract: { code: channelAllowed ? "invalid" : "forbidden" },
           });
       }
       const first = await cmd("vc.CreateArtifact", { mediaKind: "doc" }, "failed-id");

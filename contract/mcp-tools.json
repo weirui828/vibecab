@@ -1,0 +1,254 @@
+{
+  "sys.Budgets": {
+    "toolName": "budgets",
+    "description": "Read budgets."
+  },
+  "sys.Capabilities": {
+    "toolName": "capabilities",
+    "description": "Read capabilities."
+  },
+  "sys.Settings": {
+    "toolName": "settings",
+    "description": "Read settings."
+  },
+  "sys.Usage": {
+    "toolName": "usage",
+    "description": "Read usage."
+  },
+  "vc.AgentTurns": {
+    "toolName": "agent_turns",
+    "description": "Read agent turns."
+  },
+  "vc.Agree": {
+    "toolName": "agree",
+    "description": "Record agreement with a comment or proposed change."
+  },
+  "vc.ApprovePlan": {
+    "toolName": "approve_plan",
+    "description": "Approve the plan for an Update."
+  },
+  "vc.Artifact": {
+    "toolName": "artifact",
+    "description": "Read artifact metadata."
+  },
+  "vc.AskAgent": {
+    "toolName": "ask_vibecab_agent",
+    "description": "Ask the VibeCab agent to respond to session feedback."
+  },
+  "vc.AttachArtifact": {
+    "toolName": "attach_artifact",
+    "description": "Attach an artifact to a session."
+  },
+  "vc.AttentionInbox": {
+    "toolName": "attention_inbox",
+    "description": "List items that need attention."
+  },
+  "vc.CancelUpdate": {
+    "toolName": "cancel_update",
+    "description": "Perform cancel update."
+  },
+  "vc.CaptureIdea": {
+    "toolName": "capture_idea",
+    "description": "Save an idea for later work."
+  },
+  "vc.Comment": {
+    "toolName": "comment",
+    "description": "Post a comment, optionally anchored to artifact text."
+  },
+  "vc.Conflicts": {
+    "toolName": "conflicts",
+    "description": "List unresolved feedback conflicts."
+  },
+  "vc.CreateArtifact": {
+    "toolName": "create_artifact",
+    "description": "Create an empty structured document."
+  },
+  "vc.CreateOutputSet": {
+    "toolName": "create_output_set",
+    "description": "Save a named set of artifact versions."
+  },
+  "vc.CreateProject": {
+    "toolName": "create_project",
+    "description": "Create a project to group sessions and artifacts."
+  },
+  "vc.DecisionRecord": {
+    "toolName": "decision_record",
+    "description": "Read agreements for an artifact."
+  },
+  "vc.Decline": {
+    "toolName": "decline",
+    "description": "Decline a proposed change with an optional reason."
+  },
+  "vc.DeleteComment": {
+    "toolName": "delete_comment",
+    "description": "Perform delete comment."
+  },
+  "vc.DeliveryState": {
+    "toolName": "delivery_state",
+    "description": "Read delivery state."
+  },
+  "vc.Diff": {
+    "toolName": "diff",
+    "description": "Compare two versions of an artifact."
+  },
+  "vc.Digest": {
+    "toolName": "digest",
+    "description": "Read digest."
+  },
+  "vc.EditComment": {
+    "toolName": "edit_comment",
+    "description": "Perform edit comment."
+  },
+  "vc.EditDigest": {
+    "toolName": "edit_digest",
+    "description": "Perform edit digest."
+  },
+  "vc.Elements": {
+    "toolName": "read_elements",
+    "description": "Read blocks from an artifact version."
+  },
+  "vc.EndSession": {
+    "toolName": "end_session",
+    "description": "End a collaboration session."
+  },
+  "vc.Export": {
+    "toolName": "export",
+    "description": "Perform export."
+  },
+  "vc.Exports": {
+    "toolName": "exports",
+    "description": "Read exports."
+  },
+  "vc.FeedbackItems": {
+    "toolName": "feedback_items",
+    "description": "List comments and suggestions in a session or artifact."
+  },
+  "vc.Grants": {
+    "toolName": "grants",
+    "description": "Read grants."
+  },
+  "vc.HoldElement": {
+    "toolName": "hold_element",
+    "description": "Hold a document block during collaboration."
+  },
+  "vc.Ideas": {
+    "toolName": "ideas",
+    "description": "List saved ideas."
+  },
+  "vc.ImportContent": {
+    "toolName": "import_content",
+    "description": "Import text or Markdown into an artifact."
+  },
+  "vc.Label": {
+    "toolName": "label",
+    "description": "Add a label to an output set or artifact."
+  },
+  "vc.Labels": {
+    "toolName": "labels",
+    "description": "Read labels."
+  },
+  "vc.Manifest": {
+    "toolName": "manifest",
+    "description": "Read manifest."
+  },
+  "vc.MarkHandled": {
+    "toolName": "mark_handled",
+    "description": "Perform mark handled."
+  },
+  "vc.MarkSeen": {
+    "toolName": "mark_seen",
+    "description": "Perform mark seen."
+  },
+  "vc.Outline": {
+    "toolName": "outline",
+    "description": "Read the outline of an artifact version."
+  },
+  "vc.OutputSets": {
+    "toolName": "output_sets",
+    "description": "List saved output sets."
+  },
+  "vc.PauseSession": {
+    "toolName": "pause_session",
+    "description": "Perform pause session."
+  },
+  "vc.Projects": {
+    "toolName": "projects",
+    "description": "List workspace projects."
+  },
+  "vc.ReleaseHold": {
+    "toolName": "release_hold",
+    "description": "Release a held document block."
+  },
+  "vc.ResolveAnchors": {
+    "toolName": "resolve_anchors",
+    "description": "Read resolve anchors."
+  },
+  "vc.ResolveConflict": {
+    "toolName": "resolve_conflict",
+    "description": "Resolve a disagreement between proposed changes."
+  },
+  "vc.Restore": {
+    "toolName": "restore",
+    "description": "Perform restore."
+  },
+  "vc.RestoreVersion": {
+    "toolName": "restore_version",
+    "description": "Restore an earlier artifact version."
+  },
+  "vc.ResumeSession": {
+    "toolName": "resume_session",
+    "description": "Perform resume session."
+  },
+  "vc.ResumeView": {
+    "toolName": "resume_view",
+    "description": "Summarize recent changes, comments, replies, and open decisions for a session."
+  },
+  "vc.SaveElement": {
+    "toolName": "save_element",
+    "description": "Save an edited document block."
+  },
+  "vc.Sessions": {
+    "toolName": "list_sessions",
+    "description": "List the workspace sessions."
+  },
+  "vc.SetReplyTrigger": {
+    "toolName": "set_reply_trigger",
+    "description": "Perform set reply trigger."
+  },
+  "vc.StartSession": {
+    "toolName": "start_session",
+    "description": "Start a collaboration session."
+  },
+  "vc.StartUpdate": {
+    "toolName": "start_update",
+    "description": "Start an Update based on agreed feedback."
+  },
+  "vc.Threads": {
+    "toolName": "list_threads",
+    "description": "List discussion threads in a session."
+  },
+  "vc.Trash": {
+    "toolName": "trash",
+    "description": "Move an item to trash."
+  },
+  "vc.UpdateDetail": {
+    "toolName": "update_detail",
+    "description": "Read update detail."
+  },
+  "vc.Updates": {
+    "toolName": "updates",
+    "description": "Read updates."
+  },
+  "vc.Versions": {
+    "toolName": "versions",
+    "description": "List versions of an artifact."
+  },
+  "vc.RequestReview": {
+    "toolName": "request_review",
+    "description": "Request a multi-model review of an artifact."
+  },
+  "tmr.Report": {
+    "toolName": "get_report",
+    "description": "Read the report for a completed review."
+  }
+}

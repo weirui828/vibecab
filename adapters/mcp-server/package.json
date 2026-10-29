@@ -1,0 +1,15 @@
+{
+  "name": "@vibecab/mcp-server",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": "./src/index.ts",
+  "dependencies": {
+    "@modelcontextprotocol/server": "^2.4.0",
+    "@vibecab/contract": "workspace:*",
+    "@vibecab/engine": "workspace:*",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "^2.4.0"
+  }
+}

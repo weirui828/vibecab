@@ -221,10 +221,10 @@ export abstract class CommandOperations extends StorageAccessRuntime {
       case "vc.SetReplyTrigger":
       case "vc.MarkHandled":
         if (!this.feedback) fail("unavailable", "Engine is stopped");
-        return this.feedback.command(cmd.type, cmd.payload, ctx.principal);
+        return this.feedback.command(cmd.type, cmd.payload, ctx.principal, ctx.channel);
       case "vc.StartSession": {
         if (!this.feedback) fail("unavailable", "Engine is stopped");
-        const result = this.feedback.command(cmd.type, cmd.payload, ctx.principal),
+        const result = this.feedback.command(cmd.type, cmd.payload, ctx.principal, ctx.channel),
           sessionId = this.contract.read<{ sessionId: string }>(
             "operations/vc.StartSession",
             result,
@@ -245,7 +245,7 @@ export abstract class CommandOperations extends StorageAccessRuntime {
             cmd.payload,
             "#/properties/payload",
           ),
-          result = this.feedback.command(cmd.type, cmd.payload, ctx.principal),
+          result = this.feedback.command(cmd.type, cmd.payload, ctx.principal, ctx.channel),
           digestId = this.deps.ids.next("digest_");
         store.saveFeedback("digest-request", digestId, this.contract.read<Json>("json", { sessionId: p.sessionId }));
         store.enqueue(

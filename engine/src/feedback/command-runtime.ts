@@ -3,6 +3,7 @@ import type {
   FeedbackComment,
   Json,
   Principal,
+  CallContext,
   Idea,
   Project,
   Session,
@@ -23,7 +24,7 @@ import { FeedbackCoreRuntime, type FeedbackInput } from "./core-runtime.js";
 export abstract class FeedbackCommandRuntime extends FeedbackCoreRuntime {
   protected abstract agree(payload: VcAgreeOperation["payload"]): { agreementId: string; commentId: string };
   protected abstract resolve(payload: VcResolveConflictOperation["payload"]): { conflictId: string; state: "resolved" };
-  command(name: string, raw: unknown, principal: Principal): unknown {
+  command(name: string, raw: unknown, principal: Principal, channel: CallContext["channel"]): unknown {
     if (principal.kind !== "human") fail("forbidden", "Feedback commands require a human principal");
     switch (name) {
       case "vc.CaptureIdea": {
@@ -130,7 +131,10 @@ export abstract class FeedbackCommandRuntime extends FeedbackCoreRuntime {
         return { sessionId: p.sessionId, state: next };
       }
       case "vc.Comment":
-        return this.post(this.contract.read<FeedbackInput>("operations/vc.Comment", raw, "#/properties/payload"));
+        return this.post(
+          this.contract.read<FeedbackInput>("operations/vc.Comment", raw, "#/properties/payload"),
+          channel,
+        );
       case "vc.EditComment": {
         const p = this.contract.read<VcEditCommentOperation["payload"]>(
           "operations/vc.EditComment",

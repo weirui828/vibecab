@@ -75,7 +75,7 @@ export abstract class EngineCore {
   }
 
   protected dispatchLegacyQuery(ctx: CallContext, query: QueryEnvelope): unknown {
-    return this.dispatchOperationQuery(query);
+    return this.dispatchOperationQuery(ctx, query);
   }
 
   private dispatchCommand(ctx: CallContext, command: CommandEnvelope): unknown {
@@ -328,7 +328,7 @@ export abstract class EngineCore {
   protected abstract budgetsPort(): BudgetPort | undefined;
   protected abstract markReservationUncertain(reservationId: string): void;
   protected abstract dispatchOperationCommand(ctx: CallContext, cmd: CommandEnvelope): unknown;
-  protected abstract dispatchOperationQuery(query: QueryEnvelope): unknown;
+  protected abstract dispatchOperationQuery(ctx: CallContext, query: QueryEnvelope): unknown;
   protected settings(): Settings {
     const value = this.available().feedback("settings", "workspace");
     return this.contract.read<Settings>("settings", value ?? { models: {}, budgets: {}, sessions: {} });

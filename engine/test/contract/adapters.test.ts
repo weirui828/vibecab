@@ -9,6 +9,7 @@ contractSuite("in-process", async () => {
   const f = await fixture();
   const adapter = inProcess(f.rawEngine);
   const client: import("./suite.js").Client = {
+    channel: "in_process",
     command: (cmd) => adapter.command(cmd),
     query: (q) => adapter.query(q),
     subscribe: (sub) => adapter.subscribe(sub),
@@ -32,7 +33,7 @@ contractSuite("HTTP", async () => {
   ).token;
   const server = await startHttp(f.rawEngine, {});
   return {
-    client: httpClient(server.url, token),
+    client: Object.assign(httpClient(server.url, token), { channel: "http" as const }),
     close: async () => {
       await server.close();
       await f.close();
@@ -52,5 +53,5 @@ contractSuite("CLI", async () => {
     tokenResult.result,
     "#/properties/result",
   ).token;
-  return { client: cliAdapter(f.rawEngine, token), close: f.close };
+  return { client: Object.assign(cliAdapter(f.rawEngine, token), { channel: "cli" as const }), close: f.close };
 });

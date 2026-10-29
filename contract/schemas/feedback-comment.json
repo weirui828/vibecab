@@ -50,6 +50,9 @@
         }
       ]
     },
+    "channel": {
+      "enum": ["in_process", "http", "cli", "mcp"]
+    },
     "anchor": {
       "$ref": "https://vibecab.local/schemas/anchor.json"
     },

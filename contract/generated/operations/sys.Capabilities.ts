@@ -4,6 +4,10 @@ export interface SysCapabilitiesOperation {
   payload: {};
   result: {
     contractVersion: string;
+    callContext: {
+      channel: "in_process" | "http" | "cli" | "mcp";
+      scope: "read" | "collaborate" | "admin";
+    };
     mediaKinds: string[];
     operations: {
       name: string;

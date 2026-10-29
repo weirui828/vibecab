@@ -1,6 +1,7 @@
 import { CONTRACT_VERSION, fail } from "../../../contract/src/index.js";
 import type {
   QueryEnvelope,
+  CallContext,
   AgentTurn,
   ContextManifest,
   Update,
@@ -15,7 +16,7 @@ import { outline, diffVersions, resolveAnchors } from "../content/diff.js";
 import { CommandOperations } from "./command-operations.js";
 
 export abstract class QueryOperations extends CommandOperations {
-  protected dispatchOperationQuery(q: QueryEnvelope): unknown {
+  protected dispatchOperationQuery(ctx: CallContext, q: QueryEnvelope): unknown {
     const store = this.available();
     const read = <T>() => this.contract.read<T>("operations/" + q.name, q.args, "#/properties/payload");
     switch (q.name) {
@@ -43,6 +44,7 @@ export abstract class QueryOperations extends CommandOperations {
             }
         return {
           contractVersion: CONTRACT_VERSION,
+          callContext: { channel: ctx.channel, scope: ctx.scope },
           mediaKinds: ["doc"],
           operations,
         };

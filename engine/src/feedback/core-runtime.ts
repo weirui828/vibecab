@@ -2,6 +2,7 @@ import { fail, type Contract } from "../../../contract/src/index.js";
 import type {
   Agreement,
   Anchor,
+  CallContext,
   FeedbackComment,
   Session,
   Json,
@@ -56,7 +57,7 @@ export abstract class FeedbackCoreRuntime {
     if (c.deleted || !["open", "discussing"].includes(c.state))
       fail("conflict", "Feedback item can no longer be changed");
   }
-  protected post(p: FeedbackInput): { commentId: string; threadId: string } {
+  protected post(p: FeedbackInput, channel: CallContext["channel"]): { commentId: string; threadId: string } {
     const session = this.session(p.sessionId);
     if (session.state !== "active") fail("conflict", "Comments require an active session");
     let anchor: Anchor | undefined;
@@ -110,6 +111,7 @@ export abstract class FeedbackCoreRuntime {
       commentId,
       sessionId: p.sessionId,
       author: { kind: "human" },
+      channel,
       ...(anchor ? { anchor } : {}),
       body: p.body,
       ...(p.suggestion ? { suggestion: p.suggestion } : {}),
