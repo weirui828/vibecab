@@ -8,7 +8,10 @@ import type {
   VcThreadsOperation,
   VcDigestOperation,
   VcSessionsOperation,
+  VcUpdatesOperation,
   AgentTurn,
+  Agreement,
+  FeedbackConflict,
 } from "../../../../contract/generated/index.js";
 import { inlineMarkdownToPlainText } from "../../../../contract/src/inline-markdown.js";
 import { locatorForTextSelection } from "../document/anchors.js";
@@ -56,6 +59,7 @@ export function SessionView({
   const [elements, setElements] = useState<Element[]>([]),
     [threads, setThreads] = useState<VcThreadsOperation["result"]>([]),
     [turns, setTurns] = useState<AgentTurn[]>([]),
+    [nextUpdateCommentIds, setNextUpdateCommentIds] = useState<string[]>([]),
     [delivery, setDelivery] = useState<Record<string, DeliveryState["state"]>>({}),
     [resume, setResume] = useState<VcResumeViewOperation["result"]>(),
     [digest, setDigest] = useState<VcDigestOperation["result"]>([]),
@@ -80,6 +84,27 @@ export function SessionView({
       sessionId,
       artifactId: artifact.artifactId,
     });
+    const [updates, agreements, conflicts] = await Promise.all([
+      window.vibecab.query<VcUpdatesOperation["result"]>("vc.Updates", { artifactId: artifact.artifactId }),
+      window.vibecab.query<Agreement[]>("vc.DecisionRecord", { artifactId: artifact.artifactId }),
+      window.vibecab.query<FeedbackConflict[]>("vc.Conflicts", { sessionId, artifactId: artifact.artifactId }),
+    ]);
+    const activeUpdate = updates.updates.find((item) =>
+        ["queued", "planning", "awaiting_plan_review", "writing", "checking"].includes(item.status),
+      ),
+      conflictIds = new Set(conflicts.filter((item) => item.state === "open").flatMap((item) => item.itemIds));
+    setNextUpdateCommentIds(
+      activeUpdate
+        ? agreements
+            .filter(
+              (item) =>
+                item.state === "agreed" &&
+                !activeUpdate.itemIds.includes(item.agreementId) &&
+                !conflictIds.has(item.agreementId),
+            )
+            .map((item) => item.commentId)
+        : [],
+    );
     const humanCommentIds = nextThreads.flatMap((thread) =>
       thread.comments.filter((comment) => comment.author.kind === "human").map((comment) => comment.commentId),
     );
@@ -440,6 +465,7 @@ export function SessionView({
           <ThreadPanel
             threads={threads}
             turns={turns}
+            nextUpdateCommentIds={nextUpdateCommentIds}
             delivery={delivery}
             currentVersion={artifact?.headVersion ?? 0}
             onRefresh={refresh}

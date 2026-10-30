@@ -41,15 +41,24 @@ test("imports, comments on text, receives a reply, and catches up after relaunch
           ],
           [
             {
-              type: "text_delta",
-              text: '{"items":[{"itemId":"$first_item","action":"edit","elementIds":["$first_element"],"note":"Apply the agreed rewrite."}]}',
+              type: "output",
+              json: {
+                items: [
+                  {
+                    itemId: "$first_item",
+                    action: "edit",
+                    elementIds: ["$first_element"],
+                    note: "Apply the agreed rewrite.",
+                  },
+                ],
+              },
             },
             { type: "done", finishReason: "stop" },
           ],
           [
             {
-              type: "text_delta",
-              text: JSON.stringify({
+              type: "output",
+              json: {
                 changes: [
                   {
                     op: "update",
@@ -58,7 +67,7 @@ test("imports, comments on text, receives a reply, and catches up after relaunch
                   },
                 ],
                 itemResults: [{ itemId: "$first_item", status: "addressed", elementIds: ["$first_element"] }],
-              }),
+              },
             },
             { type: "done", finishReason: "stop" },
           ],
@@ -96,12 +105,13 @@ test("imports, comments on text, receives a reply, and catches up after relaunch
       sessionResult.result,
       "#/properties/result",
     );
-    await page.evaluate(
+    const attached = await page.evaluate(
       async ({ sessionId, artifactId }) =>
         window.vibecab.command("vc.AttachArtifact", { sessionId, artifactId, role: "primary" }),
       { sessionId: session.sessionId, artifactId: artifact.artifactId },
     );
-    await page.evaluate(
+    if (!attached.ok) throw new Error(attached.error.message);
+    const configured = await page.evaluate(
       (sessionId) =>
         window.vibecab.command("sys.SetSettings", {
           patch: {
@@ -119,12 +129,45 @@ test("imports, comments on text, receives a reply, and catches up after relaunch
                 },
                 pricing: { inputMicrosPerMillion: 0, outputMicrosPerMillion: 0 },
               },
+              planner: {
+                provider: "openai-compatible",
+                baseUrl: "https://example.invalid/v1",
+                model: "scripted",
+                capabilities: {
+                  tools: true,
+                  jsonSchemaOutput: true,
+                  streaming: true,
+                  maxContextTokens: 4096,
+                  reportsUsage: false,
+                },
+                pricing: { inputMicrosPerMillion: 0, outputMicrosPerMillion: 0 },
+              },
+              writer: {
+                provider: "openai-compatible",
+                baseUrl: "https://example.invalid/v1",
+                model: "scripted",
+                capabilities: {
+                  tools: true,
+                  jsonSchemaOutput: true,
+                  streaming: true,
+                  maxContextTokens: 4096,
+                  reportsUsage: false,
+                },
+                pricing: { inputMicrosPerMillion: 0, outputMicrosPerMillion: 0 },
+              },
             },
-            sessions: { [sessionId]: { realtimeDebounceSeconds: 1, updateIdleMinutes: 0.02 } },
+            sessions: { [sessionId]: { realtimeDebounceSeconds: 1, updateIdleMinutes: 60 } },
           },
         }),
       session.sessionId,
     );
+    if (!configured.ok) throw new Error(`Model configuration failed: ${configured.error.message}`);
+    const profiles = await page.evaluate(async () => {
+      const settings = await window.vibecab.query<{ models: Record<string, { model: string }> }>("sys.Settings", {});
+      return { planner: settings.models.planner?.model, writer: settings.models.writer?.model };
+    });
+    if (profiles.planner !== "scripted" || profiles.writer !== "scripted")
+      throw new Error(`Planner and writer models were not saved: ${JSON.stringify(profiles)}`);
     const budget = await page.evaluate(async () =>
       window.vibecab.command("sys.SetBudget", { account: { kind: "daily" }, limitMicros: 10_000_000 }),
     );
@@ -153,9 +196,10 @@ test("imports, comments on text, receives a reply, and catches up after relaunch
       throw new Error(`Scripted reply was not posted: ${JSON.stringify(replyState)}`);
     await expect(page.getByText("I can tighten that sentence.", { exact: true })).toBeVisible({ timeout: 20_000 });
     await page.getByRole("button", { name: "Agree with option: Tighten sentence" }).click();
+    await page.getByRole("button", { name: "Update now" }).click();
     await expect(page.getByText("Applied in v2", { exact: true })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole("heading", { name: "v1 → v2" })).toBeVisible({ timeout: 30_000 });
-    await expect(page.getByText("The paragraph has a clearer sentence.", { exact: true })).toBeVisible();
+    await expect(page.locator(".update-diff")).toContainText("clearer sentence");
     const screenshots = join(appPath, "test-results");
     await mkdir(screenshots, { recursive: true });
     await page.evaluate(() => window.vibecab.app.setTheme("light"));

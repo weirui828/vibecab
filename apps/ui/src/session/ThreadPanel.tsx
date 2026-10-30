@@ -10,6 +10,7 @@ import { terms } from "../copy/terms.js";
 export function ThreadPanel({
   threads,
   turns,
+  nextUpdateCommentIds = [],
   delivery,
   currentVersion,
   onRefresh,
@@ -19,6 +20,7 @@ export function ThreadPanel({
 }: {
   threads: VcThreadsOperation["result"];
   turns: AgentTurn[];
+  nextUpdateCommentIds?: string[];
   delivery: Record<string, DeliveryState["state"]>;
   currentVersion: number;
   onRefresh: () => Promise<void>;
@@ -135,7 +137,9 @@ export function ThreadPanel({
                 ) : (
                   <p>
                     {comment.state === "agreed"
-                      ? "Agreed — waiting for the next Update"
+                      ? nextUpdateCommentIds.includes(comment.commentId)
+                        ? "Will go into the next Update"
+                        : "Agreed — waiting for the next Update"
                       : comment.state === "scheduled"
                         ? "In an Update"
                         : terms[comment.state]}

@@ -4,6 +4,7 @@ import type {
   Agreement,
   Element,
   FeedbackConflict,
+  Grant,
   Settings,
   Update,
   UpdatePlan,
@@ -42,6 +43,7 @@ export function SessionWorkflow({
     [turns, setTurns] = useState<AgentTurn[]>([]),
     [agreements, setAgreements] = useState<Agreement[]>([]),
     [settings, setSettings] = useState<Settings>(),
+    [grants, setGrants] = useState<Grant[]>([]),
     [detail, setDetail] = useState<Update>(),
     [writtenByAgent, setWrittenByAgent] = useState(false),
     [diff, setDiff] = useState<DiffResult>(),
@@ -51,18 +53,20 @@ export function SessionWorkflow({
     [batchCount, setBatchCount] = useState(3),
     [idleMinutes, setIdleMinutes] = useState(2);
   const refresh = useCallback(async () => {
-    const [nextUpdates, nextConflicts, nextTurns, nextAgreements, nextSettings] = await Promise.all([
+    const [nextUpdates, nextConflicts, nextTurns, nextAgreements, nextSettings, nextGrants] = await Promise.all([
       window.vibecab.query<VcUpdatesOperation["result"]>("vc.Updates", { artifactId: artifact.artifactId }),
       window.vibecab.query<FeedbackConflict[]>("vc.Conflicts", { sessionId, artifactId: artifact.artifactId }),
       window.vibecab.query<AgentTurn[]>("vc.AgentTurns", { sessionId }),
       window.vibecab.query<Agreement[]>("vc.DecisionRecord", { artifactId: artifact.artifactId }),
       window.vibecab.query<Settings>("sys.Settings", {}),
+      window.vibecab.query<Grant[]>("vc.Grants", {}),
     ]);
     setQueryResult(nextUpdates);
     setConflicts(nextConflicts);
     setTurns(nextTurns);
     setAgreements(nextAgreements);
     setSettings(nextSettings);
+    setGrants(nextGrants);
     const mostRecent = [...nextUpdates.updates].sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0],
       nextDetail = mostRecent
         ? await window.vibecab.query<Update>("vc.UpdateDetail", { updateId: mostRecent.updateId })
@@ -110,6 +114,17 @@ export function SessionWorkflow({
         : undefined,
     plan = readPlan(active?.plan),
     noModel = !settings?.models?.default && !settings?.models?.reply;
+  const hasAutoAgreeGrant = grants.some((grant) => {
+    const sessionScope = grant.scope.sessionIds,
+      artifactScope = grant.scope.artifactIds;
+    return (
+      grant.capabilities.includes("auto_agree_own_proposals") &&
+      !grant.revokedAt &&
+      (!grant.expiresAt || Date.parse(grant.expiresAt) > Date.now()) &&
+      (!sessionScope || sessionScope.includes(sessionId)) &&
+      (!artifactScope || artifactScope.some((id) => session.artifactIds.includes(id)))
+    );
+  });
 
   const command = async (type: string, payload: unknown) => {
     const result = await window.vibecab.command(type, payload);
@@ -202,9 +217,13 @@ export function SessionWorkflow({
             />
             Review Update plans
           </label>
-          <p>Automatic agreement grants are managed in Settings → Grants.</p>
         </details>
       </header>
+      {hasAutoAgreeGrant ? (
+        <p className="auto-agree-notice" role="status">
+          Agent proposals count as agreed · <a href="#/settings">Settings → Grants</a>
+        </p>
+      ) : null}
       {noModel ? <p role="status">Add a model in Settings to use agent replies and Updates.</p> : null}
       {updatesRemaining > 0 ? (
         <section className="update-bar" aria-label="Agreed changes">

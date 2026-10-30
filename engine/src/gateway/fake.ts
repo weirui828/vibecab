@@ -1,7 +1,7 @@
 import type { ModelProvider, ModelRequest, ModelCallOptions, ModelEvent, ProviderModel } from "./types.js";
 
 type Scenario = { events: ModelEvent[] } | { hang: true };
-type DefaultScenario = ModelEvent[] | ((model: ProviderModel, request: ModelRequest) => ModelEvent[]);
+type DefaultScenario = ModelEvent[] | ((model: ProviderModel, request: ModelRequest) => ModelEvent[]) | { hang: true };
 export class ScriptedProvider implements ModelProvider {
   readonly calls: Array<{
     model: ProviderModel;
@@ -19,6 +19,9 @@ export class ScriptedProvider implements ModelProvider {
   }
   enqueueDefaultSequence(sequence: ModelEvent[][]) {
     this.defaultSequence.push(...sequence.map((events) => [...events]));
+  }
+  enqueueDefaultHang() {
+    this.defaultSequence.push({ hang: true });
   }
   enqueueDefaultFactory(factory: (model: ProviderModel, request: ModelRequest) => ModelEvent[]) {
     this.defaultSequence.push(factory);
@@ -39,12 +42,16 @@ export class ScriptedProvider implements ModelProvider {
     }
     await options.onSent?.();
     const configured = this.defaultSequence.shift(),
-      scenario = this.scenarios.get(options.idempotencyKey ?? "") ?? {
-        events:
-          typeof configured === "function"
-            ? configured(model, request)
-            : (configured ?? this.defaultHandler?.(model, request) ?? [{ type: "done", finishReason: "stop" }]),
-      };
+      scenario =
+        this.scenarios.get(options.idempotencyKey ?? "") ??
+        (configured && typeof configured === "object" && !Array.isArray(configured) && "hang" in configured
+          ? configured
+          : {
+              events:
+                typeof configured === "function"
+                  ? configured(model, request)
+                  : (configured ?? this.defaultHandler?.(model, request) ?? [{ type: "done", finishReason: "stop" }]),
+            });
     if ("hang" in scenario) {
       await new Promise<void>((resolve) => {
         options.signal.addEventListener("abort", () => resolve(), {
