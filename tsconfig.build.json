@@ -13,6 +13,7 @@
     "adapters/*/src/**/*.ts",
     "host/src/**/*.ts",
     "apps/macos/src/**/*.ts",
+    "apps/macos/src/**/*.cts",
     "apps/ui/src/**/*.ts",
     "apps/ui/src/**/*.tsx"
   ]

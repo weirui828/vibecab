@@ -1,17 +1,14 @@
 import { contextBridge, ipcRenderer } from "electron";
-import { randomUUID } from "node:crypto";
-import { Contract } from "../../../contract/src/index.js";
 import type { EventEnvelope } from "../../../contract/src/index.js";
 import type { ContractBridge } from "../../ui/src/api.js";
 
 const bridge: ContractBridge = {
-  command: (type, payload, commandId = randomUUID()) =>
+  command: (type, payload, commandId = globalThis.crypto.randomUUID()) =>
     ipcRenderer.invoke("vibe:command", { type, payload, commandId }),
   query: (name, args) => ipcRenderer.invoke("vibe:query", { name, args }),
   subscribe: (afterSeq, filter, onEvent) => {
-    const id = randomUUID(),
-      listener = (_event: Electron.IpcRendererEvent, value: unknown) =>
-        onEvent(new Contract().read<EventEnvelope>("event-envelope", value));
+    const id = globalThis.crypto.randomUUID(),
+      listener = (_event: Electron.IpcRendererEvent, value: unknown) => onEvent(value as EventEnvelope);
     ipcRenderer.on("vibe:event:" + id, listener);
     void ipcRenderer.invoke("vibe:subscribe", { id, afterSeq, filter });
     return () => {

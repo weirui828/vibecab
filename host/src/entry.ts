@@ -79,7 +79,11 @@ export async function ensureToken(engine: Engine, workspace: string, account: "a
   );
   if (!created.ok) throw Error(created.error.message);
   const tokenValue = tokenSecret(created.result);
-  new Entry(service, account).setPassword(JSON.stringify({ ...tokens, [workspace]: tokenValue }));
+  try {
+    new Entry(service, account).setPassword(JSON.stringify({ ...tokens, [workspace]: tokenValue }));
+  } catch {
+    console.warn("CLI access token could not be saved to the OS keychain.");
+  }
 }
 
 async function ensureAppToken(engine: Engine, workspace: string): Promise<void> {

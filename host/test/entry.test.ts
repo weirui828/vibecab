@@ -8,7 +8,7 @@ import { fixture } from "../../engine/test/helpers.js";
 import type { Engine } from "../../engine/src/engine.js";
 import { createServerRecord, ensureToken, serve } from "../src/entry.js";
 
-const keychain = vi.hoisted(() => new Map<string, string>());
+const keychain = vi.hoisted(() => ({ values: new Map<string, string>(), failWrites: false }));
 vi.mock("@napi-rs/keyring", () => ({
   Entry: class {
     private readonly key: string;
@@ -16,19 +16,20 @@ vi.mock("@napi-rs/keyring", () => ({
       this.key = service + ":" + account;
     }
     getPassword() {
-      return keychain.get(this.key) ?? null;
+      return keychain.values.get(this.key) ?? null;
     }
     setPassword(value: string) {
-      keychain.set(this.key, value);
+      if (keychain.failWrites) throw new Error("simulated keychain authorization failure");
+      keychain.values.set(this.key, value);
     }
     deletePassword() {
-      keychain.delete(this.key);
+      keychain.values.delete(this.key);
     }
   },
 }));
 
 it("creates a private app-token file, reuses it after restart, and migrates the keychain workspace entry", async () => {
-  keychain.clear();
+  keychain.values.clear();
   const f = await fixture(),
     log = vi.spyOn(console, "log").mockImplementation(() => undefined),
     warn = vi.spyOn(console, "warn").mockImplementation(() => undefined),
@@ -45,7 +46,7 @@ it("creates a private app-token file, reuses it after restart, and migrates the 
       created.result,
       "#/properties/result",
     ).token;
-    keychain.set("VibeCab:app", JSON.stringify({ [f.dir]: legacyToken, "/other/workspace": "other-token" }));
+    keychain.values.set("VibeCab:app", JSON.stringify({ [f.dir]: legacyToken, "/other/workspace": "other-token" }));
     await ensureToken(f.rawEngine as Engine, f.dir, "app");
     const tokenPath = join(f.dir, ".vibecab", "app-token"),
       first = await readFile(tokenPath, "utf8"),
@@ -54,7 +55,9 @@ it("creates a private app-token file, reuses it after restart, and migrates the 
     expect(first).toBe(legacyToken);
     expect(fileMode).toBe(0o600);
     expect(directoryMode).toBe(0o700);
-    expect(JSON.parse(keychain.get("VibeCab:app") ?? "{}")).toEqual({ "/other/workspace": "other-token" });
+    expect(JSON.parse(keychain.values.get("VibeCab:app") ?? "{}")).toEqual({
+      "/other/workspace": "other-token",
+    });
     expect((await readdir(join(f.dir, ".vibecab"))).sort()).toEqual(["app-token"]);
 
     await f.rawEngine.stop();
@@ -102,12 +105,12 @@ it("creates a private app-token file, reuses it after restart, and migrates the 
     warn.mockRestore();
     error.mockRestore();
     await f.close();
-    keychain.clear();
+    keychain.values.clear();
   }
 });
 
 it("secures an overly readable token file and logs only a generic warning", async () => {
-  keychain.clear();
+  keychain.values.clear();
   const f = await fixture();
   const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
   try {
@@ -123,7 +126,23 @@ it("secures an overly readable token file and logs only a generic warning", asyn
   } finally {
     warning.mockRestore();
     await f.close();
-    keychain.clear();
+    keychain.values.clear();
+  }
+});
+
+it("keeps host startup available when the CLI token cannot be saved to the keychain", async () => {
+  keychain.values.clear();
+  keychain.failWrites = true;
+  const f = await fixture(),
+    warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  try {
+    await expect(ensureToken(f.rawEngine as Engine, f.dir, "cli")).resolves.toBeUndefined();
+    expect(warning).toHaveBeenCalledWith("CLI access token could not be saved to the OS keychain.");
+  } finally {
+    warning.mockRestore();
+    keychain.failWrites = false;
+    await f.close();
+    keychain.values.clear();
   }
 });
 

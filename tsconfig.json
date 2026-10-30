@@ -12,5 +12,13 @@
     "types": ["node", "vitest/globals"],
     "noEmit": true
   },
-  "include": ["contract/**/*.ts", "engine/**/*.ts", "adapters/**/*.ts", "host/**/*.ts", "apps/**/*.ts", "apps/**/*.tsx"]
+  "include": [
+    "contract/**/*.ts",
+    "engine/**/*.ts",
+    "adapters/**/*.ts",
+    "host/**/*.ts",
+    "apps/**/*.ts",
+    "apps/**/*.tsx",
+    "apps/**/*.cts"
+  ]
 }
