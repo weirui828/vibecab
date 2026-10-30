@@ -163,7 +163,6 @@ function installBridge(): void {
   });
   ipcMain.handle("app:save-provider", async (_event, raw: unknown) => {
     const input = contract.read<{ baseUrl: string; model: string; apiKey: string }>("json", raw);
-    new Entry("VibeCab", "provider:default").setPassword(input.apiKey);
     const engine = client;
     if (!engine) throw Error("Engine is not connected");
     const model = {
@@ -180,14 +179,6 @@ function installBridge(): void {
       },
       pricing: { inputMicrosPerMillion: 0, outputMicrosPerMillion: 0 },
     };
-    const keyRef = await engine.command(
-      contract.read<CommandEnvelope>("command-envelope", {
-        commandId: randomUUID(),
-        type: "sys.SetProviderKeyRef",
-        payload: { alias: "default", keyRef: "provider:default" },
-      }),
-    );
-    if (!keyRef.ok) fail(keyRef.error.code, keyRef.error.message, keyRef.error.details);
     const settings = await engine.command(
       contract.read<CommandEnvelope>("command-envelope", {
         commandId: randomUUID(),
@@ -196,6 +187,14 @@ function installBridge(): void {
       }),
     );
     if (!settings.ok) fail(settings.error.code, settings.error.message, settings.error.details);
+    const key = await engine.command(
+      contract.read<CommandEnvelope>("command-envelope", {
+        commandId: randomUUID(),
+        type: "sys.SetProviderKey",
+        payload: { alias: "default", secret: input.apiKey },
+      }),
+    );
+    if (!key.ok) fail(key.error.code, key.error.message, key.error.details);
   });
   ipcMain.handle("app:open-markdown", async () => {
     const picked = await dialog.showOpenDialog({

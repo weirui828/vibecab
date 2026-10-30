@@ -10,7 +10,7 @@ import { httpClient } from "../../http/src/index.js";
 import { createBootstrapToken, nextCommandId, withClient } from "./client.js";
 import { purge } from "./operations.js";
 import { serve, start, status, stop } from "./host.js";
-import { readCliToken, readSecret, saveProviderKey } from "./keychain.js";
+import { readCliToken, readSecret } from "./keychain.js";
 import type { CliClient, CliIO } from "./types.js";
 
 export const exitCodes: Record<string, number> = {
@@ -321,12 +321,11 @@ async function handle(command: string, args: string[], io: CliIO): Promise<unkno
     if (!alias) fail("invalid", "Usage: vibecab keys set <alias>");
     const secret = await io.readSecret(`Provider secret for ${alias}: `);
     if (!secret) fail("invalid", "Provider secret cannot be empty");
-    saveProviderKey(alias, secret);
     return withClient(workspace, (client) =>
       sendCommand(client, {
         commandId: nextCommandId(),
-        type: "sys.SetProviderKeyRef",
-        payload: { alias, keyRef: `provider:${alias}` },
+        type: "sys.SetProviderKey",
+        payload: { alias, secret },
       }),
     );
   }

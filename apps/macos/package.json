@@ -4,7 +4,8 @@
   "type": "module",
   "main": "../../dist/apps/macos/src/main.js",
   "scripts": {
-    "test:e2e": "pnpm fuses && playwright test -c playwright.config.ts",
+    "test:e2e": "playwright test -c playwright.config.ts",
+    "test:fuses": "vitest run test/fuses.test.ts",
     "fuses": "node fuses.mjs"
   },
   "dependencies": {

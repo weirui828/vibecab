@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/sys.SetProviderKey.json",
+  "title": "sysSetProviderKeyOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": {
+        "alias": { "type": "string", "minLength": 1 },
+        "secret": { "type": "string", "minLength": 1 }
+      },
+      "required": ["alias", "secret"],
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "properties": {
+        "alias": { "type": "string", "minLength": 1 },
+        "keyRef": { "type": "string", "minLength": 1 }
+      },
+      "required": ["alias", "keyRef"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["payload", "result"],
+  "additionalProperties": false,
+  "operation": {
+    "name": "sys.SetProviderKey",
+    "kind": "command",
+    "meta": { "effect": "admin", "irreversible": false, "channels": ["in_process", "http", "cli"] }
+  }
+}

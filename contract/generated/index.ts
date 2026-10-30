@@ -96,6 +96,7 @@ export type { SysCapabilitiesOperation } from './operations/sys.Capabilities.js'
 export type { SysCreateAccessTokenOperation } from './operations/sys.CreateAccessToken.js';
 export type { SysRevokeAccessTokenOperation } from './operations/sys.RevokeAccessToken.js';
 export type { SysSetBudgetOperation } from './operations/sys.SetBudget.js';
+export type { SysSetProviderKeyOperation } from './operations/sys.SetProviderKey.js';
 export type { SysSetProviderKeyRefOperation } from './operations/sys.SetProviderKeyRef.js';
 export type { SysSetSettingsOperation } from './operations/sys.SetSettings.js';
 export type { SysSettingsOperation } from './operations/sys.Settings.js';

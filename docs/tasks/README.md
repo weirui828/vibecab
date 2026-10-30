@@ -29,7 +29,8 @@ Run after task 09 (and 09b if possible). A0 can run alongside tasks 10–11. Dec
 | A0 | App groundwork: shared engine host, MCP stdio relay, `vc.Artifacts`, renames, live events, fake-provider mode, `AGENTS.md` app rules | 09 |
 | A1 | Electron shell, engine lifecycle, ContractBridge, Tundra theme, first run | A0 |
 | A1b | Host and app shell: broken MCP relay, missing tests (from review) | A1 |
-| A2 | Home and session view: Document renderer, anchored comments, threads, "since you were here" | A1b |
+| A1c | Provider keys owned by the engine, fuses at packaging, real event audit | A1b |
+| A2 | Home and session view: Document renderer, anchored comments, threads, "since you were here" | A1c |
 | A3 | Agreement, conflicts, agent replies and Updates, diff view | A2 |
 | A4 | History, Snapshots, export, trash, backup/restore, settings, MCP setup | A3 |
 | A5 | Packaging (arm64, bundled Node 26), app icon, menu bar, login item | A4 |

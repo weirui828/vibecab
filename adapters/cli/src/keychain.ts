@@ -40,10 +40,6 @@ export function saveCliToken(workspaceDir: string, token: string): void {
   entry.setPassword(JSON.stringify(tokens));
 }
 
-export function saveProviderKey(alias: string, secret: string): void {
-  new Entry(service, "provider:" + alias).setPassword(secret);
-}
-
 export async function readSecret(prompt: string): Promise<string> {
   stdout.write(prompt);
   if (!stdin.isTTY || typeof stdin.setRawMode !== "function") {

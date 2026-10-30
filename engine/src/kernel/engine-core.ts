@@ -300,7 +300,7 @@ export abstract class EngineCore {
           store.saveCommand(cmd.commandId, durableResult);
           return result;
         });
-        if (result.ok && (cmd.type === "sys.SetSettings" || cmd.type === "sys.SetProviderKeyRef"))
+        if (result.ok && ["sys.SetSettings", "sys.SetProviderKeyRef", "sys.SetProviderKey"].includes(cmd.type))
           this.settingsChanged();
         this.wake();
         return result;

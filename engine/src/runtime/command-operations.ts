@@ -61,27 +61,19 @@ export abstract class CommandOperations extends StorageAccessRuntime {
       }
       case "sys.SetProviderKeyRef": {
         const p = this.contract.read<{ alias: string; keyRef: string }>(
-            "operations/sys.SetProviderKeyRef",
-            cmd.payload,
-            "#/properties/payload",
-          ),
-          current = this.settings(),
-          model = current.models[p.alias];
-        if (!model) fail("not_found", "Model alias not found");
-        this.saveSettings({
-          ...current,
-          models: {
-            ...current.models,
-            [p.alias]: { ...model, keyRef: p.keyRef },
-          },
-        });
-        store.appendEvent({
-          ts: this.deps.clock.now(),
-          type: "sys.ProviderKeyRefSet",
-          entity: { kind: "model", id: p.alias },
-          payload: this.contract.read<Json>("events/sys.ProviderKeyRefSet", p),
-        });
-        return p;
+          "operations/sys.SetProviderKeyRef",
+          cmd.payload,
+          "#/properties/payload",
+        );
+        return this.setProviderKeyRef(p.alias, p.keyRef);
+      }
+      case "sys.SetProviderKey": {
+        const p = this.contract.read<{ alias: string; secret: string }>(
+          "operations/sys.SetProviderKey",
+          cmd.payload,
+          "#/properties/payload",
+        );
+        return this.setProviderKey(p.alias, p.secret);
       }
       case "sys.SetBudget": {
         const p = this.contract.read<{

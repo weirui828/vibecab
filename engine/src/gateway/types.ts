@@ -62,7 +62,7 @@ export interface ModelProvider {
 }
 export interface KeyStore {
   get(ref: string): Promise<string>;
-  set(ref: string, secret: string): Promise<void>;
+  set(ref: string, secret: string): void;
   delete(ref: string): Promise<void>;
 }
 export type BudgetScope = ContractBudgetAccount;

@@ -23,6 +23,45 @@ export abstract class StorageAccessRuntime extends EngineCore {
     return settings;
   }
 
+  protected setProviderKey(alias: string, secret: string): { alias: string; keyRef: string } {
+    const store = this.store;
+    if (!store) fail("unavailable", "Engine is stopped");
+    const current = this.settings(),
+      model = current.models[alias];
+    if (!model) fail("not_found", "Model alias not found");
+    const keyRef = `provider:${alias}`;
+    this.saveSettings({ ...current, models: { ...current.models, [alias]: { ...model, keyRef } } });
+    store.appendEvent({
+      ts: this.deps.clock.now(),
+      type: "sys.ProviderKeyRefSet",
+      entity: { kind: "model", id: alias },
+      payload: this.contract.read<Json>("events/sys.ProviderKeyRefSet", { alias, keyRef }),
+    });
+    try {
+      this.deps.keyStore.set(keyRef, secret);
+    } catch {
+      fail("unavailable", "Could not store provider key in the OS keychain");
+    }
+    return { alias, keyRef };
+  }
+
+  protected setProviderKeyRef(alias: string, keyRef: string): { alias: string; keyRef: string } {
+    const store = this.store;
+    if (!store) fail("unavailable", "Engine is stopped");
+    const current = this.settings(),
+      model = current.models[alias];
+    if (!model) fail("not_found", "Model alias not found");
+    this.saveSettings({ ...current, models: { ...current.models, [alias]: { ...model, keyRef } } });
+    const payload = this.contract.read<Json>("events/sys.ProviderKeyRefSet", { alias, keyRef });
+    store.appendEvent({
+      ts: this.deps.clock.now(),
+      type: "sys.ProviderKeyRefSet",
+      entity: { kind: "model", id: alias },
+      payload,
+    });
+    return { alias, keyRef };
+  }
+
   subscribe(auth: CallAuth, metadata: CallMetadata, rawSub: Subscription): AsyncIterable<EventEnvelope> {
     const currentStore = () => this.store;
     const listeners = this.listeners;

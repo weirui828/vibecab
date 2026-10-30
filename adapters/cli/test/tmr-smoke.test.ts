@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { expect, it, vi } from "vitest";
 import { CONTRACT_VERSION, Contract, type Json } from "../../../contract/src/index.js";
 import { createEngine } from "../../../engine/src/engine.js";
+import { MemoryKeyStore } from "../../../engine/src/gateway/keys.js";
 import type { ModelProvider } from "../../../engine/src/gateway/types.js";
 import { startHttp } from "../../http/src/index.js";
 import { main } from "../src/index.js";
@@ -182,6 +183,86 @@ it("smokes tmr submit, status, report, cancel, and resume through the CLI client
     await engine.stop();
     await rm(workspace, { recursive: true, force: true });
     keyring.clear();
+  }
+});
+
+it("sets provider keys through the engine command without writing a provider keychain item in the CLI", async () => {
+  const workspace = await mkdtemp(join(tmpdir(), "vibecab-cli-provider-key-")),
+    output: string[] = [],
+    errors: string[] = [],
+    secret = "cli-provider-secret-not-for-disk",
+    keyStore = new MemoryKeyStore(),
+    engine = createEngine({ keyStore });
+  let http: Awaited<ReturnType<typeof startHttp>> | undefined;
+  try {
+    await engine.start(workspace);
+    const configured = await engine.command(
+      engine.inProcessAuth,
+      { contractVersion: CONTRACT_VERSION, requestId: "cli-key-settings" },
+      {
+        commandId: "cli-key-settings",
+        type: "sys.SetSettings",
+        payload: {
+          patch: {
+            models: {
+              default: {
+                provider: "openai-compatible",
+                baseUrl: "https://example.invalid/v1",
+                model: "test-model",
+                capabilities: {
+                  tools: false,
+                  jsonSchemaOutput: false,
+                  streaming: true,
+                  maxContextTokens: 1024,
+                  reportsUsage: false,
+                },
+                pricing: { inputMicrosPerMillion: 0, outputMicrosPerMillion: 0 },
+              },
+            },
+          },
+        },
+      },
+    );
+    expect(configured.ok).toBe(true);
+    const tokenResult = await engine.command(
+      engine.inProcessAuth,
+      { contractVersion: CONTRACT_VERSION, requestId: "cli-key-token" },
+      {
+        commandId: "cli-key-token",
+        type: "sys.CreateAccessToken",
+        payload: { name: "CLI key test", channel: "cli", scope: "admin" },
+      },
+    );
+    if (!tokenResult.ok) throw Error(tokenResult.error.message);
+    keyring.set("VibeCab:cli", JSON.stringify({ [workspace]: get(tokenResult.result, "token") }));
+    http = await startHttp(engine, { port: 0, transport: "cli" });
+    await mkdir(join(workspace, ".vibecab"), { recursive: true });
+    await writeFile(
+      join(workspace, ".vibecab", "server.json"),
+      JSON.stringify({
+        pid: process.pid,
+        cliUrl: http.url,
+        httpUrl: http.url,
+        mcpUrl: http.url,
+        startedAt: new Date().toISOString(),
+        contractVersion: "1.0",
+      }),
+    );
+    const exit = await main(["keys", "set", "default", "--workspace", workspace], {
+      writeOut: (value) => output.push(value),
+      writeError: (value) => errors.push(value),
+      readSecret: async () => secret,
+      writeBytes: () => undefined,
+    });
+    expect(errors).toEqual([]);
+    expect(exit).toBe(0);
+    expect(await keyStore.get("provider:default")).toBe(secret);
+    expect(keyring.has("VibeCab:provider:default")).toBe(false);
+    expect(output.join("\n")).not.toContain(secret);
+  } finally {
+    await http?.close();
+    await engine.stop();
+    await rm(workspace, { recursive: true, force: true });
   }
 });
 

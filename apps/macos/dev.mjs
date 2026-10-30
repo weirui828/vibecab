@@ -5,8 +5,6 @@ import { setTimeout as delay } from "node:timers/promises";
 
 const build = spawn("pnpm", ["build"], { stdio: "inherit" });
 if ((await new Promise((resolve) => build.once("exit", resolve))) !== 0) process.exit(1);
-const fuses = spawn("pnpm", ["--filter", "@vibecab/macos", "fuses"], { stdio: "inherit" });
-if ((await new Promise((resolve) => fuses.once("exit", resolve))) !== 0) process.exit(1);
 const vite = spawn("pnpm", ["--filter", "@vibecab/ui", "dev"], { stdio: "inherit" });
 let ready = false;
 for (let attempt = 0; attempt < 80; attempt++) {
