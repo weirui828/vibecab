@@ -12,18 +12,27 @@ import type {
   OutputSet,
   Session,
   SessionSeen,
-  TrashRecord,
   Update,
   Version,
 } from "../../../contract/src/index.js";
 
 import { UpdateRuntime } from "../updates/runtime.js";
-type TrashTarget = TrashRecord["kind"] extends never ? never : { kind: TrashRecord["kind"]; id: string };
+import type { ReviewPurgeAction, ReviewPurgeHook, TrashTarget } from "./review-purge-hook.js";
 function field(value: unknown, key: string): unknown {
   return typeof value === "object" && value !== null ? Reflect.get(value, key) : undefined;
 }
 
 export abstract class LifecycleHelpersRuntime extends UpdateRuntime {
+  protected reviewPurgeHook: ReviewPurgeHook | undefined;
+
+  setReviewPurgeHook(hook: ReviewPurgeHook): void {
+    this.reviewPurgeHook = hook;
+  }
+
+  protected applyReviewPurge(target: TrashTarget, actions: readonly ReviewPurgeAction[]): void {
+    this.reviewPurgeHook?.apply(target, actions);
+  }
+
   protected resumeView(raw: Json): unknown {
     const p = this.contract.read<{ sessionId: string; since?: number }>(
       "operations/vc.ResumeView",
@@ -229,6 +238,7 @@ export abstract class LifecycleHelpersRuntime extends UpdateRuntime {
       updateIds,
       conflictIds,
       outputSetIds,
+      reviewRuns: this.reviewPurgeHook?.preview(target) ?? [],
     };
   }
 

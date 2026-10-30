@@ -90,7 +90,7 @@ export abstract class EngineCore {
     return registered.handler(this.moduleContext(), ctx, query);
   }
 
-  private moduleContext(): ModuleContext {
+  protected moduleContext(): ModuleContext {
     if (this.lifecycleContext) return this.lifecycleContext;
     const store = this.available();
     this.lifecycleContext = {

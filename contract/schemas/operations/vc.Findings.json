@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/vc.Findings.json",
+  "title": "vcFindingsOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": { "reviewRequestId": { "type": "string" } },
+      "required": ["reviewRequestId"],
+      "additionalProperties": false
+    },
+    "result": { "type": "array", "items": { "type": "object" } }
+  },
+  "required": ["payload", "result"],
+  "additionalProperties": false,
+  "operation": {
+    "name": "vc.Findings",
+    "kind": "query",
+    "meta": { "effect": "read", "irreversible": false, "channels": ["in_process", "http", "cli"] }
+  }
+}

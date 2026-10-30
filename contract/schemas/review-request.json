@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/review-request.json",
+  "title": "ReviewRequest",
+  "type": "object",
+  "properties": {
+    "reviewRequestId": { "type": "string", "minLength": 1 },
+    "sessionId": { "type": "string", "minLength": 1 },
+    "threadId": { "type": "string", "minLength": 1 },
+    "snapshotId": { "type": "string", "minLength": 1 },
+    "sourceMap": { "type": "object", "additionalProperties": { "type": "object" } },
+    "requestedBy": { "enum": ["human", "agent"] },
+    "grantId": { "type": "string" },
+    "runId": { "type": "string" },
+    "cursor": { "type": "integer", "minimum": 0 },
+    "status": { "enum": ["queued", "running", "completed", "failed"] },
+    "createdAt": { "type": "string", "format": "date-time" }
+  },
+  "required": [
+    "reviewRequestId",
+    "sessionId",
+    "threadId",
+    "snapshotId",
+    "sourceMap",
+    "requestedBy",
+    "cursor",
+    "status",
+    "createdAt"
+  ],
+  "additionalProperties": false
+}

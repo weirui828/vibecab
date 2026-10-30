@@ -3,6 +3,10 @@
 export interface Agreement {
   agreementId: string;
   commentId: string;
+  source?: {
+    runId: string;
+    findingId: string;
+  };
   instruction: string;
   kind: "as_written" | "agent_proposal" | "option";
   optionLabel?: string;

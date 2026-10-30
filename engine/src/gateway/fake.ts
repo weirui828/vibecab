@@ -1,6 +1,7 @@
 import type { ModelProvider, ModelRequest, ModelCallOptions, ModelEvent, ProviderModel } from "./types.js";
 
 type Scenario = { events: ModelEvent[] } | { hang: true };
+type DefaultScenario = ModelEvent[] | ((model: ProviderModel, request: ModelRequest) => ModelEvent[]);
 export class ScriptedProvider implements ModelProvider {
   readonly calls: Array<{
     model: ProviderModel;
@@ -8,7 +9,8 @@ export class ScriptedProvider implements ModelProvider {
     options: ModelCallOptions;
   }> = [];
   private readonly scenarios = new Map<string, Scenario>();
-  private defaultSequence: ModelEvent[][] = [];
+  private defaultSequence: DefaultScenario[] = [];
+  private defaultHandler: ((model: ProviderModel, request: ModelRequest) => ModelEvent[]) | undefined;
   enqueue(key: string, events: ModelEvent[]) {
     this.scenarios.set(key, { events });
   }
@@ -17,6 +19,12 @@ export class ScriptedProvider implements ModelProvider {
   }
   enqueueDefaultSequence(sequence: ModelEvent[][]) {
     this.defaultSequence.push(...sequence.map((events) => [...events]));
+  }
+  enqueueDefaultFactory(factory: (model: ProviderModel, request: ModelRequest) => ModelEvent[]) {
+    this.defaultSequence.push(factory);
+  }
+  setDefaultHandler(handler: (model: ProviderModel, request: ModelRequest) => ModelEvent[]): void {
+    this.defaultHandler = handler;
   }
   async *call(model: ProviderModel, request: ModelRequest, options: ModelCallOptions): AsyncIterable<ModelEvent> {
     this.calls.push({ model, request, options });
@@ -30,9 +38,13 @@ export class ScriptedProvider implements ModelProvider {
       return;
     }
     await options.onSent?.();
-    const scenario = this.scenarios.get(options.idempotencyKey ?? "") ?? {
-      events: this.defaultSequence.shift() ?? [{ type: "done", finishReason: "stop" }],
-    };
+    const configured = this.defaultSequence.shift(),
+      scenario = this.scenarios.get(options.idempotencyKey ?? "") ?? {
+        events:
+          typeof configured === "function"
+            ? configured(model, request)
+            : (configured ?? this.defaultHandler?.(model, request) ?? [{ type: "done", finishReason: "stop" }]),
+      };
     if ("hang" in scenario) {
       await new Promise<void>((resolve) => {
         options.signal.addEventListener("abort", () => resolve(), {

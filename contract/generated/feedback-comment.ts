@@ -2,6 +2,14 @@
 
 export interface FeedbackComment {
   commentId: string;
+  itemKind?: "comment" | "finding";
+  source?: {
+    runId: string;
+    findingId: string;
+  };
+  applicability?: "current" | "revised" | "removed" | "not_located";
+  reviewedContent?: string;
+  currentContent?: string;
   sessionId: string;
   author:
     | {

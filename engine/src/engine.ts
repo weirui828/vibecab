@@ -10,12 +10,13 @@ import type { Dependencies } from "./dependencies.js";
 import { defaults } from "./dependencies.js";
 import { LifecycleRuntime } from "./lifecycle/runtime.js";
 import { contentModule } from "./content/module.js";
-import { feedbackModule } from "./feedback/module.js";
+import { feedbackModule, feedbackPort } from "./feedback/index.js";
 import { agentModule } from "./agent/module.js";
-import { updatesModule } from "./updates/module.js";
+import { updatesModule, updatesPort } from "./updates/index.js";
 import { gatewayModule } from "./gateway/module.js";
 import { lifecycleModule } from "./lifecycle/module.js";
-import { tmrModule } from "./tmr/module.js";
+import { tmrModule, tmrPort } from "./tmr/index.js";
+import { integrationModule, integrationPurgePort } from "./integration/index.js";
 import type { EngineModuleHost } from "./kernel/module-registry.js";
 import type { CallAuth, CallMetadata, TrustedHostCredential } from "./auth.js";
 
@@ -53,6 +54,14 @@ class LocalEngine extends LifecycleRuntime implements Engine {
       query: (ctx, query) => this.dispatchLegacyQuery(ctx, query),
       runJob: (kind, job) => this.runEngineJob(kind, job),
     };
+    const feedback = feedbackPort(),
+      updates = updatesPort(),
+      tmr = tmrPort(),
+      integrationPurge = integrationPurgePort({ feedback, tmr });
+    this.setReviewPurgeHook({
+      preview: (target) => integrationPurge.preview(this.moduleContext(), target),
+      apply: (target, actions) => integrationPurge.apply(this.moduleContext(), target, actions),
+    });
     this.configureModules([
       contentModule(host),
       feedbackModule(host),
@@ -61,6 +70,7 @@ class LocalEngine extends LifecycleRuntime implements Engine {
       gatewayModule(host),
       lifecycleModule(host),
       tmrModule(),
+      integrationModule({ feedback, updates, tmr }),
     ]);
   }
 

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/events/vc.ReviewRequested.json",
+  "title": "ReviewRequested",
+  "type": "object",
+  "properties": { "reviewRequestId": { "type": "string" }, "sessionId": { "type": "string" } },
+  "required": ["reviewRequestId", "sessionId"],
+  "additionalProperties": false
+}

@@ -12,6 +12,12 @@
       "type": "string",
       "minLength": 1
     },
+    "source": {
+      "type": "object",
+      "properties": { "runId": { "type": "string" }, "findingId": { "type": "string" } },
+      "required": ["runId", "findingId"],
+      "additionalProperties": false
+    },
     "instruction": {
       "type": "string"
     },

@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/events/vc.ReportArrived.json",
+  "title": "ReportArrived",
+  "type": "object",
+  "properties": { "reviewRequestId": { "type": "string" }, "runId": { "type": "string" } },
+  "required": ["reviewRequestId", "runId"],
+  "additionalProperties": false
+}

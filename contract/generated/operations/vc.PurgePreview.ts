@@ -19,5 +19,11 @@ export interface VcPurgePreviewOperation {
     updateIds: string[];
     conflictIds: string[];
     outputSetIds: string[];
+    reviewRuns: {
+      reviewRequestId: string;
+      runId: string;
+      redactRemoves: string[];
+      deleteRemoves: string[];
+    }[];
   };
 }

@@ -16,7 +16,6 @@ export const unsupportedGroups: readonly {
     queries: "Grants",
     effect: "admin",
   },
-  { prefix: "vc", commands: "RequestReview", queries: "" },
   { prefix: "vc", commands: "", queries: "" },
   {
     prefix: "vc",

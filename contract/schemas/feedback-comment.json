@@ -8,6 +8,16 @@
       "type": "string",
       "minLength": 1
     },
+    "itemKind": { "enum": ["comment", "finding"] },
+    "source": {
+      "type": "object",
+      "properties": { "runId": { "type": "string" }, "findingId": { "type": "string" } },
+      "required": ["runId", "findingId"],
+      "additionalProperties": false
+    },
+    "applicability": { "enum": ["current", "revised", "removed", "not_located"] },
+    "reviewedContent": { "type": "string" },
+    "currentContent": { "type": "string" },
     "sessionId": {
       "type": "string",
       "minLength": 1

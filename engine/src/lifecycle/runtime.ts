@@ -196,12 +196,26 @@ export class LifecycleRuntime extends LifecycleJobsRuntime {
           })
           .map((agreement) => agreement.agreementId);
         const outputSetId = this.deps.ids.next("output_");
+        const reviewRequestIds = [
+          ...new Set(
+            agreementIds.flatMap((agreementId) => {
+              const agreement = store.feedback("agreement", agreementId);
+              if (!agreement) return [];
+              const source = field(agreement, "source"),
+                runId = field(source, "runId");
+              if (typeof runId !== "string") return [];
+              const request = store.feedbackList("review-request").find((value) => field(value, "runId") === runId);
+              const requestId = field(request, "reviewRequestId");
+              return typeof requestId === "string" ? [requestId] : [];
+            }),
+          ),
+        ];
         const outputSet = this.contract.read<OutputSet>("output-set", {
           outputSetId,
           ...(p.sessionId ? { sessionId: p.sessionId } : {}),
           ...(p.label ? { label: p.label } : {}),
           members,
-          links: { agreementIds, reviewRequestIds: [] },
+          links: { agreementIds, reviewRequestIds },
           createdAt: this.deps.clock.now(),
         });
         store.saveFeedback("output-set", outputSetId, this.contract.read<Json>("json", outputSet));
@@ -277,11 +291,25 @@ export class LifecycleRuntime extends LifecycleJobsRuntime {
         return { restored: true };
       }
       case "vc.Purge": {
-        const p = this.contract.read<{ target: TrashTarget }>("operations/vc.Purge", raw, "#/properties/payload");
+        const p = this.contract.read<{
+          target: TrashTarget;
+          reviewActions?: Array<{ runId: string; action: "redact" | "delete" }>;
+        }>("operations/vc.Purge", raw, "#/properties/payload");
         if (!store.feedback("trash", this.trashKey(p.target)))
           fail("conflict", "Target must be in the trash before purge");
+        const dependent = this.purgePreview(p.target)
+            .reviewRuns.map((review) => review.runId)
+            .sort(),
+          actions = p.reviewActions ?? [],
+          supplied = actions.map((action) => action.runId).sort();
+        if (dependent.length !== supplied.length || dependent.some((runId, index) => runId !== supplied[index]))
+          fail("invalid", "Purge requires exactly one action for every dependent review run");
         const purgeId = this.deps.ids.next("purge_");
-        store.saveFeedback("purge-request", purgeId, this.contract.read<Json>("json", { target: p.target }));
+        store.saveFeedback(
+          "purge-request",
+          purgeId,
+          this.contract.read<Json>("json", { target: p.target, reviewActions: actions }),
+        );
         store.enqueue("purge", purgeId, this.contract.read<Json>("json", { purgeId }), this.deps.clock.now());
         this.event("purge", purgeId, "queued");
         return { purgeId, status: "queued" };

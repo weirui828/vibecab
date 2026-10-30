@@ -6,6 +6,10 @@ export interface VcPurgeOperation {
       kind: "artifact" | "session" | "comment" | "idea" | "project";
       id: string;
     };
+    reviewActions?: {
+      runId: string;
+      action: "redact" | "delete";
+    }[];
   };
   result: {
     purgeId: string;

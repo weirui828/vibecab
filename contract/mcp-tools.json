@@ -79,6 +79,11 @@
     "toolName": "create_project",
     "description": "Create a project to group sessions and artifacts."
   },
+  "vc.RequestReview": {
+    "toolName": "request_review",
+    "description": "Request a bounded TMR review of selected session materials."
+  },
+  "vc.ReviewReport": { "toolName": "get_report", "description": "Read the report for a requested review." },
   "vc.DecisionRecord": {
     "toolName": "decision_record",
     "description": "Read agreements for an artifact."
@@ -246,9 +251,5 @@
   "vc.Versions": {
     "toolName": "versions",
     "description": "List versions of an artifact."
-  },
-  "vc.RequestReview": {
-    "toolName": "request_review",
-    "description": "Request a multi-model review of an artifact."
   }
 }

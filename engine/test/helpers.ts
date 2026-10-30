@@ -30,7 +30,14 @@ export const ctx: CallContext = {
   scope: "admin",
   requestId: "test",
 };
-export const clock = { now: () => "2026-10-28T00:00:00.000Z" };
+let currentTime = Date.parse("2026-10-28T00:00:00.000Z");
+export const clock = { now: () => new Date(currentTime).toISOString() };
+export function advanceClock(milliseconds: number): void {
+  currentTime += milliseconds;
+}
+export function resetClock(): void {
+  currentTime = Date.parse("2026-10-28T00:00:00.000Z");
+}
 export function ids() {
   let n = 0;
   const alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
@@ -50,6 +57,7 @@ export function paragraph(text: string): ElementDraft {
   return { type: "paragraph", props: {}, text };
 }
 export async function fixture(options: Partial<Dependencies> = {}) {
+  resetClock();
   const dir = await mkdtemp(join(tmpdir(), "vibecab-"));
   const engine = createEngine({
     clock,

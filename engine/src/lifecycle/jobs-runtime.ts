@@ -142,13 +142,24 @@ export abstract class LifecycleJobsRuntime extends LifecycleHelpersRuntime {
 
   protected async runPurge(job: Job): Promise<void> {
     const purgeId = this.jobId(job, "purgeId"),
-      request = this.feedbackRecord<{ target: TrashTarget }>("purge-request", "json", purgeId),
+      request = this.feedbackRecord<{
+        target: TrashTarget;
+        reviewActions: Array<{ runId: string; action: "redact" | "delete" }>;
+      }>("purge-request", "json", purgeId),
       preview = this.purgePreview(request.target),
       commentIds = new Set(preview.commentIds),
       artifactId = request.target.kind === "artifact" ? request.target.id : undefined,
       discardedBlobs = new Set<string>();
     await this.queue.run(() =>
       this.available().transaction(() => {
+        const expectedRuns = preview.reviewRuns.map((review) => review.runId).sort(),
+          suppliedRuns = request.reviewActions.map((action) => action.runId).sort();
+        if (
+          expectedRuns.length !== suppliedRuns.length ||
+          expectedRuns.some((runId, index) => runId !== suppliedRuns[index])
+        )
+          fail("invalid", "Dependent review runs changed after the purge preview");
+        this.applyReviewPurge(request.target, request.reviewActions);
         for (const commentId of commentIds) {
           this.available().deleteFeedback("comment", commentId);
           for (const agreement of this.available()
@@ -237,6 +248,7 @@ export abstract class LifecycleJobsRuntime extends LifecycleHelpersRuntime {
           const record = this.contract.read<TrashRecord>("trash-record", value);
           if (Date.parse(record.purgeAt) > now) continue;
           const target: TrashTarget = { kind: record.kind, id: record.id };
+          if (this.purgePreview(target).reviewRuns.length > 0) continue;
           const alreadyQueued = this.available()
             .feedbackList("purge-request")
             .some((request) => {
@@ -245,7 +257,11 @@ export abstract class LifecycleJobsRuntime extends LifecycleHelpersRuntime {
             });
           if (alreadyQueued) continue;
           const purgeId = this.deps.ids.next("purge_");
-          this.available().saveFeedback("purge-request", purgeId, this.contract.read<Json>("json", { target }));
+          this.available().saveFeedback(
+            "purge-request",
+            purgeId,
+            this.contract.read<Json>("json", { target, reviewActions: [] }),
+          );
           this.available().enqueue(
             "purge",
             purgeId,

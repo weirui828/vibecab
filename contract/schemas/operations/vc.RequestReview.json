@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/vc.RequestReview.json",
+  "title": "vcRequestReviewOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": {
+        "sessionId": { "type": "string", "minLength": 1 },
+        "threadId": { "type": "string", "minLength": 1 },
+        "question": { "type": "string", "minLength": 1 },
+        "elementRefs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "properties": {
+              "artifactId": { "type": "string" },
+              "elementIds": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+            },
+            "required": ["artifactId", "elementIds"],
+            "additionalProperties": false
+          }
+        },
+        "commentIds": { "type": "array", "items": { "type": "string" } },
+        "criteria": { "type": "array", "items": { "type": "string" } },
+        "preset": { "type": "string" },
+        "participants": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "participantId": { "type": "string" },
+              "roleLabel": { "type": "string" },
+              "modelRef": { "type": "string" },
+              "systemPromptHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "temperature": { "type": "number", "minimum": 0, "maximum": 2 }
+            },
+            "required": ["participantId", "roleLabel", "modelRef", "systemPromptHash"],
+            "additionalProperties": false
+          }
+        },
+        "limits": {
+          "type": "object",
+          "properties": {
+            "spendMicros": { "type": "integer", "minimum": 0 },
+            "autoResume": { "type": "boolean" }
+          },
+          "required": ["spendMicros"],
+          "additionalProperties": false
+        },
+        "mode": { "enum": ["live", "demo"] }
+      },
+      "required": ["sessionId", "question", "elementRefs", "preset", "limits", "mode"],
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "properties": { "reviewRequestId": { "type": "string" }, "status": { "type": "string" } },
+      "required": ["reviewRequestId", "status"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["payload", "result"],
+  "additionalProperties": false,
+  "operation": {
+    "name": "vc.RequestReview",
+    "kind": "command",
+    "meta": { "effect": "collaborate", "irreversible": false, "channels": ["in_process", "http", "cli", "mcp"] }
+  }
+}

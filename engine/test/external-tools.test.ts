@@ -666,13 +666,13 @@ it("Update turns offer only allowed read-only tools even when the grant names a 
         await f.engine.query(ctx, { name: "vc.UpdateDetail", args: { updateId } }),
         "#/properties/result",
       );
-      if (["committed", "partially_committed", "failed"].includes(update.status)) {
+      if (update.status === "failed") {
         completedUpdate = update;
         break;
       }
       await new Promise((resolve) => setTimeout(resolve, 10));
     }
-    expect(["committed", "partially_committed", "failed"]).toContain(completedUpdate?.status);
+    expect(completedUpdate?.status).toBe("failed");
     expect(provider.calls[0]?.request.tools?.map((tool) => tool.name)).toEqual([modelToolName(serverId, "read")]);
     expect(transport.calls).toEqual(["read"]);
     const callLog = new Contract().read<import("../../contract/src/index.js").ToolCall[]>(

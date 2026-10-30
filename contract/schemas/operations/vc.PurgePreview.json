@@ -33,7 +33,21 @@
         "agreementIds": { "type": "array", "items": { "type": "string" } },
         "updateIds": { "type": "array", "items": { "type": "string" } },
         "conflictIds": { "type": "array", "items": { "type": "string" } },
-        "outputSetIds": { "type": "array", "items": { "type": "string" } }
+        "outputSetIds": { "type": "array", "items": { "type": "string" } },
+        "reviewRuns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "reviewRequestId": { "type": "string" },
+              "runId": { "type": "string" },
+              "redactRemoves": { "type": "array", "items": { "type": "string" } },
+              "deleteRemoves": { "type": "array", "items": { "type": "string" } }
+            },
+            "required": ["reviewRequestId", "runId", "redactRemoves", "deleteRemoves"],
+            "additionalProperties": false
+          }
+        }
       },
       "required": [
         "target",
@@ -46,7 +60,8 @@
         "agreementIds",
         "updateIds",
         "conflictIds",
-        "outputSetIds"
+        "outputSetIds",
+        "reviewRuns"
       ],
       "additionalProperties": false
     }

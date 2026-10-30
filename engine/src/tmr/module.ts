@@ -131,6 +131,15 @@ function submit(ctx: ModuleContext, p: Record<string, Json>): Json {
   enqueue(ctx, run, 0);
   return { runId, status: run.status };
 }
+
+/** Narrow internal port for the VibeCab integration module. */
+export function submitReview(ctx: ModuleContext, payload: Record<string, Json>): Json {
+  return submit(ctx, payload);
+}
+
+export function reviewRun(ctx: ModuleContext, runId: string): Run {
+  return getRun(ctx, runId);
+}
 function enqueue(ctx: ModuleContext, run: Run, index: number): void {
   const current = maybeRun(ctx, run.runId);
   if (!current || terminal(current.status)) return;

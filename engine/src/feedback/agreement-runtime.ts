@@ -15,6 +15,11 @@ export abstract class FeedbackAgreementRuntime extends FeedbackCommandRuntime {
   } {
     const c = this.comment(p.commentId);
     this.editable(c);
+    if (c.itemKind === "finding" && c.anchor) {
+      const currentHash = this.store.version(c.anchor.artifactId).manifest[c.anchor.elementId];
+      if (currentHash !== c.anchor.seenHash && p.instruction === undefined)
+        fail("invalid", "A revised review finding requires an explicit instruction");
+    }
     if (p.kind === "as_written" && p.instruction !== undefined)
       fail("invalid", "As-written agreements derive their instruction from the comment");
     if (p.kind === "agent_proposal" && c.author.kind !== "agent")
@@ -28,6 +33,7 @@ export abstract class FeedbackAgreementRuntime extends FeedbackCommandRuntime {
     this.save<Agreement>("agreement", "agreement", agreementId, {
       agreementId,
       commentId: c.commentId,
+      ...(c.source ? { source: c.source } : {}),
       instruction,
       kind: p.kind,
       ...(p.optionLabel ? { optionLabel: p.optionLabel } : {}),
