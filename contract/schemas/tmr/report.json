@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/tmr/report.json",
+  "title": "TmrReport",
+  "type": "object",
+  "properties": {
+    "runId": { "type": "string" },
+    "mode": { "enum": ["live", "demo"] },
+    "scope": { "type": "object" },
+    "recommendation": {},
+    "alignment": { "type": "array", "items": { "type": "object" } },
+    "dissent": { "type": "array", "items": { "type": "object" } },
+    "findings": { "type": "array", "items": { "$ref": "https://vibecab.local/schemas/tmr/finding.json" } },
+    "inputMaterials": { "type": "array", "items": { "type": "object" } },
+    "evidenceAndAttribution": { "type": "array", "items": { "type": "object" } },
+    "missingInformation": { "type": "array", "items": { "type": "string" } },
+    "coverage": { "type": "object" },
+    "outcome": { "type": "string" },
+    "inspectionReferences": { "type": "object" },
+    "statistics": { "type": "object" }
+  },
+  "required": [
+    "runId",
+    "mode",
+    "scope",
+    "recommendation",
+    "alignment",
+    "dissent",
+    "findings",
+    "inputMaterials",
+    "evidenceAndAttribution",
+    "missingInformation",
+    "coverage",
+    "outcome",
+    "inspectionReferences",
+    "statistics"
+  ],
+  "additionalProperties": false
+}

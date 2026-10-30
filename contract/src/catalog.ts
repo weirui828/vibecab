@@ -17,11 +17,6 @@ export const unsupportedGroups: readonly {
     effect: "admin",
   },
   { prefix: "vc", commands: "RequestReview", queries: "" },
-  {
-    prefix: "tmr",
-    commands: "CancelRun ResumeRun",
-    queries: "Runs Run Report Findings",
-  },
   { prefix: "vc", commands: "", queries: "" },
   {
     prefix: "vc",

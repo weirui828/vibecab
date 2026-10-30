@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/tmr.Export.json",
+  "title": "tmrExportOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": { "runId": { "type": "string" }, "format": { "enum": ["json", "markdown"] } },
+      "required": ["runId", "format"],
+      "additionalProperties": false
+    },
+    "result": { "type": "object" }
+  },
+  "required": ["payload", "result"],
+  "additionalProperties": false,
+  "operation": {
+    "name": "tmr.Export",
+    "kind": "query",
+    "meta": { "effect": "read", "irreversible": false, "channels": ["in_process", "http", "cli", "mcp"] }
+  }
+}

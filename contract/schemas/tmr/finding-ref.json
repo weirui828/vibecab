@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/tmr/finding-ref.json",
+  "title": "TmrFindingRef",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": { "itemId": { "type": "string" }, "locator": { "type": "string" } },
+      "required": ["itemId"],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": { "contributionId": { "type": "string" } },
+      "required": ["contributionId"],
+      "additionalProperties": false
+    }
+  ]
+}

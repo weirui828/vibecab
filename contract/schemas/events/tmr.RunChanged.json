@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/events/tmr.RunChanged.json",
+  "title": "TmrRunChanged",
+  "type": "object",
+  "properties": { "runId": { "type": "string" }, "status": { "type": "string" }, "data": { "type": "object" } },
+  "required": ["runId", "status"],
+  "additionalProperties": false
+}

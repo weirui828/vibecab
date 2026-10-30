@@ -15,6 +15,7 @@ import { agentModule } from "./agent/module.js";
 import { updatesModule } from "./updates/module.js";
 import { gatewayModule } from "./gateway/module.js";
 import { lifecycleModule } from "./lifecycle/module.js";
+import { tmrModule } from "./tmr/module.js";
 import type { EngineModuleHost } from "./kernel/module-registry.js";
 import type { CallAuth, CallMetadata, TrustedHostCredential } from "./auth.js";
 
@@ -59,6 +60,7 @@ class LocalEngine extends LifecycleRuntime implements Engine {
       updatesModule(host),
       gatewayModule(host),
       lifecycleModule(host),
+      tmrModule(),
     ]);
   }
 

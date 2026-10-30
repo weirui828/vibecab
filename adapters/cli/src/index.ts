@@ -1,9 +1,11 @@
 import { readFile, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 import { stdin, stdout, stderr } from "node:process";
 import { Contract, errorOf, fail } from "../../../contract/src/index.js";
 import type { CommandEnvelope, Json } from "../../../contract/src/index.js";
 import { createEngine } from "../../../engine/src/engine.js";
+import { independentReviewPreset } from "../../../engine/src/tmr/presets/independent-review.js";
 import { httpClient } from "../../http/src/index.js";
 import { createBootstrapToken, nextCommandId, withClient } from "./client.js";
 import { purge } from "./operations.js";
@@ -104,6 +106,85 @@ async function handle(command: string, args: string[], io: CliIO): Promise<unkno
   if (command === "start") {
     await createBootstrapToken(workspace);
     return start(workspace);
+  }
+  if (command === "tmr") {
+    const action = positional[0];
+    if (!action) fail("invalid", "Usage: tmr submit|status|report|cancel|resume");
+    if (action === "submit") {
+      const question = parsed.values.get("question");
+      const preset = parsed.values.get("preset") ?? "independent-review";
+      if (preset !== "independent-review") fail("unsupported", "Unknown TMR process preset");
+      if (!question) fail("invalid", "Missing --question");
+      const inputs = args.flatMap((arg, index) => (arg === "--input" && args[index + 1] ? [args[index + 1]!] : []));
+      if (!inputs.length) fail("invalid", "Provide at least one --input file");
+      const items = await Promise.all(
+        inputs.map(async (path, index) => ({
+          itemId: "input-" + (index + 1),
+          kind: "text",
+          content: await inputText(path),
+          source: resolve(path),
+        })),
+      );
+      const participantPath = parsed.values.get("participants");
+      const participants: Json = participantPath
+        ? jsonValue(await inputText(participantPath))
+        : [
+            {
+              participantId: "reviewer-1",
+              roleLabel: "Reviewer",
+              modelRef: "default",
+              systemPromptHash: createHash("sha256").update("TMR reviewer").digest("hex"),
+            },
+          ];
+      const all = Array.isArray(participants) ? participants : [];
+      const stages = independentReviewPreset(
+        all.map((item) => {
+          if (
+            typeof item !== "object" ||
+            item === null ||
+            Array.isArray(item) ||
+            typeof Reflect.get(item, "participantId") !== "string"
+          )
+            fail("invalid", "Invalid participant configuration");
+          return Reflect.get(item, "participantId") as string;
+        }),
+      );
+      const budget = Number(parsed.values.get("budget") ?? "2");
+      if (!Number.isFinite(budget) || budget < 0) fail("invalid", "Invalid --budget amount");
+      const submitPayload = new Contract().read<Json>("json", {
+        requestId: nextCommandId(),
+        question,
+        items,
+        criteria: [],
+        processSpec: stages,
+        participants: all,
+        limits: { spendMicros: Math.round(budget * 1000000) },
+        mode: parsed.values.get("mode") === "live" ? "live" : "demo",
+      });
+      return withClient(workspace, (client) =>
+        sendCommand(client, { commandId: nextCommandId(), type: "tmr.Submit", payload: submitPayload }),
+      );
+    }
+    const runId = positional[1];
+    if (!runId) fail("invalid", "Usage: tmr " + action + " <run-id>");
+    if (action === "status")
+      return withClient(workspace, (client) => client.query({ name: "tmr.Run", args: { runId } }));
+    if (action === "report")
+      return withClient(workspace, (client) =>
+        client.query({
+          name: "tmr.Export",
+          args: { runId, format: parsed.flags.has("markdown") ? "markdown" : "json" },
+        }),
+      );
+    if (action === "cancel" || action === "resume")
+      return withClient(workspace, (client) =>
+        sendCommand(client, {
+          commandId: nextCommandId(),
+          type: action === "cancel" ? "tmr.Cancel" : "tmr.Resume",
+          payload: { runId },
+        }),
+      );
+    fail("invalid", "Usage: tmr submit|status|report|cancel|resume");
   }
   if (command === "stop") return stop(workspace);
   if (command === "status") return status(workspace);
@@ -257,7 +338,7 @@ export async function main(args = process.argv.slice(2), io = defaultIO()): Prom
   const [command, ...rest] = args;
   if (!command) {
     io.writeError(
-      "Usage: vibecab <start|stop|status|cmd|query|events|export|backup|restore-backup|purge|tokens|keys|review>",
+      "Usage: vibecab <start|stop|status|cmd|query|events|export|backup|restore-backup|purge|tokens|keys|review|tmr>",
     );
     return 2;
   }

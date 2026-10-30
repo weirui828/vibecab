@@ -19,8 +19,15 @@ vibecab tokens create --name "MCP read" --channel mcp --scope read
 vibecab tokens list
 vibecab tokens revoke <token-id>
 vibecab keys set <model-alias>
+tmr submit --question "Review this proposal" --input proposal.md --preset independent-review --budget 2.00
+tmr status <run-id>
+tmr report <run-id> [--markdown]
+tmr cancel <run-id>
+tmr resume <run-id>
 ```
 
 The CLI uses the `VibeCab/cli` OS keychain entry. `tokens create` prints a token secret once. `purge` without `--yes` returns only its preview. Add `--json` to print JSON for wrapper commands; `cmd` emits JSON and uses its required `--json <file|->` option for the payload.
 
 Exit codes: 0 success; 2 invalid input; 3 unauthenticated; 4 forbidden; 5 not found; 6 conflict, stale base, or locked; 7 budget exceeded or rate limited; 8 unsupported; 9 unavailable or uncertain; 10 internal error.
+
+The tmr binary is included in the same package and uses the same workspace credentials. Submissions run in demo mode unless --mode live is specified. Participant configuration is a JSON array supplied with --participants <file>.

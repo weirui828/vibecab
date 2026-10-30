@@ -15,6 +15,14 @@
     "toolName": "usage",
     "description": "Read usage."
   },
+  "tmr.Cancel": { "toolName": "cancel_tmr_run", "description": "Cancel an active TMR review run." },
+  "tmr.Events": { "toolName": "tmr_events", "description": "Read process events for a TMR run." },
+  "tmr.Export": { "toolName": "export_tmr_report", "description": "Export a TMR report as JSON or Markdown." },
+  "tmr.Report": { "toolName": "tmr_report", "description": "Read the report for a TMR run." },
+  "tmr.Resume": { "toolName": "resume_tmr_run", "description": "Resume missing work for an interrupted TMR run." },
+  "tmr.Run": { "toolName": "tmr_run", "description": "Read TMR run status and frozen process details." },
+  "tmr.Runs": { "toolName": "tmr_runs", "description": "List TMR runs in this workspace." },
+  "tmr.Submit": { "toolName": "submit_tmr_run", "description": "Start a bounded machine review run." },
   "vc.AgentTurns": {
     "toolName": "agent_turns",
     "description": "Read agent turns."
@@ -242,9 +250,5 @@
   "vc.RequestReview": {
     "toolName": "request_review",
     "description": "Request a multi-model review of an artifact."
-  },
-  "tmr.Report": {
-    "toolName": "get_report",
-    "description": "Read the report for a completed review."
   }
 }

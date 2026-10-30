@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/tmr.Events.json",
+  "title": "tmrEventsOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": { "runId": { "type": "string" } },
+      "required": ["runId"],
+      "additionalProperties": false
+    },
+    "result": { "type": "array", "items": { "type": "object" } }
+  },
+  "required": ["payload", "result"],
+  "additionalProperties": false,
+  "operation": {
+    "name": "tmr.Events",
+    "kind": "query",
+    "meta": { "effect": "read", "irreversible": false, "channels": ["in_process", "http", "cli", "mcp"] }
+  }
+}

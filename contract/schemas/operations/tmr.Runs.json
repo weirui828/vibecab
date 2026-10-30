@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/tmr.Runs.json",
+  "title": "tmrRunsOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": { "limit": { "type": "integer", "minimum": 1 } },
+      "additionalProperties": false
+    },
+    "result": { "type": "array", "items": { "$ref": "https://vibecab.local/schemas/tmr/run.json" } }
+  },
+  "required": ["payload", "result"],
+  "additionalProperties": false,
+  "operation": {
+    "name": "tmr.Runs",
+    "kind": "query",
+    "meta": { "effect": "read", "irreversible": false, "channels": ["in_process", "http", "cli", "mcp"] }
+  }
+}

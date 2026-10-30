@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/tmr/snapshot.json",
+  "title": "TmrSnapshot",
+  "type": "object",
+  "properties": {
+    "snapshotId": { "type": "string" },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "itemId": { "type": "string" },
+          "kind": { "enum": ["element", "comment", "text", "asset"] },
+          "content": {},
+          "source": { "type": "string" }
+        },
+        "required": ["itemId", "kind", "content", "source"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["snapshotId", "items"],
+  "additionalProperties": false
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/tmr/contribution-failure.json",
+  "title": "TmrContributionFailure",
+  "type": "object",
+  "properties": {
+    "runId": { "type": "string" },
+    "stageId": { "type": "string" },
+    "participantId": { "type": "string" },
+    "createdAt": { "type": "string" },
+    "code": { "type": "string" }
+  },
+  "required": ["runId", "stageId", "participantId", "createdAt", "code"],
+  "additionalProperties": false
+}

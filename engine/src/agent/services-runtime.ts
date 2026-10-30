@@ -1,4 +1,5 @@
 import { Content } from "../content/content.js";
+import { errorOf } from "../../../contract/src/index.js";
 import { Feedback } from "../feedback/feedback.js";
 import { BudgetLedger } from "../gateway/ledger.js";
 import { ProviderGateway } from "../gateway/gateway.js";
@@ -50,11 +51,18 @@ export abstract class AgentServicesRuntime extends QueryOperations {
       ? {
           markTurnUncertain: (turnId) => this.budgets!.markTurnUncertain(turnId),
           markUncertain: (reservationId) => this.budgets!.markUncertain(reservationId),
+          setRunLimit: (runId, limitMicros) => this.budgets!.setLimit({ kind: "run", key: runId }, limitMicros),
+          reserve: (reservationId, runId, amountMicros) =>
+            this.budgets!.reserve(reservationId, [{ kind: "run", key: runId }, { kind: "daily" }], amountMicros),
         }
       : undefined;
   }
 
   protected markReservationUncertain(reservationId: string): void {
-    this.budgets?.markUncertain(reservationId);
+    try {
+      this.budgets?.markUncertain(reservationId);
+    } catch (error) {
+      if (errorOf(error).code !== "not_found") throw error;
+    }
   }
 }

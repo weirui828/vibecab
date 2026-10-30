@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/tmr/run.json",
+  "title": "TmrRun",
+  "type": "object",
+  "properties": {
+    "runId": { "type": "string" },
+    "requestId": { "type": "string" },
+    "payloadHash": { "type": "string" },
+    "question": { "type": "string" },
+    "intendedUse": { "type": "string" },
+    "snapshotId": { "type": "string" },
+    "criteria": { "type": "array", "items": { "type": "string" } },
+    "processSpec": { "type": "object" },
+    "processHash": { "type": "string" },
+    "participants": { "type": "array", "items": { "type": "object" } },
+    "limits": { "type": "object" },
+    "mode": { "enum": ["live", "demo"] },
+    "status": {
+      "enum": ["queued", "running", "completed", "partial", "limit_reached", "failed", "cancelled", "interrupted"]
+    },
+    "outcome": { "enum": ["completed", "partial", "limit_reached", "failed", "cancelled", "interrupted"] },
+    "coverage": { "type": "object" },
+    "rerunOf": { "type": "string" },
+    "createdAt": { "type": "string" }
+  },
+  "required": [
+    "runId",
+    "requestId",
+    "payloadHash",
+    "question",
+    "snapshotId",
+    "criteria",
+    "processSpec",
+    "processHash",
+    "participants",
+    "limits",
+    "mode",
+    "status",
+    "createdAt"
+  ],
+  "additionalProperties": false
+}

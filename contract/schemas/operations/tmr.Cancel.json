@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/tmr.Cancel.json",
+  "title": "tmrCancelOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": { "runId": { "type": "string" } },
+      "required": ["runId"],
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "properties": { "runId": { "type": "string" }, "status": { "type": "string" } },
+      "required": ["runId", "status"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["payload", "result"],
+  "additionalProperties": false,
+  "operation": {
+    "name": "tmr.Cancel",
+    "kind": "command",
+    "meta": { "effect": "collaborate", "irreversible": false, "channels": ["in_process", "http", "cli", "mcp"] }
+  }
+}

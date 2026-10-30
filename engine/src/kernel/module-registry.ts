@@ -12,6 +12,7 @@ import type { Repository } from "../storage/repository.js";
 
 export interface ContractValidator {
   read<T>(schemaName: string, value: unknown, path?: string): T;
+  schemaIsValid(schema: JsonSchema): boolean;
 }
 
 export interface GatewayRequestPort {
@@ -51,6 +52,8 @@ export interface GatewayPort {
 export interface BudgetPort {
   markTurnUncertain(turnId: string): void;
   markUncertain(reservationId: string): void;
+  setRunLimit(runId: string, limitMicros: number): void;
+  reserve(reservationId: string, runId: string, amountMicros: number): void;
 }
 
 export interface EngineModuleHost {
@@ -61,6 +64,7 @@ export interface EngineModuleHost {
 
 export interface ModuleContext {
   repository: Repository;
+  mutate<T>(action: () => T): Promise<T>;
   clock: Clock;
   ids: IdGenerator;
   contract: ContractValidator;

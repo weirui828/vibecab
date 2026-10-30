@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/tmr.PurgeBySource.json",
+  "title": "tmrPurgeBySourceOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": { "source": { "type": "string", "minLength": 1 } },
+      "required": ["source"],
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "properties": { "purged": { "type": "integer" } },
+      "required": ["purged"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["payload", "result"],
+  "additionalProperties": false,
+  "operation": {
+    "name": "tmr.PurgeBySource",
+    "kind": "command",
+    "meta": { "effect": "admin", "irreversible": true, "destructive": true, "channels": ["in_process", "http", "cli"] }
+  }
+}

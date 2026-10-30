@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "type": "module",
   "bin": {
-    "vibecab": "bin/vibecab.mjs"
+    "vibecab": "bin/vibecab.mjs",
+    "tmr": "bin/tmr.mjs"
   },
   "exports": "./src/index.ts",
   "dependencies": {

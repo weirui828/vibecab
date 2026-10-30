@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/tmr/finding.json",
+  "title": "TmrFinding",
+  "type": "object",
+  "properties": {
+    "findingId": { "type": "string" },
+    "concern": { "type": "string" },
+    "rationale": { "type": "string" },
+    "consequence": { "type": "string" },
+    "suggestion": { "type": "string" },
+    "severity": { "type": "string" },
+    "refs": { "type": "array", "items": { "$ref": "https://vibecab.local/schemas/tmr/finding-ref.json" } },
+    "supportedBy": { "type": "array", "items": { "type": "string" } },
+    "opposedBy": { "type": "array", "items": { "type": "string" } },
+    "unresolved_reference": { "type": "boolean" }
+  },
+  "required": ["findingId", "concern", "rationale", "refs", "supportedBy", "opposedBy"],
+  "additionalProperties": false
+}

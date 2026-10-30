@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/tmr/process-spec.json",
+  "title": "TmrProcessSpec",
+  "type": "object",
+  "properties": {
+    "version": { "type": "integer", "minimum": 1 },
+    "maxStages": { "type": "integer", "minimum": 1 },
+    "onMissingContribution": {
+      "oneOf": [
+        { "enum": ["fail", "proceed_disclosed"] },
+        {
+          "type": "object",
+          "properties": {
+            "retry": { "type": "integer", "minimum": 0 },
+            "then": { "enum": ["fail", "proceed_disclosed"] }
+          },
+          "required": ["retry", "then"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "stages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "kind": { "enum": ["assess", "critique", "revise", "debate_round", "synthesize"] },
+          "participants": { "oneOf": [{ "type": "array", "items": { "type": "string" } }, { "const": "all" }] },
+          "inputs": { "type": "array", "items": { "type": "string" } },
+          "outputSchema": { "type": "object" },
+          "quorum": { "type": "integer", "minimum": 1 }
+        },
+        "required": ["id", "kind", "participants", "inputs", "outputSchema", "quorum"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["version", "maxStages", "onMissingContribution", "stages"],
+  "additionalProperties": false
+}

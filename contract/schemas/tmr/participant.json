@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/tmr/participant.json",
+  "title": "TmrParticipant",
+  "type": "object",
+  "properties": {
+    "participantId": { "type": "string" },
+    "roleLabel": { "type": "string" },
+    "modelRef": { "type": "string" },
+    "systemPromptHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "temperature": { "type": "number", "minimum": 0, "maximum": 2 }
+  },
+  "required": ["participantId", "roleLabel", "modelRef", "systemPromptHash"],
+  "additionalProperties": false
+}

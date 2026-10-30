@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/tmr/contribution.json",
+  "title": "TmrContribution",
+  "type": "object",
+  "properties": {
+    "contributionId": { "type": "string" },
+    "runId": { "type": "string" },
+    "stageId": { "type": "string" },
+    "participantId": { "type": "string" },
+    "position": { "type": "string" },
+    "content": {},
+    "createdAt": { "type": "string" },
+    "mode": { "enum": ["live", "demo"] }
+  },
+  "required": ["contributionId", "runId", "stageId", "participantId", "content", "createdAt", "mode"],
+  "additionalProperties": false
+}

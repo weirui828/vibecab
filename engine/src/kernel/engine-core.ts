@@ -95,9 +95,13 @@ export abstract class EngineCore {
     const store = this.available();
     this.lifecycleContext = {
       repository: store,
+      mutate: (action) => this.queue.run(() => store.transaction(action)),
       clock: this.deps.clock,
       ids: this.deps.ids,
-      contract: { read: <T>(name: string, value: unknown, path?: string) => this.contract.read<T>(name, value, path) },
+      contract: {
+        read: <T>(name: string, value: unknown, path?: string) => this.contract.read<T>(name, value, path),
+        schemaIsValid: (schema) => this.contract.schemaIsValid(schema),
+      },
       appendEvent: (event) => store.appendEvent(event),
       enqueue: (kind, id, payload, ts) => store.enqueue(kind, id, payload, ts),
       settings: () => this.contract.read<Json>("json", this.settings()),
