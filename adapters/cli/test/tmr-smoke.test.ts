@@ -1,29 +1,14 @@
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { expect, it, vi } from "vitest";
+import { expect, it } from "vitest";
 import { CONTRACT_VERSION, Contract, type Json } from "../../../contract/src/index.js";
 import { createEngine } from "../../../engine/src/engine.js";
 import { MemoryKeyStore } from "../../../engine/src/gateway/keys.js";
 import type { ModelProvider } from "../../../engine/src/gateway/types.js";
 import { startHttp } from "../../http/src/index.js";
+import { saveCliToken } from "../src/keychain.js";
 import { main } from "../src/index.js";
-
-const keyring = vi.hoisted(() => new Map<string, string>());
-vi.mock("@napi-rs/keyring", () => ({
-  Entry: class {
-    private readonly key: string;
-    constructor(service: string, account: string) {
-      this.key = service + ":" + account;
-    }
-    getPassword() {
-      return keyring.get(this.key) ?? null;
-    }
-    setPassword(value: string) {
-      keyring.set(this.key, value);
-    }
-  },
-}));
 
 const liveModel = {
   provider: "openai-compatible",
@@ -81,7 +66,7 @@ it("smokes tmr submit, status, report, cancel, and resume through the CLI client
     if (!tokenResult.ok) throw Error("Could not create CLI test token");
     const token = get(tokenResult.result, "token");
     if (typeof token !== "string") throw Error("CLI test token missing");
-    keyring.set("VibeCab:cli", JSON.stringify({ [workspace]: token }));
+    await saveCliToken(workspace, token);
     http = await startHttp(engine, { port: 0, transport: "cli" });
     await mkdir(join(workspace, ".vibecab"), { recursive: true });
     await writeFile(
@@ -182,7 +167,6 @@ it("smokes tmr submit, status, report, cancel, and resume through the CLI client
     await http?.close();
     await engine.stop();
     await rm(workspace, { recursive: true, force: true });
-    keyring.clear();
   }
 });
 
@@ -234,7 +218,9 @@ it("sets provider keys through the engine command without writing a provider key
       },
     );
     if (!tokenResult.ok) throw Error(tokenResult.error.message);
-    keyring.set("VibeCab:cli", JSON.stringify({ [workspace]: get(tokenResult.result, "token") }));
+    const token = get(tokenResult.result, "token");
+    if (typeof token !== "string") throw Error("CLI key test token missing");
+    await saveCliToken(workspace, token);
     http = await startHttp(engine, { port: 0, transport: "cli" });
     await mkdir(join(workspace, ".vibecab"), { recursive: true });
     await writeFile(
@@ -257,7 +243,6 @@ it("sets provider keys through the engine command without writing a provider key
     expect(errors).toEqual([]);
     expect(exit).toBe(0);
     expect(await keyStore.get("provider:default")).toBe(secret);
-    expect(keyring.has("VibeCab:provider:default")).toBe(false);
     expect(output.join("\n")).not.toContain(secret);
   } finally {
     await http?.close();

@@ -13,7 +13,7 @@ export function nextCommandId(): string {
 export async function withClient<T>(workspaceDir: string, action: (client: CliClient) => Promise<T>): Promise<T> {
   const workspace = resolve(workspaceDir),
     host = await start(workspace),
-    token = readCliToken(workspace);
+    token = await readCliToken(workspace);
   if (!host.running || !host.cliUrl || !token)
     fail("unauthenticated", "No CLI access token is stored in the OS keychain");
   return action(httpClient(host.cliUrl, token));

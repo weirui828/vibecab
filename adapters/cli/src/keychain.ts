@@ -1,16 +1,15 @@
-import { Entry } from "@napi-rs/keyring";
 import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
+import { createKeyStoreFromEnvironment } from "../../../engine/src/gateway/keys.js";
 
-const service = "VibeCab";
+const keyStore = createKeyStoreFromEnvironment();
 
-export function readCliToken(workspaceDir: string): string | undefined {
+export async function readCliToken(workspaceDir: string): Promise<string | undefined> {
   try {
-    const value = new Entry(service, "cli").getPassword();
-    if (!value) return undefined;
+    const value = await keyStore.get("cli");
     try {
       const parsed: unknown = JSON.parse(value);
-      if (typeof parsed === "object" && parsed !== null) {
+      if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
         const token = Reflect.get(parsed, workspaceDir);
         return typeof token === "string" ? token : undefined;
       }
@@ -23,9 +22,8 @@ export function readCliToken(workspaceDir: string): string | undefined {
   }
 }
 
-export function saveCliToken(workspaceDir: string, token: string): void {
-  const entry = new Entry(service, "cli"),
-    current = entry.getPassword();
+export async function saveCliToken(workspaceDir: string, token: string): Promise<void> {
+  const current = await keyStore.get("cli").catch(() => undefined);
   let tokens: Record<string, string> = {};
   if (current) {
     try {
@@ -37,7 +35,7 @@ export function saveCliToken(workspaceDir: string, token: string): void {
     }
   }
   tokens[workspaceDir] = token;
-  entry.setPassword(JSON.stringify(tokens));
+  keyStore.set("cli", JSON.stringify(tokens));
 }
 
 export async function readSecret(prompt: string): Promise<string> {

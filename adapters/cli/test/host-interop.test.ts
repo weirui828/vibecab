@@ -1,25 +1,10 @@
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { expect, it, vi } from "vitest";
+import { expect, it } from "vitest";
 import { start as startHost, status, stop } from "../../../host/src/index.js";
+import { saveCliToken } from "../src/keychain.js";
 import { main } from "../src/index.js";
-
-const passwords = vi.hoisted(() => new Map<string, string>());
-vi.mock("@napi-rs/keyring", () => ({
-  Entry: class {
-    private readonly key: string;
-    constructor(service: string, account: string) {
-      this.key = service + ":" + account;
-    }
-    getPassword() {
-      return passwords.get(this.key) ?? null;
-    }
-    setPassword(value: string) {
-      passwords.set(this.key, value);
-    }
-  },
-}));
 
 it("shares one host between the library and CLI in both startup directions", async () => {
   const workspace = await mkdtemp(join(tmpdir(), "vibecab-cli-host-")),
@@ -37,7 +22,6 @@ it("shares one host between the library and CLI in both startup directions", asy
     previousEntry = process.env.VIBECAB_HOST_ENTRY;
   process.env.VIBECAB_DEV = "1";
   process.env.VIBECAB_HOST_ENTRY = hostEntry;
-  passwords.clear();
   try {
     await writeFile(
       hostEntry,
@@ -94,7 +78,7 @@ await new Promise(() => setInterval(() => undefined, 1000));\n`,
     expect(JSON.parse(output.at(-1) ?? "null")).toMatchObject({ running: true, pid: libraryStarted.pid });
 
     const token = await readFile(join(workspace, ".vibecab", "cli-token.test-only"), "utf8");
-    passwords.set("VibeCab:cli", JSON.stringify({ [workspace]: token }));
+    await saveCliToken(workspace, token);
     expect(await main(["cmd", "vc.StartSession", "--json", input, "--workspace", workspace], io)).toBe(0);
     expect(JSON.parse(output.at(-1) ?? "null")).toHaveProperty("sessionId");
     expect(await main(["stop", "--workspace", workspace], io)).toBe(0);
@@ -110,7 +94,6 @@ await new Promise(() => setInterval(() => undefined, 1000));\n`,
     else process.env.VIBECAB_DEV = previousDev;
     if (previousEntry === undefined) delete process.env.VIBECAB_HOST_ENTRY;
     else process.env.VIBECAB_HOST_ENTRY = previousEntry;
-    passwords.clear();
     await rm(workspace, { recursive: true, force: true });
   }
 });
