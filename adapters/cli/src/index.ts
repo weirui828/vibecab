@@ -1,6 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
-import { resolve } from "node:path";
+import { basename, resolve } from "node:path";
 import { stdin, stdout, stderr } from "node:process";
 import { Contract, errorOf, fail } from "../../../contract/src/index.js";
 import type { CommandEnvelope, Json } from "../../../contract/src/index.js";
@@ -122,7 +122,7 @@ async function handle(command: string, args: string[], io: CliIO): Promise<unkno
           itemId: "input-" + (index + 1),
           kind: "text",
           content: await inputText(path),
-          source: resolve(path),
+          source: path === "-" ? "text:" + (index + 1) : "file:" + basename(path),
         })),
       );
       const participantPath = parsed.values.get("participants");

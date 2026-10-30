@@ -10,6 +10,12 @@ export interface TmrRun {
   criteria: string[];
   processSpec: {};
   processHash: string;
+  promptHashes?: {
+    [k: string]: string;
+  };
+  stagePrompts?: {
+    [k: string]: string;
+  };
   participants: {}[];
   limits: {};
   mode: "live" | "demo";

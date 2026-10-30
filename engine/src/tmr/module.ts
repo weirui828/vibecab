@@ -1,11 +1,15 @@
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { errorOf, fail, type Json } from "../../../contract/src/index.js";
 import type { EngineModule, ModuleContext } from "../kernel/module-registry.js";
 import { canonical } from "../kernel/canonical.js";
+import { estimateReservationMicros } from "../gateway/ledger.js";
+import type { ModelRequest, ProviderModel } from "../gateway/types.js";
 import { snapshotId, stageContext, validateProcess } from "./process.js";
 import type { ProcessSpec } from "./process.js";
-import { finish, saveRun } from "./report.js";
+import { finish, markdownReport, saveRun } from "./report.js";
 import type { Run } from "./types.js";
+import { purgeBySource } from "./purge.js";
 
 const commands = ["tmr.Submit", "tmr.Cancel", "tmr.Resume", "tmr.PurgeBySource"],
   queries = ["tmr.Run", "tmr.Runs", "tmr.Report", "tmr.Events", "tmr.Export"];
@@ -26,7 +30,7 @@ export function tmrModule(): EngineModule {
           if (name === "tmr.Submit") return submit(ctx, p);
           if (name === "tmr.Cancel") return cancelRun(ctx, str(p, "runId"), activeCalls);
           if (name === "tmr.Resume") return resume(ctx, str(p, "runId"));
-          if (name === "tmr.PurgeBySource") return purge(ctx, str(p, "source"));
+          if (name === "tmr.PurgeBySource") return purgeBySource(ctx, str(p, "source"));
           fail("unsupported", "Unsupported TMR command");
         },
       ]),
@@ -53,9 +57,7 @@ export function tmrModule(): EngineModule {
             report = ctx.repository.feedback("tmr-report", run.runId);
           if (!report) fail("not_found", "TMR report not found");
           const value = ctx.contract.read<Json>("tmr/report", report);
-          return p.format === "markdown"
-            ? { content: "# TMR report\n\n" + JSON.stringify(value, null, 2) }
-            : { content: value };
+          return p.format === "markdown" ? { content: markdownReport(value) } : { content: value };
         },
       ]),
     ),
@@ -66,11 +68,7 @@ export function tmrModule(): EngineModule {
       for (const run of listRuns(ctx)) {
         if (run.status !== "running") continue;
         const interrupted = { ...run, status: "interrupted", outcome: "interrupted" };
-        saveRun(ctx, interrupted);
-        if (run.limits.autoResume) {
-          const index = firstMissingStage(ctx, run);
-          if (index >= 0) enqueue(ctx, interrupted, index);
-        }
+        finish(ctx, interrupted);
       }
     },
   };
@@ -97,7 +95,13 @@ function submit(ctx: ModuleContext, p: Record<string, Json>): Json {
     snapshot = { snapshotId: sid, items };
   ctx.contract.read("tmr/snapshot", snapshot);
   const runId = ctx.ids.next("tmr_run_"),
-    limits = ctx.contract.read<Run["limits"]>("json", p.limits);
+    limits = ctx.contract.read<Run["limits"]>("json", p.limits),
+    stagePrompts = Object.fromEntries(
+      [...new Set(spec.stages.map((stage) => stage.kind))].map((kind) => [kind, loadStagePrompt(kind)]),
+    ),
+    promptHashes = Object.fromEntries(
+      Object.entries(stagePrompts).map(([kind, prompt]) => [kind, createHash("sha256").update(prompt).digest("hex")]),
+    );
   if (p.mode === "live") {
     if (!ctx.gateway || !ctx.budgets) fail("unavailable", "Live TMR gateway unavailable");
     ctx.budgets.setRunLimit(runId, limits.spendMicros);
@@ -111,6 +115,8 @@ function submit(ctx: ModuleContext, p: Record<string, Json>): Json {
     criteria: ctx.contract.read<string[]>("json", p.criteria),
     processSpec: spec,
     processHash: createHash("sha256").update(canonical(spec)).digest("hex"),
+    promptHashes,
+    stagePrompts,
     participants,
     limits,
     mode: p.mode,
@@ -125,6 +131,9 @@ function submit(ctx: ModuleContext, p: Record<string, Json>): Json {
   return { runId, status: run.status };
 }
 function enqueue(ctx: ModuleContext, run: Run, index: number): void {
+  const current = maybeRun(ctx, run.runId);
+  if (!current || terminal(current.status)) return;
+  run = current;
   const stage = run.processSpec.stages[index];
   if (!stage) return;
   const assigned = stage.participants === "all" ? run.participants.map((x) => x.participantId) : stage.participants;
@@ -172,7 +181,7 @@ async function runContribution(
     index = num(field(job.payload, "index")) ?? 0,
     run = getRun(ctx, runId),
     stage = run.processSpec.stages[index];
-  if (!stage || stage.id !== stageId || terminal(run.status)) return;
+  if (!stage || stage.id !== stageId || terminal(run.status) || !(await ctx.mutate(() => holdsLease(ctx, job)))) return;
   const contributionId = runId + ":" + stageId + ":" + participantId;
   if (!ctx.repository.feedback("tmr-contribution", contributionId)) {
     const participant = run.participants.find((p) => p.participantId === participantId);
@@ -202,7 +211,11 @@ async function runContribution(
       const current = maybeRun(ctx, runId);
       if (current && terminal(current.status)) return;
       if (errorOf(error).code === "budget_exceeded") {
-        await ctx.mutate(() => finish(ctx, { ...run, status: "limit_reached", outcome: "limit_reached" }));
+        await ctx.mutate(() => {
+          const latest = maybeRun(ctx, runId);
+          if (latest && !terminal(latest.status) && holdsLease(ctx, job))
+            finish(ctx, { ...latest, status: "limit_reached", outcome: "limit_reached" });
+        });
         return;
       }
       const retryPolicy =
@@ -210,7 +223,9 @@ async function runContribution(
         attempt = num(field(job.payload, "attempt")) ?? 0;
       if (retryPolicy && attempt < retryPolicy.retry) {
         const retryPayload = ctx.contract.read<Record<string, Json>>("json", job.payload);
-        await ctx.mutate(() =>
+        await ctx.mutate(() => {
+          const latest = maybeRun(ctx, runId);
+          if (!latest || terminal(latest.status) || !holdsLease(ctx, job)) return;
           ctx.enqueue(
             "tmr.stage",
             job.id + ":retry:" + (attempt + 1),
@@ -220,8 +235,8 @@ async function runContribution(
               attempt: attempt + 1,
             }),
             ctx.clock.now(),
-          ),
-        );
+          );
+        });
         await ctx.mutate(() =>
           recordProgress(ctx, runId, "retry_scheduled", { stageId, participantId, actual: attempt + 1 }),
         );
@@ -235,11 +250,13 @@ async function runContribution(
         code: "contribution_failed",
       });
       await ctx.mutate(() => {
+        const latest = maybeRun(ctx, runId);
+        if (!latest || terminal(latest.status) || !holdsLease(ctx, job)) return;
         ctx.repository.saveFeedback("tmr-failure", contributionId, failure);
         recordProgress(ctx, runId, "contribution_failed", { stageId, participantId });
         if (missingFailureMode(run.processSpec) === "fail")
-          finish(ctx, { ...run, status: "failed", outcome: "failed" });
-        else advanceWhenSettled(ctx, run, stage, index, assignedParticipants(run, stage));
+          finish(ctx, { ...latest, status: "failed", outcome: "failed" });
+        else advanceWhenSettled(ctx, latest, stage, index, assignedParticipants(latest, stage));
       });
       return;
     }
@@ -253,16 +270,22 @@ async function runContribution(
       mode: run.mode,
     });
     await ctx.mutate(() => {
+      const latest = maybeRun(ctx, runId);
+      if (!latest || terminal(latest.status) || !holdsLease(ctx, job)) return;
       ctx.repository.saveFeedback("tmr-contribution", contributionId, contribution);
-      const actual = assignedParticipants(run, stage).filter((id) =>
+      const actual = assignedParticipants(latest, stage).filter((id) =>
         Boolean(ctx.repository.feedback("tmr-contribution", runId + ":" + stageId + ":" + id)),
       ).length;
       recordProgress(ctx, runId, "contribution_recorded", { stageId, participantId, actual });
-      advanceWhenSettled(ctx, run, stage, index, assignedParticipants(run, stage));
+      advanceWhenSettled(ctx, latest, stage, index, assignedParticipants(latest, stage));
     });
     return;
   }
-  await ctx.mutate(() => advanceWhenSettled(ctx, run, stage, index, assignedParticipants(run, stage)));
+  await ctx.mutate(() => {
+    const latest = maybeRun(ctx, runId);
+    if (latest && !terminal(latest.status) && holdsLease(ctx, job))
+      advanceWhenSettled(ctx, latest, stage, index, assignedParticipants(latest, stage));
+  });
 }
 function assignedParticipants(run: Run, stage: ProcessSpec["stages"][number]): string[] {
   return stage.participants === "all" ? run.participants.map((x) => x.participantId) : stage.participants;
@@ -274,6 +297,9 @@ function advanceWhenSettled(
   index: number,
   assigned: string[],
 ): void {
+  const current = maybeRun(ctx, run.runId);
+  if (!current || terminal(current.status)) return;
+  run = current;
   const accounted = assigned.filter((id) => {
     const key = run.runId + ":" + stage.id + ":" + id;
     return Boolean(ctx.repository.feedback("tmr-contribution", key) || ctx.repository.feedback("tmr-failure", key));
@@ -328,12 +354,10 @@ async function liveContribution(
     messages: [
       {
         role: "system" as const,
-        content:
-          "You are a TMR " +
-          participant.roleLabel +
-          " in the " +
-          stage.kind +
-          " stage. Return a structured assessment.",
+        content: (run.stagePrompts?.[stage.kind] ?? fail("internal", "TMR stage prompt missing")).replace(
+          "{{roleLabel}}",
+          participant.roleLabel,
+        ),
       },
       {
         role: "user" as const,
@@ -348,10 +372,10 @@ async function liveContribution(
     maxOutputTokens: 1600,
     ...(participant.temperature === undefined ? {} : { temperature: participant.temperature }),
   };
-  const amount = Math.max(
-    1,
-    Math.ceil(run.limits.spendMicros / Math.max(1, run.processSpec.maxStages * run.participants.length)),
-  );
+  const settings = ctx.settings(),
+    configured = field(field(settings, "models"), participant.modelRef),
+    model = ctx.contract.read<ProviderModel>("provider-model", configured),
+    amount = estimateReservationMicros(request satisfies ModelRequest, model);
   ctx.budgets.reserve(reservationId, run.runId, amount);
   let output: Json | undefined;
   const controller = new AbortController(),
@@ -379,7 +403,11 @@ function resume(ctx: ModuleContext, id: string): Json {
   if (!["interrupted", "partial", "failed", "limit_reached"].includes(run.status))
     fail("conflict", "TMR run cannot resume");
   const index = firstMissingStage(ctx, run);
-  if (index >= 0) enqueue(ctx, { ...run, status: "queued", outcome: undefined }, index);
+  if (index >= 0) {
+    const resumed = queuedRun(run);
+    saveRun(ctx, resumed, true);
+    enqueue(ctx, resumed, index);
+  }
   return { runId: id, status: index >= 0 ? "queued" : run.status };
 }
 function firstMissingStage(ctx: ModuleContext, run: Run): number {
@@ -394,34 +422,6 @@ function cancelRun(ctx: ModuleContext, id: string, activeCalls: Map<string, Set<
   for (const controller of activeCalls.get(id) ?? []) controller.abort();
   if (!terminal(run.status)) finish(ctx, { ...run, status: "cancelled", outcome: "cancelled" });
   return { runId: id, status: terminal(run.status) ? run.status : "cancelled" };
-}
-function purge(ctx: ModuleContext, source: string): Json {
-  let purged = 0;
-  for (const r of listRuns(ctx)) {
-    const snap = ctx.repository.feedback("tmr-snapshot", r.snapshotId);
-    const items = field(snap, "items");
-    if (Array.isArray(items) && items.some((x) => field(x, "source") === source)) {
-      ctx.repository.deleteFeedback("tmr-snapshot", r.snapshotId);
-      ctx.repository.deleteFeedback("tmr-run", r.runId);
-      ctx.repository.deleteFeedback("tmr-report", r.runId);
-      for (const raw of ctx.repository.feedbackList("tmr-contribution")) {
-        const contribution = ctx.contract.read<Json>("tmr/contribution", raw);
-        if (field(contribution, "runId") === r.runId) {
-          const id = field(contribution, "contributionId");
-          if (typeof id === "string") ctx.repository.deleteFeedback("tmr-contribution", id);
-        }
-      }
-      for (const raw of ctx.repository.feedbackList("tmr-event")) {
-        const event = ctx.contract.read<Json>("json", raw);
-        if (field(event, "runId") === r.runId) {
-          const id = field(event, "eventId");
-          if (typeof id === "string") ctx.repository.deleteFeedback("tmr-event", id);
-        }
-      }
-      purged++;
-    }
-  }
-  return { purged };
 }
 function getRun(ctx: ModuleContext, id: string): Run {
   const x = ctx.repository.feedback("tmr-run", id);
@@ -440,6 +440,16 @@ function listRuns(ctx: ModuleContext): Run[] {
 }
 function terminal(s: string): boolean {
   return ["completed", "partial", "limit_reached", "failed", "cancelled", "interrupted"].includes(s);
+}
+function queuedRun(run: Run): Run {
+  const withoutOutcome = { ...run };
+  delete withoutOutcome.outcome;
+  return { ...withoutOutcome, status: "queued" };
+}
+function holdsLease(ctx: ModuleContext, job: import("../../../contract/src/index.js").Job): boolean {
+  return ctx.repository
+    .jobs()
+    .some((current) => current.id === job.id && current.state === "leased" && current.attempts === job.attempts);
 }
 function recordProgress(ctx: ModuleContext, runId: string, eventType: string, details: Record<string, Json>): void {
   const eventId = ctx.ids.next("tmr_event_"),
@@ -463,4 +473,8 @@ function str(v: unknown, k: string): string {
 }
 function num(v: unknown): number | undefined {
   return typeof v === "number" ? v : undefined;
+}
+
+function loadStagePrompt(kind: string): string {
+  return readFileSync(new URL("./prompts/" + kind + ".md", import.meta.url), "utf8");
 }

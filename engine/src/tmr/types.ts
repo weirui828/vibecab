@@ -18,6 +18,8 @@ export type Run = {
   criteria: string[];
   processSpec: ProcessSpec;
   processHash: string;
+  promptHashes?: Record<string, string>;
+  stagePrompts?: Record<string, string>;
   participants: Participant[];
   limits: { spendMicros: number; autoResume?: boolean };
   mode: "live" | "demo";

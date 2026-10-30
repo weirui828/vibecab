@@ -13,6 +13,8 @@
     "criteria": { "type": "array", "items": { "type": "string" } },
     "processSpec": { "type": "object" },
     "processHash": { "type": "string" },
+    "promptHashes": { "type": "object", "additionalProperties": { "type": "string", "pattern": "^[a-f0-9]{64}$" } },
+    "stagePrompts": { "type": "object", "additionalProperties": { "type": "string" } },
     "participants": { "type": "array", "items": { "type": "object" } },
     "limits": { "type": "object" },
     "mode": { "enum": ["live", "demo"] },
