@@ -355,6 +355,7 @@ export function SessionView({
         showHistory={showHistory}
         setShowHistory={setShowHistory}
         setViewingVersion={setViewingVersion}
+        setActiveArtifactId={setActiveArtifactId}
         setComparison={setComparison}
         refresh={refresh}
         setPendingExportId={setPendingExportId}

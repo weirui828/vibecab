@@ -97,12 +97,16 @@ export function SnapshotPanel({
   snapshots,
   onCreated,
   onExportQueued,
+  onViewVersion,
+  onCompare,
 }: {
   sessionId: string;
   artifacts: { artifactId: string; title: string; headVersion: number }[];
   snapshots: OutputSet[];
   onCreated: () => Promise<void>;
   onExportQueued: (exportId: string) => void;
+  onViewVersion: (artifactId: string, version: number) => void;
+  onCompare: (artifactId: string, from: number, to: number) => void;
 }) {
   const [showForm, setShowForm] = useState(false),
     [label, setLabel] = useState("");
@@ -135,19 +139,34 @@ export function SnapshotPanel({
           <button type="submit">Create Snapshot</button>
         </form>
       ) : null}
-      {snapshots.map((snapshot) => (
-        <SnapshotRow key={snapshot.outputSetId} snapshot={snapshot} onExportQueued={onExportQueued} />
-      ))}
+      {snapshots
+        .toSorted((a, b) => a.createdAt.localeCompare(b.createdAt))
+        .map((snapshot, index, ordered) => (
+          <SnapshotRow
+            key={snapshot.outputSetId}
+            snapshot={snapshot}
+            previous={ordered[index - 1]}
+            onExportQueued={onExportQueued}
+            onViewVersion={onViewVersion}
+            onCompare={onCompare}
+          />
+        ))}
     </>
   );
 }
 
 function SnapshotRow({
   snapshot,
+  previous,
   onExportQueued,
+  onViewVersion,
+  onCompare,
 }: {
   snapshot: OutputSet;
+  previous?: OutputSet;
   onExportQueued: (exportId: string) => void;
+  onViewVersion: (artifactId: string, version: number) => void;
+  onCompare: (artifactId: string, from: number, to: number) => void;
 }) {
   const [showFormats, setShowFormats] = useState(false),
     [includeThreads, setIncludeThreads] = useState(false),
@@ -165,6 +184,23 @@ function SnapshotRow({
   return (
     <article className="snapshot-row">
       <strong>{snapshot.label ?? "Snapshot"}</strong>
+      <time>{new Date(snapshot.createdAt).toLocaleString()}</time>
+      <ul aria-label="Snapshot Draft versions">
+        {snapshot.members.map((member) => {
+          const prior = previous?.members.find((item) => item.artifactId === member.artifactId);
+          return (
+            <li key={member.artifactId}>
+              Draft {member.artifactId}: v{member.version}{" "}
+              <button onClick={() => onViewVersion(member.artifactId, member.version)}>Open v{member.version}</button>
+              {prior && prior.version !== member.version ? (
+                <button onClick={() => onCompare(member.artifactId, prior.version, member.version)}>
+                  What changed since previous Snapshot?
+                </button>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
       {labels.map((item) => (
         <span key={item.labelId} className="label-chip">
           {item.label}

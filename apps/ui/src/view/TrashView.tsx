@@ -20,6 +20,7 @@ export function TrashView({ onBack, onChanged }: { onBack: () => void; onChanged
   const [targets, setTargets] = useState<Target[]>([]),
     [selected, setSelected] = useState<Target>(),
     [preview, setPreview] = useState<Preview>(),
+    [emptyPreviews, setEmptyPreviews] = useState<Array<{ target: Target; preview: Preview }>>(),
     [confirmation, setConfirmation] = useState(""),
     [reviewActions, setReviewActions] = useState<Record<string, "redact" | "delete">>({}),
     [retentionDays, setRetentionDays] = useState(30),
@@ -62,12 +63,33 @@ export function TrashView({ onBack, onChanged }: { onBack: () => void; onChanged
       await window.vibecab.query<Preview>("vc.PurgePreview", { target: { kind: target.kind, id: target.id } }),
     );
   };
+  const startEmptyTrash = async () => {
+    setSelected(undefined);
+    setPreview(undefined);
+    setConfirmation("");
+    setReviewActions({});
+    const items = await Promise.all(
+      targets.map(async (target) => ({
+        target,
+        preview: await window.vibecab.query<Preview>("vc.PurgePreview", {
+          target: { kind: target.kind, id: target.id },
+        }),
+      })),
+    );
+    setEmptyPreviews(items);
+  };
   const actions =
     preview?.reviewRuns.flatMap((run) => {
       const action = reviewActions[run.runId];
       return action ? [{ runId: run.runId, action }] : [];
     }) ?? [];
   const purgeAllowed = preview && confirmation === selected?.title && actions.length === preview.reviewRuns.length;
+  const emptyRuns =
+    emptyPreviews?.flatMap(({ target, preview }) => preview.reviewRuns.map((run) => ({ ...run, target }))) ?? [];
+  const emptyReviewActions = emptyRuns.flatMap(({ runId }) => {
+    const action = reviewActions[runId];
+    return action ? [{ runId, action }] : [];
+  });
   return (
     <section aria-label="Trash view">
       <div className="row">
@@ -75,6 +97,7 @@ export function TrashView({ onBack, onChanged }: { onBack: () => void; onChanged
         <button onClick={onBack}>Back</button>
       </div>
       <p>Items are automatically purged after {retentionDays} days.</p>
+      {targets.length ? <button onClick={() => void startEmptyTrash()}>Empty trash</button> : null}
       {targets.map((item) => (
         <article key={`${item.kind}:${item.id}`}>
           <span>{item.title}</span>
@@ -97,6 +120,70 @@ export function TrashView({ onBack, onChanged }: { onBack: () => void; onChanged
         </article>
       ))}
       {!targets.length ? <p>Trash is empty.</p> : null}
+      {emptyPreviews ? (
+        <section aria-label="Empty trash confirmation">
+          <h3>Empty trash?</h3>
+          <p>
+            This removes {emptyPreviews.reduce((sum, item) => sum + item.preview.recordIds.length, 0)} records,{" "}
+            {emptyPreviews.reduce((sum, item) => sum + item.preview.revisionHashes.length, 0)} versions,{" "}
+            {emptyPreviews.reduce((sum, item) => sum + item.preview.blobHashes.length, 0)} images and{" "}
+            {emptyPreviews.reduce((sum, item) => sum + item.preview.commentIds.length, 0)} comments. It cannot be
+            undone.
+          </p>
+          {emptyRuns.map((run) => (
+            <fieldset key={`${run.target.id}:${run.runId}`}>
+              <legend>
+                {run.target.title}: dependent review run {run.runId}
+              </legend>
+              {(["redact", "delete"] as const).map((action) => (
+                <label key={action}>
+                  <input
+                    type="radio"
+                    name={`empty-${run.target.id}-${run.runId}`}
+                    checked={reviewActions[run.runId] === action}
+                    onChange={() => setReviewActions((current) => ({ ...current, [run.runId]: action }))}
+                  />
+                  {action}
+                </label>
+              ))}
+            </fieldset>
+          ))}
+          <label>
+            Type EMPTY TRASH to confirm
+            <input
+              aria-label="Empty trash confirmation text"
+              value={confirmation}
+              onChange={(event) => setConfirmation(event.target.value)}
+            />
+          </label>
+          <button
+            disabled={confirmation !== "EMPTY TRASH" || emptyReviewActions.length !== emptyRuns.length}
+            onClick={() =>
+              void (async () => {
+                for (const item of emptyPreviews) {
+                  const result = await window.vibecab.command("vc.Purge", {
+                    target: { kind: item.target.kind, id: item.target.id },
+                    reviewActions: emptyReviewActions.filter((action) =>
+                      item.preview.reviewRuns.some((run) => run.runId === action.runId),
+                    ),
+                  });
+                  if (!result.ok) {
+                    setMessage(result.error.message);
+                    return;
+                  }
+                }
+                setEmptyPreviews(undefined);
+                setMessage("Trash emptied");
+                await load();
+                onChanged();
+              })()
+            }
+          >
+            Empty trash permanently
+          </button>
+          <button onClick={() => setEmptyPreviews(undefined)}>Cancel</button>
+        </section>
+      ) : null}
       {selected && preview ? (
         <section aria-label="Purge confirmation">
           <h3>Delete permanently?</h3>

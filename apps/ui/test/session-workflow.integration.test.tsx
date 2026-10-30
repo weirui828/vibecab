@@ -377,6 +377,10 @@ it("creates a stable Snapshot, labels it, and exports its Markdown through the U
     app.fireEvent.change(app.screen.getByLabelText("Snapshot label"), { target: { value: "Sent to editor" } });
     await app.screen.getByRole("button", { name: "Create Snapshot" }).click();
     expect(await app.screen.findByText("Sent to editor")).toBeTruthy();
+    expect(await app.screen.findByText(`Draft ${app.artifactId}: v1`)).toBeTruthy();
+    await app.screen.getByRole("button", { name: "Open v1" }).click();
+    expect(await app.screen.findByText("Viewing v1 — read only")).toBeTruthy();
+    await app.screen.getByRole("button", { name: "Back to latest" }).click();
     await app.screen.getByRole("button", { name: "Export Snapshot" }).click();
     await app.screen.getByRole("button", { name: "Export Markdown" }).click();
     expect(await app.screen.findByText("Snapshot export text.")).toBeTruthy();
@@ -388,6 +392,10 @@ it("creates a stable Snapshot, labels it, and exports its Markdown through the U
     >("vc.OutputSets", { sessionId: app.sessionId });
     expect(set[0]?.members).toMatchObject([{ artifactId: app.artifactId, version: 1 }]);
     await app.command("vc.RestoreVersion", { artifactId: app.artifactId, version: 1 });
+    await app.reloadSession();
+    await app.screen.getByRole("button", { name: "Save Snapshot" }).click();
+    await app.screen.getByRole("button", { name: "Create Snapshot" }).click();
+    expect(await app.screen.findByRole("button", { name: "What changed since previous Snapshot?" })).toBeTruthy();
     expect(
       (
         await app.query<Array<{ members: Array<{ version: number }> }>>("vc.OutputSets", { sessionId: app.sessionId })

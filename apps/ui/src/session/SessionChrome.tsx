@@ -13,6 +13,7 @@ export function SessionHeader(props: {
   showHistory: boolean;
   setShowHistory: Dispatch<SetStateAction<boolean>>;
   setViewingVersion: Dispatch<SetStateAction<number | undefined>>;
+  setActiveArtifactId: Dispatch<SetStateAction<string>>;
   setComparison: Dispatch<SetStateAction<DiffResult | undefined>>;
   refresh: () => Promise<void>;
   setPendingExportId: Dispatch<SetStateAction<string | undefined>>;
@@ -59,6 +60,16 @@ export function SessionHeader(props: {
         snapshots={props.snapshots}
         onCreated={props.refresh}
         onExportQueued={props.setPendingExportId}
+        onViewVersion={(artifactId, version) => {
+          props.setActiveArtifactId(artifactId);
+          props.setViewingVersion(version);
+        }}
+        onCompare={(artifactId, from, to) =>
+          void window.vibecab.query<DiffResult>("vc.Diff", { artifactId, from, to }).then((result) => {
+            props.setComparison(result);
+            props.setViewingVersion(to);
+          })
+        }
       />
       <button aria-label="Toggle threads" onClick={() => props.setShowThreads((shown) => !shown)}>
         Threads
