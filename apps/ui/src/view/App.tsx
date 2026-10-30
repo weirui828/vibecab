@@ -4,9 +4,11 @@ import type { Settings, VcArtifactsOperation, VcSessionsOperation } from "../../
 import { createBlank, importMarkdown as importMarkdownContent, listArtifacts } from "../api/artifacts.js";
 import { attachArtifact, listSessions, startSession } from "../api/sessions.js";
 import { terms } from "../copy/terms.js";
+import { connectionTransition } from "../connection.js";
+import type { ConnectionEvent, ConnectionState } from "../connection.js";
 
 export function App() {
-  const [state, setState] = useState("Starting"),
+  const [state, setState] = useState<ConnectionState>("Starting"),
     [artifacts, setArtifacts] = useState<VcArtifactsOperation["result"]>([]),
     [sessions, setSessions] = useState<VcSessionsOperation["result"]>([]),
     [error, setError] = useState(""),
@@ -14,19 +16,20 @@ export function App() {
     [selected, setSelected] = useState(""),
     [route, setRoute] = useState(window.location.hash.slice(1) || "/"),
     [showNewDraft, setShowNewDraft] = useState(false);
+  const setConnection = (event: ConnectionEvent) => setState((current) => connectionTransition(current, event));
   const refresh = async () => {
     try {
       const [nextArtifacts, nextSessions] = await Promise.all([listArtifacts(), listSessions()]);
       setArtifacts(nextArtifacts);
       setSessions(nextSessions);
-      setState("Connected");
+      setConnection("connected");
       setError("");
     } catch {
-      setState("Engine unreachable");
+      setConnection("unreachable");
     }
   };
   useEffect(() => {
-    void window.vibecab.app.state().then(setState);
+    void window.vibecab.app.state().then((current) => setConnection(current === "Connected" ? "connected" : "stopped"));
     void Promise.all([listArtifacts(), window.vibecab.query<Settings>("sys.Settings", {})]).then(
       ([existing, settings]) => {
         const models = settings.models;
@@ -41,7 +44,7 @@ export function App() {
       importFile = window.vibecab.app.onImport(() => void importMarkdown());
     const theme = window.vibecab.app.onTheme((dark) => document.documentElement.classList.toggle("dark", dark));
     const lost = window.vibecab.app.onConnectionLost(() => {
-      setState("Engine unreachable");
+      setConnection("unreachable");
       void refresh();
     });
     const onHash = () => setRoute(window.location.hash.slice(1) || "/"),
@@ -121,7 +124,9 @@ export function App() {
         </p>
         <p className="notice">{state}</p>
         {state === "Engine stopped" || state === "Engine unreachable" ? (
-          <Button onClick={() => void window.vibecab.app.startEngine().then(setState)}>Start engine</Button>
+          <Button onClick={() => void window.vibecab.app.startEngine().then(() => setConnection("connected"))}>
+            Start engine
+          </Button>
         ) : null}
         <label>
           Theme{" "}

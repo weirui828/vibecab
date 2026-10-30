@@ -9,6 +9,7 @@ import type { CommandEnvelope, QueryEnvelope, Subscription } from "../../../cont
 import { start, status, stop } from "../../../host/src/index.js";
 import { httpClient } from "../../../adapters/http/src/index.js";
 import { workspacePath } from "./paths.js";
+import { isUnauthenticated, reconnectEvents, retryUnauthenticated } from "./bridge-runtime.js";
 
 const contract = new Contract(),
   workspace = resolve(workspacePath()),
@@ -84,18 +85,10 @@ async function connect(): Promise<void> {
   client = httpClient(apiUrl, token);
 }
 
-async function retryUnauthenticated<T>(action: () => Promise<T>): Promise<T> {
-  try {
-    return await action();
-  } catch (error) {
-    if (!(error instanceof Error) || !("code" in error) || Reflect.get(error, "code") !== "unauthenticated")
-      throw error;
-    await stop(workspace);
-    await start(workspace, hostOptions());
-    await connect();
-    if (!client) throw error;
-    return action();
-  }
+async function recoverAuthentication(): Promise<void> {
+  await stop(workspace);
+  await start(workspace, hostOptions());
+  await connect();
 }
 
 function installBridge(): void {
@@ -111,20 +104,20 @@ function installBridge(): void {
           "#/properties/result",
         );
       return result;
-    }),
+    }, recoverAuthentication),
   );
   ipcMain.handle("vibe:query", (_event, raw: unknown) =>
     retryUnauthenticated(async () => {
       if (!client) await connect();
       return client!.query(contract.read<QueryEnvelope>("query-envelope", raw));
-    }),
+    }, recoverAuthentication),
   );
   ipcMain.handle("vibe:put-blob", (_event, raw: unknown) =>
     retryUnauthenticated(async () => {
       if (!client) await connect();
       const input = contract.read<{ bytes: Uint8Array; mediaType: string }>("json", raw);
       return client!.putBlob(input.bytes, input.mediaType);
-    }),
+    }, recoverAuthentication),
   );
   ipcMain.handle("vibe:subscribe", async (event, raw: unknown) => {
     const input = contract.read<{ id: string; afterSeq: number; filter: unknown }>("json", raw),
@@ -133,26 +126,21 @@ function installBridge(): void {
     void (async () => {
       try {
         if (!client) await connect();
-        let afterSeq = input.afterSeq;
-        while (!controller.signal.aborted) {
-          try {
-            for await (const item of client!.subscribe(
+        for await (const item of reconnectEvents(
+          input.afterSeq,
+          controller.signal,
+          (afterSeq) =>
+            client!.subscribe(
               contract.read<Subscription>("subscription", { afterSeq, filter: input.filter }),
               undefined,
               controller.signal,
-            )) {
-              afterSeq = item.seq;
-              event.sender.send("vibe:event:" + input.id, item);
-            }
-          } catch (error) {
+            ),
+          async (error) => {
             event.sender.send("app:connection-lost");
-            if (error instanceof Error && "code" in error && Reflect.get(error, "code") === "unauthenticated") {
-              await stop(workspace);
-              await start(workspace, hostOptions());
-              await connect();
-            }
-          }
-          if (!controller.signal.aborted) await new Promise((resolveDelay) => setTimeout(resolveDelay, 300));
+            if (isUnauthenticated(error)) await recoverAuthentication();
+          },
+        )) {
+          event.sender.send("vibe:event:" + input.id, item);
         }
       } catch {
         if (!controller.signal.aborted) event.sender.send("app:connection-lost");
@@ -342,7 +330,7 @@ else {
         { label: "Window", submenu: [{ role: "minimize" }, { role: "close" }] },
         {
           label: "Help",
-          submenu: [{ label: "VibeCab Help", click: () => void shell.openExternal("https://vibecab.local") }],
+          submenu: [],
         },
       ]),
     );
@@ -379,7 +367,15 @@ else {
         });
         if (choice.response === 1) {
           const runtime = await status(workspace);
-          if (runtime.running) process.kill(runtime.pid, "SIGKILL");
+          if (runtime.running) {
+            process.kill(runtime.pid, "SIGTERM");
+            for (let attempt = 0; attempt < 50; attempt++) {
+              if (!(await status(workspace)).running) break;
+              await new Promise((resolveDelay) => setTimeout(resolveDelay, 100));
+            }
+            const remaining = await status(workspace);
+            if (remaining.running) process.kill(remaining.pid, "SIGKILL");
+          }
         }
       }
       isQuitting = true;

@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "type": "module",
   "exports": "./src/index.ts",
+  "bin": {
+    "vibecab-mcp": "./bin/vibecab-mcp.mjs"
+  },
   "dependencies": {
     "@modelcontextprotocol/server": "^2.4.0",
     "@vibecab/contract": "workspace:*",

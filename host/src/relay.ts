@@ -20,21 +20,20 @@ export async function serveMcpRelayStdio(mcpUrl: string, secret: string) {
   const server = new McpServer({ name: "vibecab", version: "0.1.0" }, { capabilities: { tools: {}, resources: {} } }),
     { tools } = await client.listTools();
   for (const tool of tools) {
-    const inputSchema = contract.read<JsonSchema>("json", tool.inputSchema),
-      outputSchema = tool.outputSchema ? contract.read<JsonSchema>("json", tool.outputSchema) : undefined;
-    if (!contract.schemaIsValid(inputSchema) || (outputSchema && !contract.schemaIsValid(outputSchema)))
-      throw Error("Host MCP endpoint returned an invalid tool schema");
+    const inputSchema = contract.read<JsonSchema>("json", tool.inputSchema);
+    if (!contract.schemaIsValid(inputSchema)) throw Error("Host MCP endpoint returned an invalid tool schema");
     server.registerTool(
       tool.name,
       {
         description: tool.description,
         inputSchema: fromJsonSchema(inputSchema as JsonSchemaType, schemaValidator(contract, inputSchema)),
         ...(tool.annotations ? { annotations: tool.annotations } : {}),
-        ...(outputSchema
-          ? { outputSchema: fromJsonSchema(outputSchema as JsonSchemaType, schemaValidator(contract, outputSchema)) }
-          : {}),
       },
-      (input) => client.callTool({ name: tool.name, arguments: isRecord(input) ? input : {} }),
+      (input) =>
+        client.callTool(
+          { name: tool.name, arguments: isRecord(input) ? input : {} },
+          { toolDefinition: { ...tool, outputSchema: undefined } },
+        ),
     );
   }
   const resources = await client.listResources();

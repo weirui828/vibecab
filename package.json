@@ -12,7 +12,7 @@
     "lint": "pnpm --filter @vibecab/lint lint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run",
+    "test": "pnpm build && vitest run",
     "test:prop": "FC_NUM_RUNS=1000 vitest run engine/test/properties",
     "build": "tsc -p tsconfig.build.json && node scripts/copy-schemas.mjs && pnpm --filter @vibecab/ui build",
     "test:build": "pnpm build && node scripts/smoke-built.mjs",

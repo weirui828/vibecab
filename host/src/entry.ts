@@ -24,7 +24,7 @@ function tokenMap(account: string): Record<string, string> {
   }
 }
 
-async function ensureToken(engine: Engine, workspace: string, account: "app" | "cli"): Promise<void> {
+export async function ensureToken(engine: Engine, workspace: string, account: "app" | "cli"): Promise<void> {
   const tokens = tokenMap(account),
     token = tokens[workspace],
     transport = account === "app" ? "http" : "cli";

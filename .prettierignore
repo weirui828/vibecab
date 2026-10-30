@@ -2,3 +2,4 @@
 contract/generated/**
 docs/**
 node_modules/**
+apps/macos/test-results/**

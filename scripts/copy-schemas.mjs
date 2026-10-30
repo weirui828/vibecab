@@ -28,3 +28,5 @@ for (const name of [
 }
 await mkdir("dist/host/bin", { recursive: true });
 await cp("host/bin/vibecab-host.mjs", "dist/host/bin/vibecab-host.mjs");
+await mkdir("dist/adapters/mcp-server/bin", { recursive: true });
+await cp("adapters/mcp-server/bin/vibecab-mcp.mjs", "dist/adapters/mcp-server/bin/vibecab-mcp.mjs");

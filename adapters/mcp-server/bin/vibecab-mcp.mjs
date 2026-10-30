@@ -2,7 +2,19 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import process from "node:process";
-import { start, status, serveMcpRelayStdio } from "../../../dist/host/src/index.js";
+import { URL } from "node:url";
+
+let host;
+for (const candidate of ["../../../dist/host/src/index.js", "../../../host/src/index.js"]) {
+  try {
+    host = await import(new URL(candidate, import.meta.url));
+    break;
+  } catch {
+    // The package bin and workspace bin have different relative build roots.
+  }
+}
+if (!host) throw new Error("VibeCab host runtime is unavailable");
+const { start, status, serveMcpRelayStdio } = host;
 
 const secret = process.env.VIBECAB_MCP_TOKEN,
   workspaceValue = process.env.VIBECAB_WORKSPACE;
@@ -12,8 +24,12 @@ if (!secret || !workspaceValue) {
 } else {
   try {
     const workspace = resolve(workspaceValue);
-    if (!(await status(workspace)).running) await start(workspace);
-    const runtime: unknown = JSON.parse(await readFile(resolve(workspace, ".vibecab", "server.json"), "utf8")),
+    const hostOptions =
+      process.env.VIBECAB_DEV === "1" && process.env.VIBECAB_HOST_ENTRY
+        ? { hostEntry: process.env.VIBECAB_HOST_ENTRY }
+        : {};
+    if (!(await status(workspace)).running) await start(workspace, hostOptions);
+    const runtime = JSON.parse(await readFile(resolve(workspace, ".vibecab", "server.json"), "utf8")),
       mcpUrl = runtime && typeof runtime === "object" ? Reflect.get(runtime, "mcpUrl") : undefined;
     if (typeof mcpUrl !== "string") throw Error("Host did not publish an MCP endpoint");
     await serveMcpRelayStdio(mcpUrl, secret);

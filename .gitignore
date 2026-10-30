@@ -3,6 +3,7 @@ docs/
 AGENTS.md
 node_modules/
 coverage/
+apps/macos/test-results/
 dist/
 .vibecab/
 *.tsbuildinfo

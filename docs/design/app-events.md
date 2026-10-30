@@ -14,7 +14,7 @@ The renderer subscribes once and refreshes the named query when its current view
 | `vc.DeliveryStateChanged` | session | `vc.DeliveryState`, `vc.Threads` |
 | `vc.UpdateChanged` | update | `vc.Updates`, `vc.DecisionRecord`, `vc.Artifact`, `vc.Versions`, `vc.AttentionInbox` |
 | `vc.AgentTurnChanged` | agent turn | `vc.AgentTurns`, `vc.Threads`, `vc.DeliveryState`, `vc.AttentionInbox` |
-| `vc.LifecycleChanged` (`output_set`, `label`, export, backup, trash actions) | lifecycle record | `vc.OutputSets`, `vc.Labels`, `vc.Exports`, `vc.Backups`, or the corresponding target query |
+| `vc.LifecycleChanged` (`output_set`, `label`, export, backup, trash actions) | lifecycle record | `vc.OutputSets`, `vc.Labels`, `vc.Exports`, `sys.Backups`, or the corresponding target query |
 | `sys.AccessTokenCreated`, `sys.AccessTokenRevoked` | access token | `sys.AccessTokens` |
 | `sys.SettingsChanged`, `sys.BudgetChanged` | settings or budget | `sys.Settings`, `sys.Budgets`, `sys.Usage` |
 

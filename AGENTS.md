@@ -77,7 +77,7 @@ pnpm format:check # verify formatting
 
 Lint rejects lines over 160 characters outside prompts and generated files, and forbids domain modules from importing adapters or `better-sqlite3`.
 
-A task is not done until `pnpm gen && pnpm typecheck && pnpm lint && pnpm test` passes with a clean `git status` for generated files.
+A task is not done until `pnpm gen && pnpm typecheck && pnpm lint && pnpm test && pnpm format:check` passes with a clean `git status` for generated files.
 
 ## 5. Hard invariants (never break; each has or must get a test)
 
