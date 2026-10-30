@@ -2,6 +2,7 @@ import { errorOf, fail } from "../../../contract/src/index.js";
 import type { Json, FeedbackComment, Agreement, Update, Job } from "../../../contract/src/index.js";
 import { AgentRuntime } from "../agent/runtime.js";
 import { findVerbatimQuote } from "./helpers.js";
+import { inlineMarkdownToPlainText, replaceInlineMarkdownText } from "../../../contract/src/inline-markdown.js";
 
 export abstract class UpdatePreparationRuntime extends AgentRuntime {
   protected abstract judgeUpdateConflicts(
@@ -260,7 +261,8 @@ export abstract class UpdatePreparationRuntime extends AgentRuntime {
         ),
         prior = existingIndex < 0 ? undefined : direct[existingIndex],
         currentText = prior?.op === "update" && "text" in prior.element ? prior.element.text : element.text;
-      const at = findVerbatimQuote(currentText, quote, anchor.locator?.prefix, anchor.locator?.suffix);
+      const plainText = inlineMarkdownToPlainText(currentText),
+        at = findVerbatimQuote(plainText, quote, anchor.locator?.prefix, anchor.locator?.suffix);
       if (at === undefined) {
         remaining.push(agreement);
         continue;
@@ -268,7 +270,7 @@ export abstract class UpdatePreparationRuntime extends AgentRuntime {
       const draft = this.contract.read<import("../../../contract/src/index.js").ElementDraft>("element-draft", {
         type: element.type,
         props: element.props,
-        text: currentText.slice(0, at) + replacement + currentText.slice(at + quote.length),
+        text: replaceInlineMarkdownText(currentText, at, at + quote.length, replacement),
       });
       if (existingIndex < 0)
         direct.push({

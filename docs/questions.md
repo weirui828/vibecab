@@ -4,6 +4,8 @@ Spec gaps found while working. Format: date — where — question — options �
 
 Unresolved questions are recorded below.
 
+- 2026-10-30 — Task A3 §1 / `vc.Agree` — A3 says a human can submit an optional `instruction` with `kind: "as_written"`, but `engine/src/feedback/agreement-runtime.ts` rejects that exact combination and derives the instruction from the comment. Options: permit and store the explicit instruction for `as_written`, or change A3 to use a different agreement kind/field. Recommendation: permit an explicit instruction for a human's `as_written` agreement, since A3 labels it as the person's direction. Status: unresolved; stopped A3 implementation as required by its conflict rule.
+
 - 2026-10-30 — Task A2 §4 / `vc.Comment` anchor payload — The task says the UI sends `seenHash`, but `contract/schemas/operations/vc.Comment.json` forbids that field and the engine derives it from `seenVersion` + `elementId`. Options: keep the payload minimal and verify the stored anchor has the derived hash, or accept a client hash and validate it against the selected version. Recommendation: keep the hash engine-derived and revise A2's payload/test wording. Status: resolved by Wei — proceed with engine-derived `seenHash`; the UI sends only the schema-defined anchor fields.
 
 - 2026-10-29 — Task 06 §5 RestoreBackup — The engine boundary accepts commands only while started, but restore must target a stopped/empty workspace; the archive and destination were unspecified. Resolved by Wei — use an archive path and empty destination, and expose restore as an engine lifecycle operation rather than a contract command.

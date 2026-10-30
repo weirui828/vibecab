@@ -67,6 +67,46 @@ export function inlineMarkdownToPlainText(input: string): string {
     .join("");
 }
 
+/** Replaces a visible-text range while retaining formatting outside that range. */
+export function replaceInlineMarkdownText(input: string, start: number, end: number, replacement: string): string {
+  const nodes = parseInlineMarkdown(input),
+    plainLength = inlineNodeText(nodes).length;
+  if (start < 0 || end < start || end > plainLength) throw new RangeError("Invalid inline text range");
+  const before = sliceInlineNodes(nodes, 0, start),
+    after = sliceInlineNodes(nodes, end, plainLength);
+  return serializeInlineMarkdown([
+    ...before,
+    ...(replacement ? [{ type: "text" as const, value: replacement }] : []),
+    ...after,
+  ]);
+}
+
+function sliceInlineNodes(nodes: InlineNode[], start: number, end: number): InlineNode[] {
+  const result: InlineNode[] = [];
+  let offset = 0;
+  for (const node of nodes) {
+    const length =
+      node.type === "text"
+        ? node.value.length
+        : node.type === "link"
+          ? node.label.length
+          : inlineNodeText(node.children).length;
+    const localStart = Math.max(0, start - offset),
+      localEnd = Math.min(length, end - offset);
+    if (localStart < localEnd) {
+      if (node.type === "text") result.push({ type: "text", value: node.value.slice(localStart, localEnd) });
+      else if (node.type === "link")
+        result.push({ type: "link", label: node.label.slice(localStart, localEnd), url: node.url });
+      else {
+        const children = sliceInlineNodes(node.children, localStart, localEnd);
+        if (children.length) result.push({ type: node.type, children });
+      }
+    }
+    offset += length;
+  }
+  return result;
+}
+
 function inlineNodeText(nodes: InlineNode[]): string {
   return nodes
     .map((node) =>

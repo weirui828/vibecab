@@ -20,6 +20,12 @@ export default tseslint.config(
     },
   },
   {
+    files: ["apps/**/src/**/*.{ts,tsx}"],
+    rules: {
+      "max-lines": ["error", { max: 500, skipComments: false, skipBlankLines: false }],
+    },
+  },
+  {
     files: ["engine/src/kernel/**/*.ts"],
     rules: {
       "no-restricted-imports": [

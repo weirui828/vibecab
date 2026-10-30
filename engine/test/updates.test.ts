@@ -66,11 +66,12 @@ async function addAgreedInstruction(
   content: string,
   elementIndex = 0,
   verbatim?: { quote: string; prefix?: string; suffix?: string; replacement: string },
+  format: "markdown" | "text" = "text",
 ) {
   const imported = await engine.command(ctx, {
     commandId: `${prefix}-import`,
     type: "vc.ImportContent",
-    payload: { content, format: "text", title: "Draft" },
+    payload: { content, format, title: "Draft" },
   });
   if (!imported.ok) throw Error(imported.error.message);
   const { artifactId } = new Contract().read<{ artifactId: string }>(
@@ -407,6 +408,41 @@ it("applies a unique verbatim agreed suggestion without calling a model and comm
       appliedVersion: 2,
       revertedInVersion: 3,
     });
+  } finally {
+    await f.close();
+  }
+});
+
+it("maps plain-text verbatim locators across inline formatting", async () => {
+  const f = await fixture();
+  try {
+    const { artifactId } = await addAgreedInstruction(
+      f.engine,
+      "formatted-verbatim",
+      "*Before* **bold** and *italic* [linked](https://example.com) and `coded` **after**.",
+      0,
+      { quote: "bold and italic linked and coded", prefix: "Before ", suffix: " after", replacement: "changed" },
+      "markdown",
+    );
+    const started = await f.engine.command(ctx, {
+      commandId: "formatted-verbatim-start",
+      type: "vc.StartUpdate",
+      payload: { artifactId },
+    });
+    if (!started.ok) throw Error(started.error.message);
+    const { updateId } = new Contract().read<{ updateId: string }>(
+      "operations/vc.StartUpdate",
+      started.result,
+      "#/properties/result",
+    );
+    const update = await waitForUpdate(f.engine, updateId);
+    expect(update.status).toBe("committed");
+    const elements = new Contract().read<import("../../contract/src/index.js").Element[]>(
+      "operations/vc.Elements",
+      await f.engine.query(ctx, { name: "vc.Elements", args: { artifactId } }),
+      "#/properties/result",
+    );
+    expect(elements[0]).toMatchObject({ text: "*Before* changed **after**." });
   } finally {
     await f.close();
   }

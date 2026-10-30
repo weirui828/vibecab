@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Card, CardBody, Spinner } from "@wei/design-system";
+import { Button, Card, CardBody } from "@wei/design-system";
 import type { Settings, VcArtifactsOperation, VcSessionsOperation } from "../../../../contract/generated/index.js";
 import { createBlank, importMarkdown as importMarkdownContent, listArtifacts } from "../api/artifacts.js";
 import { attachArtifact, listSessions, startSession } from "../api/sessions.js";
@@ -8,6 +8,7 @@ import { connectionTransition } from "../connection.js";
 import type { ConnectionEvent, ConnectionState } from "../connection.js";
 import type { AttentionItem } from "../../../../contract/generated/index.js";
 import { SessionView } from "../session/SessionView.js";
+import { Onboarding } from "./Onboarding.js";
 
 export function App() {
   const [state, setState] = useState<ConnectionState>("Starting"),
@@ -426,77 +427,5 @@ export function App() {
         )}
       </main>
     </div>
-  );
-}
-
-function Onboarding({
-  onSkip,
-  onSave,
-}: {
-  onSkip: () => void;
-  onSave: (baseUrl: string, model: string, key: string) => Promise<void>;
-}) {
-  const [step, setStep] = useState(0),
-    [baseUrl, setBaseUrl] = useState("https://api.openai.com/v1"),
-    [model, setModel] = useState(""),
-    [key, setKey] = useState(""),
-    [saving, setSaving] = useState(false),
-    [error, setError] = useState("");
-  return (
-    <Card>
-      <CardBody>
-        {step === 0 ? (
-          <>
-            <p className="eyebrow">Welcome</p>
-            <h2>Think together, one comment at a time.</h2>
-            <p>VibeCab keeps your drafts and conversations in one private workspace.</p>
-            <Button onClick={() => setStep(1)}>Get started</Button>
-          </>
-        ) : (
-          <>
-            <p className="eyebrow">Model setup · optional</p>
-            <h2>Add a model</h2>
-            <div className="form">
-              <label>
-                Base URL
-                <input value={baseUrl} onChange={(event) => setBaseUrl(event.target.value)} />
-              </label>
-              <label>
-                Model name
-                <input value={model} onChange={(event) => setModel(event.target.value)} />
-              </label>
-              <label>
-                API key
-                <input type="password" value={key} onChange={(event) => setKey(event.target.value)} />
-              </label>
-            </div>
-            {error ? <p role="alert">{error}</p> : null}
-            <p className="notice">Daily spending limits can be set later in Settings.</p>
-            <p className="notice">
-              Connection testing is not available yet. You can still save the model and try it later.
-            </p>
-            <div className="row">
-              <Button variant="secondary" onClick={onSkip}>
-                Skip for now
-              </Button>
-              <Button
-                disabled={!model || !key || saving}
-                onClick={() => {
-                  setSaving(true);
-                  void onSave(baseUrl, model, key)
-                    .catch((reason) => setError(String(reason)))
-                    .finally(() => {
-                      setKey("");
-                      setSaving(false);
-                    });
-                }}
-              >
-                {saving ? <Spinner size="sm" /> : "Save and continue"}
-              </Button>
-            </div>
-          </>
-        )}
-      </CardBody>
-    </Card>
   );
 }
