@@ -146,6 +146,27 @@ it("returns scripted findings, applies only agreed non-conflicting feedback, and
       secondCurrent = currentElements.find((element) => field(element, "elementId") === elements[2]);
     expect(field(firstCurrent, "text")).toBe("First paragraph revised.");
     expect(field(secondCurrent, "text")).toBe("Second paragraph.");
+    const runId = string(field(firstReport, "runId")),
+      decisionRecord = array(
+        await f.engine.query(ctx, {
+          name: "vc.DecisionRecord",
+          args: { artifactId, elementId: elements[1]! },
+        }),
+      );
+    expect(decisionRecord).toContainEqual(
+      expect.objectContaining({ source: { runId, findingId: "apply-first" }, state: "applied" }),
+    );
+    const output = await f.engine.command(ctx, {
+      commandId: "review-output-set",
+      type: "vc.CreateOutputSet",
+      payload: { sessionId, artifactIds: [artifactId] },
+    });
+    expect(output.ok).toBe(true);
+    if (!output.ok) throw new Error(output.error.message);
+    const outputSetId = string(field(output.result, "outputSetId")),
+      outputSets = array(await f.engine.query(ctx, { name: "vc.OutputSets", args: { sessionId } })),
+      createdOutputSet = outputSets.find((item) => field(item, "outputSetId") === outputSetId);
+    expect(array(field(field(createdOutputSet, "links"), "reviewRequestIds"))).toContain(firstReview);
 
     const secondFindings = array(
         await f.engine.query(ctx, { name: "vc.Findings", args: { reviewRequestId: secondReview } }),
@@ -164,7 +185,10 @@ it("returns scripted findings, applies only agreed non-conflicting feedback, and
       type: "vc.Agree",
       payload: { commentId: staleId, kind: "as_written" },
     });
-    expect(noInstruction).toMatchObject({ ok: false, error: { code: "invalid" } });
+    expect(noInstruction).toMatchObject({
+      ok: false,
+      error: { code: "invalid", message: "A revised review finding requires an explicit instruction" },
+    });
     void secondReport;
   } finally {
     await f.close();
