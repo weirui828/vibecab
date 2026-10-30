@@ -290,9 +290,6 @@ importers:
       "@electron/fuses":
         specifier: ^2.1.3
         version: 2.1.3
-      "@napi-rs/keyring":
-        specifier: ^2.1.2
-        version: 2.1.2
       "@vibecab/host":
         specifier: workspace:*
         version: link:../../host

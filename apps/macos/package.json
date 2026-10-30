@@ -9,7 +9,6 @@
     "fuses": "node fuses.mjs"
   },
   "dependencies": {
-    "@napi-rs/keyring": "^2.1.2",
     "@vibecab/host": "workspace:*",
     "@vibecab/http": "workspace:*",
     "electron": "45.1.0",

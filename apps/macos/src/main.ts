@@ -1,5 +1,4 @@
 import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, protocol, shell } from "electron";
-import { Entry } from "@napi-rs/keyring";
 import { execFileSync } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -12,15 +11,7 @@ import { workspacePath } from "./paths.js";
 import { isUnauthenticated, reconnectEvents, retryUnauthenticated } from "./bridge-runtime.js";
 
 const contract = new Contract(),
-  workspace = resolve(workspacePath()),
-  appTokens = () => {
-    try {
-      const value: unknown = JSON.parse(new Entry("VibeCab", "app").getPassword() ?? "{}");
-      return value;
-    } catch {
-      return {};
-    }
-  };
+  workspace = resolve(workspacePath());
 type Preferences = { theme?: "system" | "light" | "dark"; width?: number; height?: number; x?: number; y?: number };
 const preferencesPath = () => join(app.getPath("userData"), "preferences.json");
 async function preferences(): Promise<Preferences> {
@@ -65,11 +56,14 @@ function versionNode(nodePath: string): void {
   if (!/^v26\./.test(version)) throw Error("VibeCab requires Node 26. Set VIBECAB_NODE to a Node 26 executable.");
 }
 
-function keychainToken(): string {
-  const value: unknown = appTokens(),
-    raw = value && typeof value === "object" ? Reflect.get(value, workspace) : undefined;
-  if (typeof raw !== "string") fail("unauthenticated", "VibeCab app token is missing");
-  return raw;
+async function appToken(): Promise<string> {
+  try {
+    const value = await readFile(join(workspace, ".vibecab", "app-token"), "utf8");
+    if (value.length > 0 && value.trim() === value) return value;
+  } catch {
+    // The host creates or repairs this file before reconnect completes.
+  }
+  fail("unauthenticated", "VibeCab app token is unavailable");
 }
 
 function hostOptions() {
@@ -81,7 +75,7 @@ async function connect(): Promise<void> {
   const runtime = await status(workspace);
   if (!runtime.running) throw Error("Engine stopped");
   apiUrl = runtime.httpUrl;
-  token = keychainToken();
+  token = await appToken();
   client = httpClient(apiUrl, token);
 }
 

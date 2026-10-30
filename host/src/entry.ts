@@ -1,5 +1,6 @@
 import { Entry } from "@napi-rs/keyring";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import { chmod, mkdir, open, lstat, readFile, rename, rm, unlink, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { CONTRACT_VERSION, Contract } from "../../contract/src/index.js";
 import type { Engine } from "../../engine/src/engine.js";
@@ -10,6 +11,26 @@ import { startHttp } from "../../adapters/http/src/index.js";
 import { startMcpHttp } from "../../adapters/mcp-server/src/index.js";
 
 const service = "VibeCab";
+export interface ServerRecord {
+  pid: number;
+  startedAt: string;
+  contractVersion: string;
+  httpUrl: string;
+  cliUrl: string;
+  mcpUrl: string;
+}
+
+export function createServerRecord(
+  pid: number,
+  startedAt: string,
+  contractVersion: string,
+  httpUrl: string,
+  cliUrl: string,
+  mcpUrl: string,
+): ServerRecord {
+  return { pid, startedAt, contractVersion, httpUrl, cliUrl, mcpUrl };
+}
+
 function tokenMap(account: string): Record<string, string> {
   try {
     const raw = new Entry(service, account).getPassword();
@@ -25,9 +46,10 @@ function tokenMap(account: string): Record<string, string> {
 }
 
 export async function ensureToken(engine: Engine, workspace: string, account: "app" | "cli"): Promise<void> {
+  if (account === "app") return ensureAppToken(engine, workspace);
   const tokens = tokenMap(account),
     token = tokens[workspace],
-    transport = account === "app" ? "http" : "cli";
+    transport = "cli";
   if (token) {
     try {
       await engine.query(
@@ -50,18 +72,126 @@ export async function ensureToken(engine: Engine, workspace: string, account: "a
       requestId: "host-app-token",
     },
     {
-      commandId: `host-app-token-${Date.now()}`,
+      commandId: `host-cli-token-${randomUUID()}`,
       type: "sys.CreateAccessToken",
-      payload: { name: account === "app" ? "VibeCab app" : "VibeCab CLI", channel: transport, scope: "admin" },
+      payload: { name: "VibeCab CLI", channel: transport, scope: "admin" },
     },
   );
   if (!created.ok) throw Error(created.error.message);
-  const tokenValue = new Contract().read<{ token: string }>(
-    "operations/sys.CreateAccessToken",
-    created.result,
-    "#/properties/result",
-  ).token;
+  const tokenValue = tokenSecret(created.result);
   new Entry(service, account).setPassword(JSON.stringify({ ...tokens, [workspace]: tokenValue }));
+}
+
+async function ensureAppToken(engine: Engine, workspace: string): Promise<void> {
+  const legacyTokens = tokenMap("app"),
+    legacyToken = legacyTokens[workspace],
+    appDir = join(workspace, ".vibecab"),
+    tokenPath = join(appDir, "app-token");
+  await mkdir(appDir, { recursive: true, mode: 0o700 });
+  await chmod(appDir, 0o700);
+
+  const storedToken = await readAppToken(tokenPath);
+  if (storedToken && (await verifies(engine, storedToken, "http"))) {
+    await removeLegacyAppToken(workspace, legacyTokens);
+    return;
+  }
+  if (legacyToken && (await verifies(engine, legacyToken, "http"))) {
+    await writeAppToken(tokenPath, appDir, legacyToken);
+    await removeLegacyAppToken(workspace, legacyTokens);
+    return;
+  }
+
+  const token = await createToken(engine, "http", "VibeCab app");
+  await writeAppToken(tokenPath, appDir, token);
+  await removeLegacyAppToken(workspace, legacyTokens);
+}
+
+async function readAppToken(path: string): Promise<string | undefined> {
+  try {
+    const info = await lstat(path);
+    if (!info.isFile()) {
+      console.warn("App token file is not a regular file; replacing it.");
+      return undefined;
+    }
+    if ((info.mode & 0o777) !== 0o600) {
+      console.warn("App token file permissions were too broad; securing the file.");
+      await chmod(path, 0o600);
+    }
+    const secured = await lstat(path);
+    if ((secured.mode & 0o077) !== 0) {
+      console.warn("App token file could not be secured; replacing it.");
+      return undefined;
+    }
+    const token = await readFile(path, "utf8");
+    return token.length > 0 && token.trim() === token ? token : undefined;
+  } catch (error) {
+    if (isMissing(error)) return undefined;
+    console.warn("App token file could not be read; replacing it.");
+    return undefined;
+  }
+}
+
+async function writeAppToken(path: string, directory: string, token: string): Promise<void> {
+  const temporaryPath = join(directory, `.app-token.${process.pid}.${randomUUID()}.tmp`);
+  try {
+    const file = await open(temporaryPath, "wx", 0o600);
+    try {
+      await file.writeFile(token, "utf8");
+      await file.sync();
+    } finally {
+      await file.close();
+    }
+    await chmod(temporaryPath, 0o600);
+    await rename(temporaryPath, path);
+    await chmod(path, 0o600);
+  } finally {
+    await unlink(temporaryPath).catch(() => undefined);
+  }
+}
+
+async function removeLegacyAppToken(workspace: string, tokens: Record<string, string>): Promise<void> {
+  if (!Object.hasOwn(tokens, workspace)) return;
+  const remaining = { ...tokens };
+  delete remaining[workspace];
+  const entry = new Entry(service, "app");
+  if (Object.keys(remaining).length === 0) entry.deletePassword();
+  else entry.setPassword(JSON.stringify(remaining));
+}
+
+async function verifies(engine: Engine, token: string, transport: "http"): Promise<boolean> {
+  try {
+    await engine.query(
+      { kind: "token", secret: token, transport },
+      { contractVersion: CONTRACT_VERSION, requestId: "host-token-check" },
+      { name: "sys.Capabilities", args: {} },
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function createToken(engine: Engine, transport: "http", name: string): Promise<string> {
+  const created = await engine.command(
+    engine.inProcessAuth,
+    { contractVersion: CONTRACT_VERSION, requestId: "host-app-token" },
+    {
+      commandId: `host-${transport}-token-${randomUUID()}`,
+      type: "sys.CreateAccessToken",
+      payload: { name, channel: transport, scope: "admin" },
+    },
+  );
+  if (!created.ok) throw Error(created.error.message);
+  return tokenSecret(created.result);
+}
+
+function tokenSecret(result: unknown): string {
+  return new Contract().read<{ token: string }>("operations/sys.CreateAccessToken", result, "#/properties/result")
+    .token;
+}
+
+function isMissing(error: unknown): boolean {
+  return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
 }
 
 export async function serve(workspaceDir: string, fakeProviderPath?: string): Promise<void> {
@@ -91,14 +221,14 @@ export async function serve(workspaceDir: string, fakeProviderPath?: string): Pr
     cli = await startHttp(engine, { port: 0, transport: "cli" });
     mcp = await startMcpHttp(engine, { port: 0 });
     await mkdir(join(workspace, ".vibecab"), { recursive: true, mode: 0o700 });
-    const record = {
-      pid: process.pid,
-      startedAt: new Date().toISOString(),
-      contractVersion: CONTRACT_VERSION,
-      httpUrl: http.url,
-      cliUrl: cli.url,
-      mcpUrl: mcp.url,
-    };
+    const record = createServerRecord(
+      process.pid,
+      new Date().toISOString(),
+      CONTRACT_VERSION,
+      http.url,
+      cli.url,
+      mcp.url,
+    );
     await writeFile(serverFile, JSON.stringify(record), { mode: 0o600 });
     let stopping: Promise<void> | undefined;
     const shutdown = () => {

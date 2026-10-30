@@ -1,6 +1,6 @@
 # VibeCab host
 
-`@vibecab/host` manages one engine process for a workspace. CLI, app and MCP relay clients use the same host and local HTTP endpoints. The host stores only endpoint metadata in `.vibecab/server.json`; app and CLI credentials stay in the OS keychain.
+`@vibecab/host` manages one engine process for a workspace. CLI, app and MCP relay clients use the same host and local HTTP endpoints. The app's HTTP admin token is atomically stored in `.vibecab/app-token` (file mode `0600`, directory mode `0700`). CLI credentials stay in the OS keychain. `.vibecab/server.json` contains endpoint metadata only.
 
 For end-to-end tests, set `VIBECAB_DEV=1` and run `vibecab-host serve --workspace <dir> --fake-provider <script.json>`. Scripts contain a `defaultSequence` array, with one array of gateway events per model call:
 
