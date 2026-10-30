@@ -69,6 +69,7 @@ export function tmrModule(): EngineModule {
         if (run.status !== "running") continue;
         const interrupted = { ...run, status: "interrupted", outcome: "interrupted" };
         finish(ctx, interrupted);
+        if (run.limits.autoResume) resume(ctx, run.runId);
       }
     },
   };

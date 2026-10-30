@@ -503,6 +503,68 @@ it("reports interrupted coverage and resumes only the missing contribution", asy
   }
 });
 
+it("auto resumes through the Resume handler when limits.autoResume is set", async () => {
+  let markStarted!: () => void, release!: () => void;
+  const started = new Promise<void>((resolve) => (markStarted = resolve)),
+    gate = new Promise<void>((resolve) => (release = resolve)),
+    oldProvider: ModelProvider = {
+      async *call() {
+        markStarted();
+        await gate;
+        yield { type: "output", json: { recommendation: "late old response" } };
+        yield { type: "done", finishReason: "stop" };
+      },
+    },
+    test = await fixture({ modelProviders: { "openai-compatible": oldProvider } });
+  let reopened: ReturnType<typeof createEngine> | undefined;
+  try {
+    await setLiveModel(test.engine);
+    const submitted = await submitLive(test.engine, "automatic-resume", spec(), [participant], 100000, true),
+      runId = field(submitted, "runId");
+    if (typeof runId !== "string") throw Error("TMR submit did not return a run id");
+    await started;
+    await test.engine.drain(0);
+    await test.engine.stop();
+    release();
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    let resumedCalls = 0,
+      restartSequence = 0;
+    const resumeProvider: ModelProvider = {
+      async *call() {
+        resumedCalls++;
+        yield { type: "output", json: { recommendation: "automatic synthesis" } };
+        yield { type: "done", finishReason: "stop" };
+      },
+    };
+    reopened = createEngine({
+      clock,
+      ids: { next: (prefix) => prefix + "auto" + String(++restartSequence).padStart(20, "0") },
+      seed: 42,
+      modelProviders: { "openai-compatible": resumeProvider },
+    });
+    await reopened.start(test.dir);
+    const auth = reopened.trustedHostAuth("admin"),
+      metadata = { contractVersion: "1.0", requestId: "tmr-auto-resume" };
+    let run: Json = {};
+    for (let attempt = 0; attempt < 100; attempt++) {
+      run = await reopened.query(auth, metadata, { name: "tmr.Run", args: { runId } });
+      if (field(run, "status") === "completed") break;
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    expect(field(run, "outcome")).toBe("completed");
+    expect(resumedCalls).toBe(2);
+    const report = await reopened.query(auth, metadata, { name: "tmr.Report", args: { runId } });
+    expect(field(report, "recommendation")).toBe("automatic synthesis");
+    const events = await reopened.query(auth, metadata, { name: "tmr.Events", args: { runId } });
+    expect(events).toEqual(expect.arrayContaining([expect.objectContaining({ status: "interrupted" })]));
+  } finally {
+    release();
+    await reopened?.stop();
+    await test.close();
+  }
+});
+
 it("keeps terminal run states final when a peer contribution completes later", async () => {
   let markStarted!: () => void,
     providerStarted = false,
@@ -687,6 +749,7 @@ async function submitLive(
   processSpec: ProcessSpec,
   participants: (typeof participant)[],
   spendMicros = 100000,
+  autoResume = false,
 ): Promise<Json> {
   const result = await engine.command(ctx, {
     commandId: "submit-" + requestId,
@@ -698,7 +761,7 @@ async function submitLive(
       criteria: [],
       processSpec,
       participants: participants.map((item) => ({ ...item, modelRef: "default" })),
-      limits: { spendMicros },
+      limits: { spendMicros, ...(autoResume ? { autoResume: true } : {}) },
       mode: "live",
     }),
   });
