@@ -1,0 +1,4 @@
+#!/bin/sh
+HERE="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+export VIBECAB_NODE="$HERE/node"
+exec "$HERE/node" "$HERE/cli.mjs" "$@"

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { Settings } from "../../../../contract/generated/index.js";
 import { AliasModel, ModelAdvanced, Spending } from "./SettingsFields.js";
 import { AgentDefaults } from "./AgentDefaults.js";
+import { SettingsAppearance } from "./SettingsAppearance.js";
 type Tab =
   | "Model"
   | "Spending"
@@ -475,15 +476,7 @@ export function SettingsView({ onBack }: { onBack: () => void }) {
           ))}
         </section>
       ) : null}
-      {tab === "Appearance" ? (
-        <section aria-label="Appearance settings">
-          {(["system", "light", "dark"] as const).map((theme) => (
-            <button key={theme} onClick={() => void window.vibecab.app.setTheme(theme)}>
-              {theme}
-            </button>
-          ))}
-        </section>
-      ) : null}
+      {tab === "Appearance" ? <SettingsAppearance /> : null}
       {tab === "About" ? (
         <section aria-label="About">
           <p>VibeCab {version}</p>

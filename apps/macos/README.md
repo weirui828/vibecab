@@ -15,3 +15,11 @@ To verify a packaged app's fuse wire, run `VIBECAB_PACKAGED_APP=/path/to/VibeCab
 If an earlier development run changed the dependency binary's fuses, restore the pristine Electron download with `pnpm install --force` before running `app:dev` or `test:e2e`.
 
 Manual macOS check for A1c: after a clean install, launch `pnpm app:dev`, configure a provider key, quit and relaunch the app, then reconnect to the running host. macOS should not show a provider-keychain access prompt; Node host is the only process that reads and writes provider-key entries.
+
+## Packaged app smoke check
+
+Build with `pnpm app:package`. On a clean macOS user account, open `release/mac-arm64/VibeCab.app` (or install it from the DMG), right-click and choose **Open** on first launch if Gatekeeper blocks the ad-hoc signed build. After onboarding, create a Document, add a comment, and quit. With no model configured, agent actions should offer **Add a model**. Confirm no bundled `node` process remains after quit, then relaunch and confirm a fresh connection.
+
+While the app is running, open Terminal and run `VibeCab.app/Contents/Resources/engine/bin/vibecab status --workspace "$HOME/Library/Application Support/VibeCab/workspaces/default"`. Configure `VIBECAB_WORKSPACE` and `VIBECAB_MCP_TOKEN` for the relay, then run `VibeCab.app/Contents/Resources/engine/bin/vibecab-mcp`; both wrappers should use the bundled Node 26 runtime and the app's running host. The MCP token is supplied by the caller and is never stored in the app bundle.
+
+Login item smoke check: turn on **Start VibeCab at login** in Settings, verify the login item reports enabled, then turn it off. When macOS launches the app as a login item, it starts the engine and tray without opening a window.

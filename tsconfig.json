@@ -20,5 +20,6 @@
     "apps/**/*.ts",
     "apps/**/*.tsx",
     "apps/**/*.cts"
-  ]
+  ],
+  "exclude": ["apps/macos/build"]
 }

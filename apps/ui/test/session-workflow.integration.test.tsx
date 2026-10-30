@@ -536,7 +536,14 @@ it("keeps schema-defined settings outside edited fields unchanged across tabs", 
         saved = await app.query("sys.Settings", {});
         expect(saved.trashRetentionDays).toBe(90);
       }
-      if (tab === "Appearance") app.fireEvent.click(app.screen.getByRole("button", { name: "dark" }));
+      if (tab === "Appearance") {
+        app.fireEvent.click(app.screen.getByRole("button", { name: "dark" }));
+        app.fireEvent.click(await app.screen.findByLabelText("Start VibeCab at login"));
+        app.fireEvent.click(await app.screen.findByLabelText("Notifications"));
+        await app.waitFor(async () => expect(await app.query("sys.Settings", {})).toEqual(saved));
+        expect(app.loginItemEnabled()).toBe(true);
+        expect(app.notificationsAreEnabled()).toBe(true);
+      }
       expect(await app.query("sys.Settings", {})).toEqual(saved);
     }
   } finally {
@@ -660,6 +667,8 @@ async function mountSession(options: {
     cleanup = cleanupRenderer = testing.cleanup;
     const screen = testing.within(dom.window.document.body);
     const savedFiles: Array<{ name: string; bytes: string }> = [];
+    let loginAtStartup = false,
+      notificationsEnabled = false;
     const bridge: ContractBridge = {
       command: (type, payload, commandId = crypto.randomUUID()) =>
         client.command({ type, payload: contract.read<Json>("json", payload), commandId }),
@@ -692,6 +701,16 @@ async function mountSession(options: {
         openMarkdown: async () => undefined,
         openExternal: async () => undefined,
         setTheme: async () => undefined,
+        getLoginItem: async () => loginAtStartup,
+        setLoginItem: async (enabled) => {
+          loginAtStartup = enabled;
+          return enabled;
+        },
+        trayStatus: async () => ({ running: true, status: ["Engine running"], recentSessions: [] }),
+        setNotificationsEnabled: async (enabled) => {
+          notificationsEnabled = enabled;
+        },
+        getNotificationsEnabled: async () => notificationsEnabled,
         saveFiles: async (files) => {
           savedFiles.push(...files.map((file) => ({ name: file.name, bytes: new TextDecoder().decode(file.bytes) })));
         },
@@ -764,6 +783,8 @@ async function mountSession(options: {
       query,
       comment,
       agree,
+      loginItemEnabled: () => loginAtStartup,
+      notificationsAreEnabled: () => notificationsEnabled,
       async headVersion() {
         const result = await query<Array<{ artifactId: string; headVersion: number }>>("vc.Artifacts", {});
         return result.find((item) => item.artifactId === artifactId)?.headVersion;

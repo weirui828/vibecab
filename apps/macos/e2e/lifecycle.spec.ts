@@ -40,6 +40,13 @@ test("first run creates a draft, keeps secrets out of the renderer and stops the
     await page.getByRole("button", { name: "Skip for now" }).click();
     await page.getByRole("button", { name: "Blank Document" }).click();
     await expect(page.getByText("Untitled", { exact: true })).toBeVisible();
+    const initialLoginItem = await page.evaluate(() => window.vibecab.app.getLoginItem());
+    expect(await page.evaluate(() => window.vibecab.app.setLoginItem(true))).toBe(true);
+    expect(await page.evaluate(() => window.vibecab.app.getLoginItem())).toBe(true);
+    await page.evaluate((enabled) => window.vibecab.app.setLoginItem(enabled), initialLoginItem);
+    const trayState = await page.evaluate(() => window.vibecab.app.trayStatus());
+    expect(trayState.running).toBe(true);
+    expect(trayState.status).toContain("Engine running");
     const exposure = await page.evaluate(() => ({
       requireType: typeof Reflect.get(window, "require"),
       processType: typeof Reflect.get(window, "process"),

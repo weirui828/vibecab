@@ -14,6 +14,15 @@ export interface ContractBridge {
     openMarkdown(): Promise<{ name: string; content: string } | undefined>;
     openExternal(url: string): Promise<void>;
     setTheme(theme: "system" | "light" | "dark"): Promise<void>;
+    getLoginItem(): Promise<boolean>;
+    setLoginItem(enabled: boolean): Promise<boolean>;
+    trayStatus(): Promise<{
+      running: boolean;
+      status: string[];
+      recentSessions: Array<{ sessionId: string; title: string }>;
+    }>;
+    setNotificationsEnabled(enabled: boolean): Promise<void>;
+    getNotificationsEnabled(): Promise<boolean>;
     saveFiles(files: Array<{ name: string; bytes: Uint8Array }>): Promise<void>;
     copyText(text: string): Promise<void>;
     reveal(path: string): Promise<void>;

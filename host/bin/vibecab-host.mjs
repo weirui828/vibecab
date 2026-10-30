@@ -2,8 +2,10 @@
 import process from "node:process";
 import { URL } from "node:url";
 
-const host = await import(new URL("../src/entry.js", import.meta.url)).catch(
-  () => import(new URL("../../dist/host/src/entry.js", import.meta.url)),
+const host = await import(new URL("../src/entry.js", import.meta.url)).catch(() =>
+  import(new URL("../dist/host/src/entry.js", import.meta.url)).catch(
+    () => import(new URL("../../dist/host/src/entry.js", import.meta.url)),
+  ),
 );
 
 const args = process.argv.slice(2),

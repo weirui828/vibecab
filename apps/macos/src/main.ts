@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeTheme, protocol, shell } from "electron";
+import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeTheme, protocol, shell } from "electron";
 import { execFileSync } from "node:child_process";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -7,17 +7,29 @@ import { join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
 import { Contract, fail } from "../../../contract/src/index.js";
 import type { CommandEnvelope, QueryEnvelope, Subscription } from "../../../contract/src/index.js";
-import { start, status, stop } from "../../../host/src/index.js";
+import { start, status, stop } from "../../../host/src/control.js";
 import { httpClient } from "../../../adapters/http/src/index.js";
 import { workspacePath } from "./paths.js";
 import type { Settings } from "../../../contract/generated/index.js";
 import { isUnauthenticated, reconnectEvents, retryUnauthenticated } from "./bridge-runtime.js";
 import { switchWorkspaceFromBackup } from "./restore-workspace.js";
+import { createTrayManager } from "./tray.js";
+import { installApplicationMenu } from "./app-menu.js";
+import { assertNode26, engineNodePath, hostEntryPath } from "./runtime.js";
+import { readAppToken } from "./app-token.js";
 
 const contract = new Contract(),
   workspace = resolve(workspacePath());
+const developmentHostEntry = new URL("../../../host/bin/vibecab-host.mjs", import.meta.url).pathname;
 const execFileAsync = promisify(execFile);
-type Preferences = { theme?: "system" | "light" | "dark"; width?: number; height?: number; x?: number; y?: number };
+type Preferences = {
+  theme?: "system" | "light" | "dark";
+  notificationsEnabled?: boolean;
+  width?: number;
+  height?: number;
+  x?: number;
+  y?: number;
+};
 const preferencesPath = () => join(app.getPath("userData"), "preferences.json");
 async function preferences(): Promise<Preferences> {
   try {
@@ -26,6 +38,7 @@ async function preferences(): Promise<Preferences> {
     const theme = Reflect.get(value, "theme");
     return {
       ...(theme === "system" || theme === "light" || theme === "dark" ? { theme } : {}),
+      ...(Reflect.get(value, "notificationsEnabled") === true ? { notificationsEnabled: true } : {}),
       ...["width", "height", "x", "y"]
         .filter((key) => Number.isFinite(Reflect.get(value, key)))
         .map((key) => [key, Reflect.get(value, key)] as const)
@@ -50,44 +63,55 @@ let windowRef: BrowserWindow | undefined,
   token = "";
 let isQuitting = false;
 const subscriptions = new Map<string, AbortController>();
-
-function versionNode(nodePath: string): void {
-  let version = "";
-  try {
-    version = execFileSync(nodePath, ["--version"], { encoding: "utf8" }).trim();
-  } catch {
-    /* Report below. */
-  }
-  if (!/^v26\./.test(version)) throw Error("VibeCab requires Node 26. Set VIBECAB_NODE to a Node 26 executable.");
-}
-
-async function appToken(): Promise<string> {
-  try {
-    const value = await readFile(join(workspace, ".vibecab", "app-token"), "utf8");
-    if (value.length > 0 && value.trim() === value) return value;
-  } catch {
-    // The host creates or repairs this file before reconnect completes.
-  }
-  fail("unauthenticated", "VibeCab app token is unavailable");
-}
+let trayManager: ReturnType<typeof createTrayManager> | undefined;
 
 function hostOptions() {
   const fakeProvider = process.env.VIBECAB_DEV === "1" ? process.env.VIBECAB_FAKE_PROVIDER : undefined;
-  return { nodePath: process.env.VIBECAB_NODE ?? "node", ...(fakeProvider ? { fakeProvider } : {}) };
+  return {
+    nodePath: engineNodePath(app.isPackaged, process.resourcesPath, process.env.VIBECAB_NODE),
+    hostEntry: hostEntryPath(app.isPackaged, process.resourcesPath, developmentHostEntry),
+    ...(fakeProvider ? { fakeProvider } : {}),
+  };
 }
 
 async function connect(): Promise<void> {
   const runtime = await status(workspace);
   if (!runtime.running) throw Error("Engine stopped");
   apiUrl = runtime.httpUrl;
-  token = await appToken();
+  token = await readAppToken(workspace);
   client = httpClient(apiUrl, token);
 }
 
 async function recoverAuthentication(): Promise<void> {
+  trayManager?.stop();
   await stop(workspace);
   await start(workspace, hostOptions());
   await connect();
+  createTray();
+}
+
+function createTray(): void {
+  const templatePath = app.isPackaged
+    ? join(process.resourcesPath, "engine", "iconTemplate.png")
+    : join(import.meta.dirname, "../../../../apps/macos/build/iconTemplate.png");
+  trayManager = createTrayManager({
+    client: client!,
+    workspace,
+    iconPath: templatePath,
+    getNotificationsEnabled: async () => (await preferences()).notificationsEnabled ?? false,
+    isWindowFocused: () => windowRef?.isFocused() ?? false,
+    openWindow: async () => {
+      if (!windowRef) await createWindow();
+      windowRef?.show();
+      windowRef?.focus();
+      app.dock?.show();
+    },
+    newDraft: () => windowRef?.webContents.send("app:new-draft"),
+    navigate: (path) => windowRef?.webContents.send("app:navigate", path),
+    stop: () => app.quit(),
+  });
+  trayManager.create();
+  trayManager.startEvents();
 }
 
 function installBridge(): void {
@@ -156,8 +180,8 @@ function installBridge(): void {
   });
   ipcMain.handle("app:state", async () => ((await status(workspace)).running ? "Connected" : "Engine stopped"));
   ipcMain.handle("app:start-engine", async () => {
-    const nodePath = process.env.VIBECAB_NODE ?? "node";
-    versionNode(nodePath);
+    const nodePath = engineNodePath(app.isPackaged, process.resourcesPath, process.env.VIBECAB_NODE);
+    assertNode26(nodePath);
     await start(workspace, hostOptions());
     await connect();
     return "Connected";
@@ -217,9 +241,30 @@ function installBridge(): void {
     nativeTheme.themeSource = theme;
     void savePreferences({ theme });
   });
+  ipcMain.handle("app:get-login-item", () => app.getLoginItemSettings().openAtLogin);
+  ipcMain.handle("app:set-login-item", (_event, enabled: unknown) => {
+    if (typeof enabled !== "boolean") fail("invalid", "Invalid login item setting");
+    app.setLoginItemSettings({ openAtLogin: enabled });
+    return app.getLoginItemSettings().openAtLogin;
+  });
+  ipcMain.handle("app:get-notifications-enabled", async () => (await preferences()).notificationsEnabled ?? false);
+  ipcMain.handle("app:set-notifications-enabled", async (_event, enabled: unknown) => {
+    if (typeof enabled !== "boolean") fail("invalid", "Invalid notification setting");
+    await savePreferences({ notificationsEnabled: enabled });
+  });
+  ipcMain.handle("app:tray-status", async () => {
+    await trayManager?.refresh();
+    return trayManager?.snapshot();
+  });
   ipcMain.handle("app:version", () => app.getVersion());
   ipcMain.handle("app:node-version", () =>
-    execFileSync(process.env.VIBECAB_NODE ?? process.execPath, ["--version"], { encoding: "utf8" }).trim(),
+    execFileSync(
+      engineNodePath(app.isPackaged, process.resourcesPath, process.env.VIBECAB_NODE ?? process.execPath),
+      ["--version"],
+      {
+        encoding: "utf8",
+      },
+    ).trim(),
   );
   ipcMain.handle("app:workspace-path", () => workspace);
   ipcMain.handle(
@@ -277,8 +322,8 @@ function installBridge(): void {
       detail: `Your current workspace will be kept in workspaces/ as default-before-restore-${new Date().toISOString().slice(0, 10)}.`,
     });
     if (confirmation.response !== 0) return;
-    const hostEntry = new URL("../../../host/bin/vibecab-host.mjs", import.meta.url).pathname,
-      nodePath = process.env.VIBECAB_NODE ?? process.execPath;
+    const hostEntry = hostEntryPath(app.isPackaged, process.resourcesPath, developmentHostEntry),
+      nodePath = engineNodePath(app.isPackaged, process.resourcesPath, process.env.VIBECAB_NODE);
     try {
       await switchWorkspaceFromBackup({
         workspace,
@@ -328,6 +373,7 @@ async function createWindow(): Promise<void> {
     if (!isQuitting) {
       event.preventDefault();
       windowRef?.hide();
+      app.dock?.hide();
     }
   });
   const saveBounds = () => {
@@ -348,6 +394,7 @@ async function createWindow(): Promise<void> {
   });
   if (process.env.VITE_DEV_SERVER_URL) await windowRef.loadURL(process.env.VITE_DEV_SERVER_URL);
   else await windowRef.loadFile(join(import.meta.dirname, "../../ui/index.html"));
+  app.dock?.show();
 }
 
 app.setName("VibeCab");
@@ -365,8 +412,8 @@ else {
   });
   app.whenReady().then(async () => {
     nativeTheme.themeSource = (await preferences()).theme ?? "system";
-    const nodePath = process.env.VIBECAB_NODE ?? "node";
-    versionNode(nodePath);
+    const nodePath = engineNodePath(app.isPackaged, process.resourcesPath, process.env.VIBECAB_NODE);
+    assertNode26(nodePath);
     protocol.handle("vc-blob", async (request) => {
       const hash = new URL(request.url).hostname;
       if (!/^[a-f0-9]{64}$/.test(hash)) return new Response("Not found", { status: 404 });
@@ -379,57 +426,27 @@ else {
     await start(workspace, hostOptions());
     await connect();
     installBridge();
-    Menu.setApplicationMenu(
-      Menu.buildFromTemplate([
-        {
-          label: "VibeCab",
-          submenu: [
-            { label: "About VibeCab", role: "about" },
-            {
-              label: "Settings…",
-              accelerator: "CmdOrCtrl+,",
-              click: () => windowRef?.webContents.send("app:navigate", "/settings"),
-            },
-            { type: "separator" },
-            { label: "Quit", accelerator: "CmdOrCtrl+Q", click: () => app.quit() },
-          ],
-        },
-        {
-          label: "File",
-          submenu: [
-            {
-              label: "New draft",
-              accelerator: "CmdOrCtrl+N",
-              click: () => windowRef?.webContents.send("app:new-draft"),
-            },
-            { label: "Import Markdown…", click: () => windowRef?.webContents.send("app:import") },
-          ],
-        },
-        {
-          label: "Edit",
-          submenu: [
-            { role: "undo" },
-            { role: "redo" },
-            { type: "separator" },
-            { role: "cut" },
-            { role: "copy" },
-            { role: "paste" },
-            { role: "selectAll" },
-          ],
-        },
-        { label: "View", submenu: [{ role: "resetZoom" }, { role: "zoomIn" }, { role: "zoomOut" }] },
-        { label: "Window", submenu: [{ role: "minimize" }, { role: "close" }] },
-        {
-          label: "Help",
-          submenu: [],
-        },
-      ]),
-    );
-    await createWindow();
+    createTray();
+    const trayTimer = setInterval(() => void trayManager?.refresh(), 5000);
+    app.on("before-quit", () => clearInterval(trayTimer));
+    installApplicationMenu({
+      openSettings: () => {
+        void trayManager?.refresh();
+        windowRef?.webContents.send("app:navigate", "/settings");
+      },
+      newDraft: () => windowRef?.webContents.send("app:new-draft"),
+      importMarkdown: () => windowRef?.webContents.send("app:import"),
+      quit: () => app.quit(),
+    });
+    if (!app.getLoginItemSettings().wasOpenedAtLogin) await createWindow();
+    else app.dock?.hide();
   });
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) void createWindow();
-    else windowRef?.show();
+    else {
+      app.dock?.show();
+      windowRef?.show();
+    }
   });
   app.on("before-quit", (event) => {
     if (isQuitting) return;

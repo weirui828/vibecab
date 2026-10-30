@@ -6,5 +6,7 @@ node_modules/
 coverage/
 apps/macos/test-results/
 dist/
+release/
+apps/macos/build/
 .vibecab/
 *.tsbuildinfo

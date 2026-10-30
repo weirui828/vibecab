@@ -255,6 +255,15 @@ test("imports, comments on text, receives a reply, and catches up after relaunch
     await expect(page.getByText("I can tighten that sentence.", { exact: true })).toBeVisible({ timeout: 20_000 });
     await page.getByRole("button", { name: "Agree with option: Tighten sentence" }).click();
     await page.getByRole("button", { name: "Update now" }).click();
+    await expect
+      .poll(
+        async () => {
+          const tray = await page.evaluate(() => window.vibecab.app.trayStatus());
+          return tray.running && tray.status.some((line) => line.startsWith("Updating "));
+        },
+        { timeout: 10_000 },
+      )
+      .toBe(true);
     await expect(page.getByText("Applied in v2", { exact: true })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByRole("heading", { name: "v1 → v2" })).toBeVisible({ timeout: 30_000 });
     await expect(page.locator(".update-diff")).toContainText("clearer sentence");

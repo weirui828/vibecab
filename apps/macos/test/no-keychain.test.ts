@@ -7,5 +7,7 @@ it("does not depend on the OS keychain for the app token", async () => {
     manifest = await readFile(resolve(import.meta.dirname, "../package.json"), "utf8");
   expect(main).not.toContain("@napi-rs/keyring");
   expect(main).not.toContain("keychainToken");
+  expect(main).toContain("host/src/control.js");
+  expect(main).not.toContain("host/src/index.js");
   expect(manifest).not.toContain("@napi-rs/keyring");
 });

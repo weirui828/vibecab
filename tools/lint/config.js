@@ -2,7 +2,16 @@ import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 export default tseslint.config(
   {
-    ignores: ["contract/generated/**", "**/node_modules/**", "docs/**", "archive/**", "dist/**", "coverage/**"],
+    ignores: [
+      "contract/generated/**",
+      "**/node_modules/**",
+      "docs/**",
+      "archive/**",
+      "dist/**",
+      "coverage/**",
+      "apps/macos/build/**",
+      "release/**",
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

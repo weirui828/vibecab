@@ -11,4 +11,5 @@ allowBuilds:
   better-sqlite3: true
   esbuild: true
   electron: true
+  electron-winstaller: false
 minimumReleaseAge: 0

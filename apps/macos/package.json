@@ -6,18 +6,17 @@
   "scripts": {
     "test:e2e": "playwright test -c playwright.config.ts",
     "test:fuses": "vitest run test/fuses.test.ts",
+    "test:packaging": "vitest run test/icons.test.ts test/tray-state.test.ts test/packaging.test.ts test/engine-package.test.ts",
     "fuses": "node fuses.mjs"
   },
-  "dependencies": {
-    "@electron/fuses": "^2.1.3",
-    "@vibecab/host": "workspace:*",
-    "@vibecab/http": "workspace:*",
-    "electron": "45.1.0"
-  },
+  "dependencies": {},
   "devDependencies": {
+    "@electron/fuses": "^2.1.3",
     "@playwright/test": "1.64.1",
     "@types/node": "^26.6.6",
     "axe-core": "^4.14.0",
+    "electron-builder": "26.18.0",
+    "electron": "45.1.0",
     "playwright": "1.64.1",
     "vitest": "^5.0.5"
   }
