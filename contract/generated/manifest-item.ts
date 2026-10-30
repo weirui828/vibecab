@@ -23,4 +23,6 @@ export interface ManifestItem {
   argsHash?: string;
   resultHash?: string;
   bytes?: number;
+  originalBytes?: number;
+  truncatedBytes?: number;
 }

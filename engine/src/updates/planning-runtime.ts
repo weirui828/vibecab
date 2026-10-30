@@ -13,6 +13,7 @@ import { estimateInputTokens, estimateReservationMicros } from "../gateway/ledge
 import type { ModelEvent as GatewayEvent, ModelRequest as GatewayRequest } from "../gateway/types.js";
 import { UpdatePreparationRuntime } from "./preparation-runtime.js";
 import { storeRequestIndex } from "./helpers.js";
+import { untrustedMcpResult } from "../agent/tools/external.js";
 
 export abstract class UpdatePlanningRuntime extends UpdatePreparationRuntime {
   protected async judgeUpdateConflicts(
@@ -219,7 +220,7 @@ export abstract class UpdatePlanningRuntime extends UpdatePreparationRuntime {
         toolResults.push({
           id: event.call.id,
           name: event.call.name,
-          content: `<untrusted-mcp-result server="${offered.serverId}" tool="${offered.tool}">\n${outcome.content}\n</untrusted-mcp-result>`,
+          content: untrustedMcpResult(offered.serverId, offered.tool, outcome.content),
         });
         manifestItems.push(outcome.manifest);
       }

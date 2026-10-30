@@ -18,7 +18,7 @@ import { createHash } from "node:crypto";
 import type { ModelEvent as GatewayEvent, ModelRequest as GatewayRequest } from "../gateway/types.js";
 import { replyToolNames, replyToolSchemas } from "./tools.js";
 import { AgentTriggerRuntime } from "./trigger-runtime.js";
-import { ExternalTools } from "./tools/external.js";
+import { ExternalTools, untrustedMcpResult } from "./tools/external.js";
 
 export abstract class AgentRuntime extends AgentTriggerRuntime {
   protected async runReply(job: Job): Promise<void> {
@@ -227,7 +227,7 @@ export abstract class AgentRuntime extends AgentTriggerRuntime {
                 settings.toolTimeoutMs ?? 20_000,
                 settings.toolResultByteLimit ?? 32_768,
               );
-            result = `<untrusted-mcp-result server="${external.serverId}" tool="${external.tool}">\n${outcome.content}\n</untrusted-mcp-result>`;
+            result = untrustedMcpResult(external.serverId, external.tool, outcome.content);
             externalManifests.push(outcome.manifest);
           } else if (event.call.name === "reply") {
             const threadId = args.threadId,

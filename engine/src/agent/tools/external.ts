@@ -29,7 +29,16 @@ export interface ExternalToolResult {
     argsHash: string;
     resultHash: string;
     bytes: number;
+    originalBytes: number;
+    truncatedBytes: number;
   };
+}
+
+export function untrustedMcpResult(serverId: string, tool: string, content: string): string {
+  const escapeAttribute = (value: string) =>
+      value.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;").replaceAll(">", "&gt;"),
+    safeContent = content.replaceAll("<", "\\u003c");
+  return `<untrusted-mcp-result server="${escapeAttribute(serverId)}" tool="${escapeAttribute(tool)}">\n${safeContent}\n</untrusted-mcp-result>`;
 }
 
 export class ExternalTools {
@@ -110,7 +119,8 @@ export class ExternalTools {
     let outcome: ToolCall["outcome"] = "error",
       responseText: string,
       resultHash: string | undefined,
-      resultBytes: number | undefined;
+      resultBytes: number | undefined,
+      truncatedBytes: number | undefined;
     let sessionTransport: Awaited<ReturnType<ToolTransport["connect"]>> | undefined;
     let timedOut = false;
     try {
@@ -132,7 +142,9 @@ export class ExternalTools {
         const serialized = safeJson(raw.value, this.contract);
         resultHash = sha(serialized);
         resultBytes = Buffer.byteLength(serialized);
-        responseText = truncateUtf8(serialized, byteLimit).text;
+        const truncated = truncateUtf8(serialized, byteLimit);
+        responseText = truncated.text;
+        truncatedBytes = Buffer.byteLength(truncated.text);
         outcome = isToolError(raw.value) ? "error" : "success";
       }
     } catch {
@@ -164,6 +176,8 @@ export class ExternalTools {
       argsHash,
       resultHash: resultHash ?? sha(responseText),
       bytes: resultBytes ?? Buffer.byteLength(responseText),
+      originalBytes: resultBytes ?? Buffer.byteLength(responseText),
+      truncatedBytes: truncatedBytes ?? Buffer.byteLength(responseText),
     };
     return { content: responseText, log, manifest };
   }
@@ -252,7 +266,16 @@ function isToolError(value: unknown): boolean {
 function truncateUtf8(value: string, limit: number): { text: string } {
   const bytes = Buffer.from(value);
   if (bytes.length <= limit) return { text: value };
-  return { text: bytes.subarray(0, limit).toString("utf8") + "…[truncated]" };
+  let end = Math.max(0, limit);
+  while (end > 0) {
+    try {
+      const prefix = new TextDecoder("utf-8", { fatal: true }).decode(bytes.subarray(0, end));
+      return { text: prefix + "…[truncated]" };
+    } catch {
+      end -= 1;
+    }
+  }
+  return { text: "…[truncated]" };
 }
 
 async function timed<T>(

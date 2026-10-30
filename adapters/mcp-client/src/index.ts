@@ -12,17 +12,33 @@ export class McpClientTransport implements ToolTransport {
       const transport = new StreamableHTTPClientTransport(url, {
         ...(credential ? { requestInit: { headers: { authorization: `Bearer ${credential}` } } } : {}),
       });
+      try {
+        await client.connect(transport);
+        return session(client);
+      } catch (error) {
+        await client.close().catch(() => undefined);
+        throw error;
+      }
+    }
+    if (server.credentialRef && !server.transport.credentialEnv) throw new Error("stdio credentialEnv is required");
+    if (server.transport.credentialEnv && !/^[A-Z_][A-Z0-9_]*$/.test(server.transport.credentialEnv))
+      throw new Error("Invalid stdio credentialEnv");
+    const env = {
+      ...server.transport.env,
+      ...(credential && server.transport.credentialEnv ? { [server.transport.credentialEnv]: credential } : {}),
+    };
+    const transport = new StdioClientTransport({
+      command: server.transport.command,
+      args: server.transport.args,
+      ...(Object.keys(env).length ? { env } : {}),
+    });
+    try {
       await client.connect(transport);
       return session(client);
+    } catch (error) {
+      await client.close().catch(() => undefined);
+      throw error;
     }
-    const env = { ...server.transport.env, ...(credential ? { VIBECAB_MCP_TOKEN: credential } : {}) },
-      transport = new StdioClientTransport({
-        command: server.transport.command,
-        args: server.transport.args,
-        ...(Object.keys(env).length ? { env } : {}),
-      });
-    await client.connect(transport);
-    return session(client);
   }
 }
 

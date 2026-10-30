@@ -38,6 +38,8 @@ export interface ManifestItem {
   argsHash?: string;
   resultHash?: string;
   bytes?: number;
+  originalBytes?: number;
+  truncatedBytes?: number;
 }
 export interface ManifestDropped {
   kind: string;

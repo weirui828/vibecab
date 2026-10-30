@@ -11,6 +11,7 @@ export interface ConnectToolServerOperation {
           env?: {
             [k: string]: string;
           };
+          credentialEnv?: string;
         }
       | {
           kind: "http";

@@ -35,6 +35,10 @@
               "additionalProperties": {
                 "type": "string"
               }
+            },
+            "credentialEnv": {
+              "type": "string",
+              "pattern": "^[A-Z_][A-Z0-9_]*$"
             }
           },
           "additionalProperties": false,
@@ -103,6 +107,29 @@
       "format": "date-time"
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "credentialRef": { "type": "string" },
+          "transport": {
+            "type": "object",
+            "properties": { "kind": { "const": "stdio" } }
+          }
+        },
+        "required": ["credentialRef", "transport"]
+      },
+      "then": {
+        "properties": {
+          "transport": {
+            "type": "object",
+            "properties": { "credentialEnv": { "type": "string", "pattern": "^[A-Z_][A-Z0-9_]*$" } },
+            "required": ["credentialEnv"]
+          }
+        }
+      }
+    }
+  ],
   "additionalProperties": false,
   "required": ["serverId", "name", "transport", "scope", "status", "tools", "policies", "updatedAt"]
 }
