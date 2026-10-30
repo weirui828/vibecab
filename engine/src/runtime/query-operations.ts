@@ -54,6 +54,33 @@ export abstract class QueryOperations extends CommandOperations {
         this.assertLifecycleVisible("artifact", p.artifactId, p.includeTrashed);
         return store.artifact(p.artifactId);
       }
+      case "vc.Artifacts": {
+        const p = this.contract.read<{ sessionId?: string; includeTrashed?: boolean }>(
+            "operations/vc.Artifacts",
+            q.args,
+            "#/properties/payload",
+          ),
+          links = store
+            .feedbackList("attachment")
+            .map((raw) =>
+              this.contract.read<{ sessionId: string; artifactId: string; role: "primary" | "supporting" }>(
+                "session-artifact",
+                raw,
+              ),
+            ),
+          ids = p.sessionId
+            ? links.filter((link) => link.sessionId === p.sessionId).map((link) => link.artifactId)
+            : store.artifactIds();
+        return [...new Set(ids)]
+          .map((artifactId) => {
+            const artifact = store.artifact(artifactId),
+              related = links.filter((link) => link.artifactId === artifactId);
+            this.assertLifecycleVisible("artifact", artifactId, p.includeTrashed);
+            const role = related.find((link) => link.sessionId === p.sessionId)?.role;
+            return { ...artifact, sessionIds: related.map((link) => link.sessionId), ...(role ? { role } : {}) };
+          })
+          .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+      }
       case "vc.Outline": {
         const p = read<VcOutlineOperation["payload"]>();
         this.assertLifecycleVisible("artifact", p.artifactId, p.includeTrashed);

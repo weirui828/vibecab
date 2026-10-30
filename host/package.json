@@ -1,0 +1,17 @@
+{
+  "name": "@vibecab/host",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": "./src/index.ts",
+  "bin": {
+    "vibecab-host": "bin/vibecab-host.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/client": "^2.4.0",
+    "@modelcontextprotocol/server": "^2.4.0",
+    "@napi-rs/keyring": "^2.1.2",
+    "@vibecab/engine": "workspace:*",
+    "@vibecab/http": "workspace:*",
+    "@vibecab/mcp-server": "workspace:*"
+  }
+}

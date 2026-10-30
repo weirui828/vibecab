@@ -135,6 +135,7 @@ export abstract class UpdatePreparationRuntime extends AgentRuntime {
         status: "queued",
         itemResults: [],
         createdAt: this.deps.clock.now(),
+        updatedAt: this.deps.clock.now(),
       });
     store.saveFeedback("update", updateId, this.contract.read<Json>("json", update));
     for (const agreement of agreements)
@@ -162,7 +163,11 @@ export abstract class UpdatePreparationRuntime extends AgentRuntime {
         store.saveFeedback("agreement", itemId, this.contract.read<Json>("json", { ...agreement, state: "agreed" }));
       }
     }
-    store.saveFeedback("update", p.updateId, this.contract.read<Json>("json", { ...update, status: "cancelled" }));
+    store.saveFeedback(
+      "update",
+      p.updateId,
+      this.contract.read<Json>("json", { ...update, status: "cancelled", updatedAt: this.deps.clock.now() }),
+    );
     return { updateId: p.updateId, status: "cancelled" };
   }
 
@@ -174,7 +179,11 @@ export abstract class UpdatePreparationRuntime extends AgentRuntime {
     const update = this.contract.read<Update>("update", found);
     if (update.status !== "awaiting_plan_review" || !update.plan)
       fail("conflict", "Update is not waiting for plan review");
-    store.saveFeedback("update", p.updateId, this.contract.read<Json>("json", { ...update, status: "writing" }));
+    store.saveFeedback(
+      "update",
+      p.updateId,
+      this.contract.read<Json>("json", { ...update, status: "writing", updatedAt: this.deps.clock.now() }),
+    );
     store.enqueue(
       "agent.update",
       this.deps.ids.next("update_job_"),
@@ -207,6 +216,7 @@ export abstract class UpdatePreparationRuntime extends AgentRuntime {
             this.contract.read<Json>("json", {
               ...current,
               status: "planning",
+              updatedAt: this.deps.clock.now(),
             }),
           );
       }),
@@ -320,6 +330,7 @@ export abstract class UpdatePreparationRuntime extends AgentRuntime {
                     ...current,
                     plan: planned,
                     status: "awaiting_plan_review",
+                    updatedAt: this.deps.clock.now(),
                     itemResults: results,
                   }),
                 );

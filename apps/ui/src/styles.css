@@ -1,0 +1,89 @@
+@import "tailwindcss";
+@import "@wei/design-system/theme.css";
+@import "@wei/design-system/styles.css";
+
+:root {
+  font-family: "DM Sans", sans-serif;
+  color: var(--color-fg-default);
+  background: var(--color-surface-base);
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  min-width: 960px;
+  min-height: 100vh;
+}
+button,
+input {
+  font: inherit;
+}
+.shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 250px 1fr;
+}
+.sidebar {
+  padding: 28px 20px;
+  border-right: 1px solid var(--color-border-default);
+  background: var(--color-surface-raised);
+}
+.brand {
+  font-family: "Fraunces", serif;
+  font-size: 25px;
+  margin: 0 0 36px;
+}
+.main {
+  padding: 42px 56px;
+  max-width: 1100px;
+}
+.eyebrow {
+  color: var(--color-fg-muted);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.list {
+  display: grid;
+  gap: 12px;
+  margin-top: 28px;
+}
+.draft {
+  padding: 18px 20px;
+  border: 1px solid var(--color-border-default);
+  border-radius: 14px;
+  background: var(--color-surface-raised);
+  text-align: left;
+  color: inherit;
+}
+.draft:hover {
+  border-color: var(--color-border-strong);
+}
+.form {
+  display: grid;
+  gap: 14px;
+  max-width: 440px;
+}
+.form label {
+  display: grid;
+  gap: 6px;
+  color: var(--color-fg-muted);
+}
+.form input {
+  border: 1px solid var(--color-border-default);
+  border-radius: 8px;
+  background: var(--color-surface-raised);
+  padding: 10px 12px;
+  color: var(--color-fg-default);
+}
+.notice {
+  margin: 18px 0;
+  color: var(--color-fg-muted);
+}

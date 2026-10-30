@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/events/vc.ArtifactRenamed.json",
+  "title": "ArtifactRenamed",
+  "type": "object",
+  "properties": { "artifactId": { "type": "string", "minLength": 1 }, "title": { "type": "string", "minLength": 1 } },
+  "required": ["artifactId", "title"],
+  "additionalProperties": false
+}

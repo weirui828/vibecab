@@ -55,6 +55,7 @@ export abstract class AgentTriggerRuntime extends AgentServicesRuntime {
       manifestId: this.deps.ids.next("manifest_"),
       status: "queued",
       createdAt: this.deps.clock.now(),
+      updatedAt: this.deps.clock.now(),
     });
     store.saveFeedback("agent-turn", turnId, this.contract.read<Json>("json", turn));
     for (const c of selected)

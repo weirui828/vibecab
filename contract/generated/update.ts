@@ -38,4 +38,5 @@ export interface Update {
     reason?: string;
   }[];
   createdAt: string;
+  updatedAt?: string;
 }

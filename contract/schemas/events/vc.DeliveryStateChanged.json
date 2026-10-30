@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/events/vc.DeliveryStateChanged.json",
+  "title": "DeliveryStateChanged",
+  "type": "object",
+  "properties": {
+    "commentIds": { "type": "array", "items": { "type": "string" } },
+    "state": { "enum": ["saved", "queued", "delivered", "replied", "handled"] }
+  },
+  "required": ["commentIds", "state"],
+  "additionalProperties": false
+}

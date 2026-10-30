@@ -37,6 +37,7 @@ export function updatesModule(host: EngineModuleHost) {
           context.contract.read<Json>("json", {
             ...update,
             status: "failed",
+            updatedAt: context.clock.now(),
             itemResults: update.itemIds.map((itemId) => ({
               itemId,
               status: "not_addressed",
@@ -68,6 +69,7 @@ export function updatesModule(host: EngineModuleHost) {
         context.contract.read<Json>("json", {
           ...update,
           status: "failed",
+          updatedAt: context.clock.now(),
           itemResults: update.itemIds.map((itemId) => ({
             itemId,
             status: "not_addressed",

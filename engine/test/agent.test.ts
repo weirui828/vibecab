@@ -93,6 +93,24 @@ function readFeedback(dir: string, kind: string, id: string): Json {
     database.close();
   }
 }
+function readEvents(dir: string): Array<{ type: string; payload: Json }> {
+  const database = new Database(join(dir, "workspace.sqlite"), { readonly: true });
+  try {
+    return database
+      .prepare("SELECT json FROM sys_events ORDER BY seq")
+      .all()
+      .map((row: unknown) => {
+        if (typeof row !== "object" || row === null || !Reflect.has(row, "json")) throw Error("Event row missing");
+        const event = new Contract().read<{ type: string; payload: Json }>(
+          "event-envelope",
+          JSON.parse(String(Reflect.get(row, "json"))),
+        );
+        return { type: event.type, payload: event.payload };
+      });
+  } finally {
+    database.close();
+  }
+}
 it("runs a manual reply through validated tools, records exact manifests and delivery states, and leaves versions untouched", async () => {
   const provider = new ScriptedProvider();
   const f = await fixture({
@@ -287,6 +305,16 @@ it("runs a manual reply through validated tools, records exact manifests and del
     );
     expect(threads[0]!.comments.some((c) => c.author.kind === "agent" && c.replyTo === commentId.commentId)).toBe(true);
     expect(threads[0]!.comments).toHaveLength(2);
+    expect(
+      readEvents(f.dir)
+        .filter((event) => event.type === "vc.AgentTurnChanged")
+        .map((event) => event.payload),
+    ).toEqual([
+      { turnId, sessionId, kind: "reply", status: "queued" },
+      { turnId, sessionId, kind: "reply", status: "running" },
+      { turnId, sessionId, kind: "reply", status: "completed" },
+    ]);
+    expect(readEvents(f.dir).some((event) => event.type === "vc.DeliveryStateChanged")).toBe(true);
     expect(await f.engine.query(ctx, { name: "vc.Versions", args: { artifactId } })).toHaveLength(1);
     expect(await f.engine.query(ctx, { name: "vc.Grants", args: {} })).toHaveLength(0);
   } finally {

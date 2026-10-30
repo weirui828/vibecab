@@ -31,6 +31,7 @@ export class Content {
       mediaKind: "doc",
       headVersion: 1,
       createdAt,
+      updatedAt: createdAt,
     });
     this.store.saveVersion(
       {
@@ -74,6 +75,7 @@ export class Content {
         mediaKind: "doc",
         headVersion: 1,
         createdAt: ts,
+        updatedAt: ts,
       });
       this.store.appendEvent({
         ts,

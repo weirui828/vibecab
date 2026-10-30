@@ -1,6 +1,8 @@
 packages:
   - contract
   - engine
+  - host
+  - apps/*
   - adapters/*
   - tools/*
 resolvePeersFromWorkspaceRoot: false
@@ -8,4 +10,5 @@ allowBuilds:
   node: true
   better-sqlite3: true
   esbuild: true
+  electron: true
 minimumReleaseAge: 0

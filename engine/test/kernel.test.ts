@@ -82,6 +82,7 @@ describe("kernel", () => {
             mediaKind: "doc",
             headVersion: 1,
             createdAt: clock.now(),
+            updatedAt: clock.now(),
           });
           store.appendEvent({
             ts: clock.now(),

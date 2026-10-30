@@ -7,4 +7,5 @@ export interface Session {
   state: "active" | "paused" | "ended";
   replyTrigger: "realtime" | "batch" | "manual";
   createdAt: string;
+  artifactIds?: string[];
 }

@@ -6,5 +6,14 @@
     "rootDir": ".",
     "outDir": "dist"
   },
-  "include": ["contract/src/**/*.ts", "contract/generated/**/*.ts", "engine/src/**/*.ts", "adapters/*/src/**/*.ts"]
+  "include": [
+    "contract/src/**/*.ts",
+    "contract/generated/**/*.ts",
+    "engine/src/**/*.ts",
+    "adapters/*/src/**/*.ts",
+    "host/src/**/*.ts",
+    "apps/macos/src/**/*.ts",
+    "apps/ui/src/**/*.ts",
+    "apps/ui/src/**/*.tsx"
+  ]
 }

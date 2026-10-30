@@ -256,6 +256,17 @@ export function contractSuite(
       expect((await cmd("vc.Agree", { commentId, kind: "as_written" })).ok).toBe(true);
       expect(await query("vc.FeedbackItems", { sessionId })).toMatchObject([{ commentId, state: "agreed" }]);
       expect(await query("vc.Sessions", {})).toMatchObject([{ sessionId, state: "active", replyTrigger: "manual" }]);
+      expect(await query("vc.Sessions", { sessionId })).toMatchObject([{ sessionId, artifactIds: [a.artifactId] }]);
+      expect(await query("vc.Artifacts", { sessionId })).toMatchObject([
+        { artifactId: a.artifactId, sessionIds: [sessionId], role: "primary" },
+      ]);
+      expect(await query("vc.Artifacts", {})).toMatchObject([
+        { artifactId: a.artifactId, updatedAt: expect.any(String) },
+      ]);
+      expect((await cmd("vc.RenameArtifact", { artifactId: a.artifactId, title: "Renamed draft" })).ok).toBe(true);
+      expect(await query("vc.Artifact", { artifactId: a.artifactId })).toMatchObject({ title: "Renamed draft" });
+      expect((await cmd("vc.RenameSession", { sessionId, title: "Renamed session" })).ok).toBe(true);
+      expect(await query("vc.Sessions", { sessionId })).toMatchObject([{ title: "Renamed session" }]);
     });
   });
 }

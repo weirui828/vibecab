@@ -18,7 +18,14 @@
     "result": {
       "type": "array",
       "items": {
-        "$ref": "https://vibecab.local/schemas/session.json"
+        "allOf": [
+          { "$ref": "https://vibecab.local/schemas/session.json" },
+          {
+            "type": "object",
+            "properties": { "artifactIds": { "type": "array", "items": { "type": "string", "minLength": 1 } } },
+            "required": ["artifactIds"]
+          }
+        ]
       }
     }
   },

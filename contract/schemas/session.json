@@ -9,7 +9,8 @@
     "primaryProjectId": { "type": "string", "minLength": 1 },
     "state": { "enum": ["active", "paused", "ended"] },
     "replyTrigger": { "enum": ["realtime", "batch", "manual"] },
-    "createdAt": { "type": "string", "format": "date-time" }
+    "createdAt": { "type": "string", "format": "date-time" },
+    "artifactIds": { "type": "array", "items": { "type": "string", "minLength": 1 } }
   },
   "required": ["sessionId", "title", "state", "replyTrigger", "createdAt"],
   "additionalProperties": false

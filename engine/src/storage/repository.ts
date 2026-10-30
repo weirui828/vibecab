@@ -28,6 +28,7 @@ export interface Repository {
   transaction<T>(action: () => T): T;
   artifact(id: string): Artifact;
   createArtifact(artifact: Artifact): void;
+  renameArtifact(id: string, title: string, updatedAt: string): Artifact;
   version(id: string, version?: number): Version;
   versions(id: string): Version[];
   elements(id: string, version?: number): Element[];

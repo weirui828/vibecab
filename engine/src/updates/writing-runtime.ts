@@ -28,7 +28,7 @@ export abstract class UpdateWritingRuntime extends UpdatePlanningRuntime {
             this.available().saveFeedback(
               "update",
               update.updateId,
-              this.contract.read<Json>("json", { ...current, status: "writing" }),
+              this.contract.read<Json>("json", { ...current, status: "writing", updatedAt: this.deps.clock.now() }),
             );
         }),
       );
@@ -134,7 +134,7 @@ export abstract class UpdateWritingRuntime extends UpdatePlanningRuntime {
           this.available().saveFeedback(
             "update",
             update.updateId,
-            this.contract.read<Json>("json", { ...current, status: "checking" }),
+            this.contract.read<Json>("json", { ...current, status: "checking", updatedAt: this.deps.clock.now() }),
           );
       }),
     );
@@ -286,6 +286,7 @@ export abstract class UpdateWritingRuntime extends UpdatePlanningRuntime {
           this.contract.read<Json>("json", {
             ...current,
             status,
+            updatedAt: this.deps.clock.now(),
             ...(resultVersion ? { resultVersion } : {}),
             itemResults: normalized,
           }),

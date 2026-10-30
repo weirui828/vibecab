@@ -5,7 +5,9 @@ export interface VcSessionsOperation {
     sessionId?: string;
     includeTrashed?: boolean;
   };
-  result: Session[];
+  result: (Session & {
+    artifactIds: string[];
+  })[];
 }
 export interface Session {
   sessionId: string;
@@ -14,4 +16,5 @@ export interface Session {
   state: "active" | "paused" | "ended";
   replyTrigger: "realtime" | "batch" | "manual";
   createdAt: string;
+  artifactIds?: string[];
 }

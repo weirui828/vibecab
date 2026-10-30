@@ -11,6 +11,7 @@ import type {
 } from "../../../contract/src/index.js";
 import type { Artifact, Repository, SearchHit, StoredAccessToken } from "./repository.js";
 import { canonical, revisionHash } from "../content/hash.js";
+import { appendFeedbackStateEvents } from "./app-events.js";
 function field(row: unknown, key: string): unknown {
   return typeof row === "object" && row !== null ? Reflect.get(row, key) : undefined;
 }
@@ -86,6 +87,21 @@ export class SqliteStore implements Repository {
     this.contract.read("operations/vc.Artifact", artifact, "#/properties/result");
     this.db.prepare("INSERT INTO vc_artifacts VALUES(?,?)").run(artifact.artifactId, canonical(artifact));
   }
+  renameArtifact(id: string, title: string, updatedAt: string): Artifact {
+    this.writing();
+    const artifact = this.artifact(id),
+      updated = this.contract.read<Artifact>(
+        "operations/vc.Artifact",
+        {
+          ...artifact,
+          title,
+          updatedAt,
+        },
+        "#/properties/result",
+      );
+    this.db.prepare("UPDATE vc_artifacts SET json=? WHERE artifact_id=?").run(canonical(updated), id);
+    return updated;
+  }
   version(id: string, number = this.artifact(id).headVersion): Version {
     const row = this.db.prepare("SELECT json FROM vc_versions WHERE artifact_id=? AND version=?").get(id, number);
     if (!row) fail("not_found", "Version not found");
@@ -154,7 +170,7 @@ export class SqliteStore implements Repository {
         .run(version.artifactId, version.version, id, hash);
     this.db
       .prepare("UPDATE vc_artifacts SET json=? WHERE artifact_id=?")
-      .run(canonical({ ...artifact, headVersion: version.version }), version.artifactId);
+      .run(canonical({ ...artifact, headVersion: version.version, updatedAt: version.createdAt }), version.artifactId);
     this.db.prepare("DELETE FROM vc_search WHERE kind='element' AND artifact_id=?").run(version.artifactId);
     const sessions = this.db
       .prepare("SELECT json FROM vc_feedback WHERE kind='attachment'")
@@ -254,11 +270,14 @@ export class SqliteStore implements Repository {
   saveFeedback(kind: string, id: string, value: Json) {
     this.writing();
     this.contract.read<Json>("json", value);
+    const previous = this.db.prepare("SELECT json FROM vc_feedback WHERE kind=? AND id=?").get(kind, id),
+      before = previous ? this.contract.read<Json>("json", json(previous)) : undefined;
     this.db
       .prepare(
         "INSERT INTO vc_feedback(kind,id,json) VALUES(?,?,?) ON CONFLICT(kind,id) DO UPDATE SET json=excluded.json",
       )
       .run(kind, id, canonical(value));
+    appendFeedbackStateEvents(this, this.contract, kind, id, before, value);
     if (kind === "comment") {
       this.db.prepare("DELETE FROM vc_search WHERE kind='comment' AND record_id=?").run(id);
       const comment = this.contract.read<{

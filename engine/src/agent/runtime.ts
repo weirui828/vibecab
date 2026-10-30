@@ -132,6 +132,7 @@ export abstract class AgentRuntime extends AgentExternalRuntime {
             this.contract.read<Json>("json", {
               ...turn,
               status: "failed",
+              updatedAt: this.deps.clock.now(),
               errorCode: "unsupported",
               completedAt: this.deps.clock.now(),
             }),
@@ -161,6 +162,7 @@ export abstract class AgentRuntime extends AgentExternalRuntime {
               this.contract.read<Json>("json", {
                 ...current,
                 status: "running",
+                updatedAt: this.deps.clock.now(),
               }),
             );
             for (const c of selected)
@@ -420,6 +422,7 @@ export abstract class AgentRuntime extends AgentExternalRuntime {
             this.contract.read<Json>("json", {
               ...current,
               status,
+              updatedAt: this.deps.clock.now(),
               completedAt: this.deps.clock.now(),
               ...(error ? { errorCode: error.code } : {}),
             }),
@@ -438,6 +441,7 @@ export abstract class AgentRuntime extends AgentExternalRuntime {
             this.contract.read<Json>("json", {
               ...current,
               status: "uncertain",
+              updatedAt: this.deps.clock.now(),
               completedAt: this.deps.clock.now(),
               errorCode: normalized.code,
             }),

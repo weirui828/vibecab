@@ -254,8 +254,9 @@ export function httpClient(base: string, token: string) {
         "#/properties/result",
       );
     },
-    subscribe(sub: Subscription, input?: CallMetadata): AsyncIterable<EventEnvelope> {
+    subscribe(sub: Subscription, input?: CallMetadata, signal?: AbortSignal): AsyncIterable<EventEnvelope> {
       const abort = new AbortController();
+      signal?.addEventListener("abort", () => abort.abort(), { once: true });
       let iterator: AsyncIterator<EventEnvelope> | undefined;
       async function* events() {
         // Send Last-Event-ID on reconnect; the server must give it precedence over the query cursor.

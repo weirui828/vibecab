@@ -12,6 +12,7 @@
     "@vibecab/contract": "workspace:*",
     "@vibecab/engine": "workspace:*",
     "@vibecab/http": "workspace:*",
-    "@vibecab/in-process": "workspace:*"
+    "@vibecab/in-process": "workspace:*",
+    "@vibecab/host": "workspace:*"
   }
 }

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/events/vc.HoldChanged.json",
+  "title": "HoldChanged",
+  "type": "object",
+  "properties": {
+    "artifactId": { "type": "string" },
+    "elementId": { "type": "string" },
+    "held": { "type": "boolean" }
+  },
+  "required": ["artifactId", "elementId", "held"],
+  "additionalProperties": false
+}

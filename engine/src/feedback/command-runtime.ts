@@ -78,6 +78,17 @@ export abstract class FeedbackCommandRuntime extends FeedbackCoreRuntime {
         this.event("vc.SessionStarted", { kind: "session", id: sessionId }, { sessionId });
         return { sessionId };
       }
+      case "vc.RenameSession": {
+        const p = this.contract.read<{ sessionId: string; title: string }>(
+            "operations/" + name,
+            raw,
+            "#/properties/payload",
+          ),
+          session = this.session(p.sessionId);
+        this.save<Session>("session", "session", p.sessionId, { ...session, title: p.title });
+        this.event("vc.SessionRenamed", { kind: "session", id: p.sessionId }, p);
+        return p;
+      }
       case "vc.AttachArtifact": {
         const p = this.contract.read<VcAttachArtifactOperation["payload"]>(
           "operations/vc.AttachArtifact",

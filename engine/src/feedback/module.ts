@@ -9,6 +9,7 @@ export function feedbackModule(host: EngineModuleHost) {
       "vc.CaptureIdea",
       "vc.CreateProject",
       "vc.StartSession",
+      "vc.RenameSession",
       "vc.AttachArtifact",
       "vc.PauseSession",
       "vc.ResumeSession",

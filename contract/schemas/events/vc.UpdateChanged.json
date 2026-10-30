@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/events/vc.UpdateChanged.json",
+  "title": "UpdateChanged",
+  "type": "object",
+  "properties": {
+    "updateId": { "type": "string" },
+    "artifactId": { "type": "string" },
+    "status": {
+      "enum": [
+        "queued",
+        "planning",
+        "awaiting_plan_review",
+        "writing",
+        "checking",
+        "committed",
+        "partially_committed",
+        "failed",
+        "cancelled"
+      ]
+    },
+    "resultVersion": { "type": "integer", "minimum": 1 }
+  },
+  "required": ["updateId", "artifactId", "status"],
+  "additionalProperties": false
+}

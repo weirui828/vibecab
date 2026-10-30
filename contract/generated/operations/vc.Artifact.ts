@@ -11,5 +11,6 @@ export interface VcArtifactOperation {
     mediaKind: "doc";
     headVersion: number;
     createdAt: string;
+    updatedAt: string;
   };
 }

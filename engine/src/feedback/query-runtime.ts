@@ -36,7 +36,12 @@ export class Feedback extends FeedbackAgreementRuntime {
           raw,
           "#/properties/payload",
         );
-        const values = this.list<Session>("session", "session");
+        const values = this.list<Session>("session", "session").map((session) => ({
+          ...session,
+          artifactIds: this.list<SessionArtifact>("attachment", "session-artifact")
+            .filter((link) => link.sessionId === session.sessionId)
+            .map((link) => link.artifactId),
+        }));
         return p.sessionId ? values.filter((s) => s.sessionId === p.sessionId) : values;
       }
       case "vc.Threads":

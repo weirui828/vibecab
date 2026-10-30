@@ -35,7 +35,12 @@ export function agentModule(host: EngineModuleHost) {
       context.repository.saveFeedback(
         "agent-turn",
         turnId,
-        context.contract.read<Json>("json", { ...turn, status: "uncertain", completedAt: context.clock.now() }),
+        context.contract.read<Json>("json", {
+          ...turn,
+          status: "uncertain",
+          updatedAt: context.clock.now(),
+          completedAt: context.clock.now(),
+        }),
       );
       context.repository.jobState(job.id, "uncertain");
     }

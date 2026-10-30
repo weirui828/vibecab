@@ -7,13 +7,8 @@
     "payload": {
       "type": "object",
       "properties": {
-        "artifactId": {
-          "type": "string",
-          "minLength": 1
-        },
-        "includeTrashed": {
-          "type": "boolean"
-        }
+        "artifactId": { "type": "string", "minLength": 1 },
+        "includeTrashed": { "type": "boolean" }
       },
       "required": ["artifactId"],
       "additionalProperties": false
@@ -38,9 +33,13 @@
         "createdAt": {
           "type": "string",
           "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
         }
       },
-      "required": ["artifactId", "title", "mediaKind", "headVersion", "createdAt"],
+      "required": ["artifactId", "title", "mediaKind", "headVersion", "createdAt", "updatedAt"],
       "additionalProperties": false
     }
   },

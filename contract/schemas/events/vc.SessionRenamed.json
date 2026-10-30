@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/events/vc.SessionRenamed.json",
+  "title": "SessionRenamed",
+  "type": "object",
+  "properties": { "sessionId": { "type": "string", "minLength": 1 }, "title": { "type": "string", "minLength": 1 } },
+  "required": ["sessionId", "title"],
+  "additionalProperties": false
+}

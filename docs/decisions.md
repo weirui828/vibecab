@@ -68,6 +68,10 @@ Choices not dictated by the design, newest last. Format: date — decision — r
 
 ## macOS app (Wei, 2026-10-29)
 
+- 2026-10-30 — Use Electron 45.1.0, the current stable release used for A1, and `@electron/fuses` 2.1.3 with RunAsNode, Node options, and Node inspector fuses disabled. — The app keeps engine work in a separately launched Node 26 process and closes Electron's Node execution paths. — Task A1 / Codex
+- 2026-10-30 — Move workspace ownership to `@vibecab/host`; app, CLI and MCP use one process, and MCP stdio is a credential-forwarding relay. — Avoids workspace-lock contention and gives the desktop app a stable local engine endpoint. — Task A0 / Codex
+- 2026-10-30 — Artifact `updatedAt` follows the latest version commit or metadata rename; session attachment ids are returned in attachment order. — Lets app lists sort by recent activity and refresh session relationships without polling or extra queries. — Task A0 / Codex
+
 - 2026-10-29 — Desktop app shell: Electron, with the engine as a separate Node 26 process shared with the CLI and MCP relay through `@vibecab/host`; the app talks to it over the HTTP adapter and SSE via a main-process bridge. — One TypeScript stack; Electron's own Node never loads the engine's native modules. — Wei
 - 2026-10-29 — Closing the window keeps the engine running in the menu bar; Quit stops it after draining. — Agent replies and Updates keep working while the window is closed. — Wei
 - 2026-10-29 — Look: Tundra theme from `@wei/design-system` (light and dark), vendored as a packed tarball. — Wei's own design system; the private repo has no published build. — Wei

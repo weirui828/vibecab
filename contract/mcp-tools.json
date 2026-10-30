@@ -39,6 +39,7 @@
     "toolName": "artifact",
     "description": "Read artifact metadata."
   },
+  "vc.Artifacts": { "toolName": "list_artifacts", "description": "List drafts and their sessions." },
   "vc.AskAgent": {
     "toolName": "ask_vibecab_agent",
     "description": "Ask the VibeCab agent to respond to session feedback."
@@ -192,6 +193,8 @@
     "toolName": "resolve_conflict",
     "description": "Resolve a disagreement between proposed changes."
   },
+  "vc.RenameArtifact": { "toolName": "rename_artifact", "description": "Rename a draft." },
+  "vc.RenameSession": { "toolName": "rename_session", "description": "Rename a session." },
   "vc.Restore": {
     "toolName": "restore",
     "description": "Perform restore."

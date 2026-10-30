@@ -85,7 +85,7 @@ it("smokes tmr submit, status, report, cancel, and resume through the CLI client
     await mkdir(join(workspace, ".vibecab"), { recursive: true });
     await writeFile(
       join(workspace, ".vibecab", "server.json"),
-      JSON.stringify({ pid: process.pid, cliUrl: http.url, httpUrl: http.url }),
+      JSON.stringify({ pid: process.pid, cliUrl: http.url, httpUrl: http.url, mcpUrl: http.url, startedAt: new Date().toISOString(), contractVersion: "1.0" }),
     );
     await writeFile(input, "A bounded review input.");
     const submitExit = await main(
@@ -150,10 +150,22 @@ it("smokes tmr submit, status, report, cancel, and resume through the CLI client
     release();
     await http.close();
     http = undefined;
-    await rm(join(workspace, ".vibecab", "server.json"), { force: true });
+    const resumedEngine = createEngine({ modelProviders: { "openai-compatible": provider } });
+    await resumedEngine.start(workspace);
+    const resumedHttp = await startHttp(resumedEngine, { transport: "cli" });
+    http = resumedHttp;
+    await writeFile(join(workspace, ".vibecab", "server.json"), JSON.stringify({
+      pid: process.pid,
+      startedAt: new Date().toISOString(),
+      contractVersion: "1.0",
+      cliUrl: resumedHttp.url,
+      httpUrl: resumedHttp.url,
+      mcpUrl: resumedHttp.url,
+    }));
     await new Promise((resolve) => setTimeout(resolve, 30));
     expect(await main(["tmr", "resume", liveRunId, "--workspace", workspace], io)).toBe(0);
     expect(errors).toEqual([]);
+    await resumedEngine.stop();
   } finally {
     release();
     await http?.close();

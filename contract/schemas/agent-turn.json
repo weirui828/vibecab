@@ -38,6 +38,7 @@
       "additionalProperties": false
     },
     "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
     "completedAt": { "type": "string", "format": "date-time" },
     "errorCode": { "type": "string" }
   },

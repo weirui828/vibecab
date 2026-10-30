@@ -23,6 +23,7 @@ export interface AgentTurn {
     quality: "reported" | "estimated" | "unknown";
   };
   createdAt: string;
+  updatedAt?: string;
   completedAt?: string;
   errorCode?: string;
 }

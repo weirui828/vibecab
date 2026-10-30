@@ -9,6 +9,9 @@ await cp("engine/src/agent/prompts", "dist/engine/src/agent/prompts", {
 for (const name of [
   "contract",
   "engine",
+  "host",
+  "apps/macos",
+  "apps/ui",
   "adapters/in-process",
   "adapters/http",
   "adapters/cli",
@@ -23,3 +26,5 @@ for (const name of [
     if (error.code !== "EEXIST") throw error;
   }
 }
+await mkdir("dist/host/bin", { recursive: true });
+await cp("host/bin/vibecab-host.mjs", "dist/host/bin/vibecab-host.mjs");

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/events/vc.AgentTurnChanged.json",
+  "title": "AgentTurnChanged",
+  "type": "object",
+  "properties": {
+    "turnId": { "type": "string" },
+    "sessionId": { "type": "string" },
+    "kind": { "const": "reply" },
+    "status": { "enum": ["queued", "running", "completed", "failed", "cancelled", "uncertain"] }
+  },
+  "required": ["turnId", "sessionId", "kind", "status"],
+  "additionalProperties": false
+}

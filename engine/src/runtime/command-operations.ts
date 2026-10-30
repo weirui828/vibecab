@@ -16,6 +16,7 @@ import type {
   ToolServer,
 } from "../../../contract/src/index.js";
 import { importContent } from "../content/import.js";
+import { renameArtifact } from "./artifact-commands.js";
 import { createGrant, revokeGrant } from "../agent/grants.js";
 import type { SettingsDocument } from "../gateway/types.js";
 import { StorageAccessRuntime } from "./storage-access.js";
@@ -271,6 +272,8 @@ export abstract class CommandOperations extends StorageAccessRuntime {
         );
         return content.create(p.title, ctx.principal);
       }
+      case "vc.RenameArtifact":
+        return renameArtifact(store, this.contract, () => this.deps.clock.now(), cmd.payload);
       case "vc.ImportContent": {
         const p = this.contract.read<VcImportContentOperation["payload"]>(
           "operations/" + cmd.type,
@@ -328,6 +331,7 @@ export abstract class CommandOperations extends StorageAccessRuntime {
       }
       case "vc.CaptureIdea":
       case "vc.CreateProject":
+      case "vc.RenameSession":
       case "vc.AttachArtifact":
       case "vc.ResumeSession":
       case "vc.EndSession":

@@ -12,7 +12,8 @@ export function contentModule(host: EngineModuleHost) {
       "vc.HoldElement",
       "vc.SaveElement",
       "vc.ReleaseHold",
+      "vc.RenameArtifact",
     ],
-    ["vc.Artifact", "vc.Outline", "vc.Elements", "vc.Versions", "vc.Diff", "vc.ResolveAnchors"],
+    ["vc.Artifact", "vc.Artifacts", "vc.Outline", "vc.Elements", "vc.Versions", "vc.Diff", "vc.ResolveAnchors"],
   );
 }
