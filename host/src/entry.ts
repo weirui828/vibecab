@@ -1,16 +1,16 @@
-import { Entry } from "@napi-rs/keyring";
 import { randomUUID } from "node:crypto";
 import { chmod, mkdir, open, lstat, readFile, rename, rm, unlink, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { CONTRACT_VERSION, Contract } from "../../contract/src/index.js";
 import type { Engine } from "../../engine/src/engine.js";
 import { createEngine } from "../../engine/src/engine.js";
+import { createKeyStoreFromEnvironment } from "../../engine/src/gateway/keys.js";
+import type { KeyStore } from "../../engine/src/gateway/types.js";
 import { ScriptedProvider } from "../../engine/src/gateway/fake.js";
 import type { ModelEvent } from "../../engine/src/gateway/types.js";
 import { startHttp } from "../../adapters/http/src/index.js";
 import { startMcpHttp } from "../../adapters/mcp-server/src/index.js";
 
-const service = "VibeCab";
 export interface ServerRecord {
   pid: number;
   startedAt: string;
@@ -31,10 +31,9 @@ export function createServerRecord(
   return { pid, startedAt, contractVersion, httpUrl, cliUrl, mcpUrl };
 }
 
-function tokenMap(account: string): Record<string, string> {
+async function tokenMap(keyStore: KeyStore, account: string): Promise<Record<string, string>> {
   try {
-    const raw = new Entry(service, account).getPassword();
-    if (!raw) return {};
+    const raw = await keyStore.get(account);
     const value: unknown = JSON.parse(raw);
     if (typeof value !== "object" || value === null || Array.isArray(value)) return {};
     return Object.fromEntries(
@@ -45,9 +44,14 @@ function tokenMap(account: string): Record<string, string> {
   }
 }
 
-export async function ensureToken(engine: Engine, workspace: string, account: "app" | "cli"): Promise<void> {
-  if (account === "app") return ensureAppToken(engine, workspace);
-  const tokens = tokenMap(account),
+export async function ensureToken(
+  engine: Engine,
+  workspace: string,
+  account: "app" | "cli",
+  keyStore: KeyStore = createKeyStoreFromEnvironment(),
+): Promise<void> {
+  if (account === "app") return ensureAppToken(engine, workspace, keyStore);
+  const tokens = await tokenMap(keyStore, account),
     token = tokens[workspace],
     transport = "cli";
   if (token) {
@@ -80,14 +84,14 @@ export async function ensureToken(engine: Engine, workspace: string, account: "a
   if (!created.ok) throw Error(created.error.message);
   const tokenValue = tokenSecret(created.result);
   try {
-    new Entry(service, account).setPassword(JSON.stringify({ ...tokens, [workspace]: tokenValue }));
+    keyStore.set(account, JSON.stringify({ ...tokens, [workspace]: tokenValue }));
   } catch {
-    console.warn("CLI access token could not be saved to the OS keychain.");
+    console.warn("CLI access token could not be saved.");
   }
 }
 
-async function ensureAppToken(engine: Engine, workspace: string): Promise<void> {
-  const legacyTokens = tokenMap("app"),
+async function ensureAppToken(engine: Engine, workspace: string, keyStore: KeyStore): Promise<void> {
+  const legacyTokens = await tokenMap(keyStore, "app"),
     legacyToken = legacyTokens[workspace],
     appDir = join(workspace, ".vibecab"),
     tokenPath = join(appDir, "app-token");
@@ -96,18 +100,18 @@ async function ensureAppToken(engine: Engine, workspace: string): Promise<void> 
 
   const storedToken = await readAppToken(tokenPath);
   if (storedToken && (await verifies(engine, storedToken, "http"))) {
-    await removeLegacyAppToken(workspace, legacyTokens);
+    await removeLegacyAppToken(workspace, legacyTokens, keyStore);
     return;
   }
   if (legacyToken && (await verifies(engine, legacyToken, "http"))) {
     await writeAppToken(tokenPath, appDir, legacyToken);
-    await removeLegacyAppToken(workspace, legacyTokens);
+    await removeLegacyAppToken(workspace, legacyTokens, keyStore);
     return;
   }
 
   const token = await createToken(engine, "http", "VibeCab app");
   await writeAppToken(tokenPath, appDir, token);
-  await removeLegacyAppToken(workspace, legacyTokens);
+  await removeLegacyAppToken(workspace, legacyTokens, keyStore);
 }
 
 async function readAppToken(path: string): Promise<string | undefined> {
@@ -153,13 +157,16 @@ async function writeAppToken(path: string, directory: string, token: string): Pr
   }
 }
 
-async function removeLegacyAppToken(workspace: string, tokens: Record<string, string>): Promise<void> {
+async function removeLegacyAppToken(
+  workspace: string,
+  tokens: Record<string, string>,
+  keyStore: KeyStore,
+): Promise<void> {
   if (!Object.hasOwn(tokens, workspace)) return;
   const remaining = { ...tokens };
   delete remaining[workspace];
-  const entry = new Entry(service, "app");
-  if (Object.keys(remaining).length === 0) entry.deletePassword();
-  else entry.setPassword(JSON.stringify(remaining));
+  if (Object.keys(remaining).length === 0) await keyStore.delete("app");
+  else keyStore.set("app", JSON.stringify(remaining));
 }
 
 async function verifies(engine: Engine, token: string, transport: "http"): Promise<boolean> {
@@ -198,7 +205,11 @@ function isMissing(error: unknown): boolean {
   return typeof error === "object" && error !== null && "code" in error && error.code === "ENOENT";
 }
 
-export async function serve(workspaceDir: string, fakeProviderPath?: string): Promise<void> {
+export async function serve(
+  workspaceDir: string,
+  fakeProviderPath?: string,
+  keyStore: KeyStore = createKeyStoreFromEnvironment(),
+): Promise<void> {
   if (fakeProviderPath && process.env.VIBECAB_DEV !== "1") throw Error("--fake-provider requires VIBECAB_DEV=1");
   const providers: Record<string, ScriptedProvider> = {};
   if (fakeProviderPath) {
@@ -212,15 +223,15 @@ export async function serve(workspaceDir: string, fakeProviderPath?: string): Pr
     providers["vibecab-fake"] = provider;
   }
   const workspace = resolve(workspaceDir),
-    engine = createEngine(fakeProviderPath ? { modelProviders: providers } : {});
+    engine = createEngine({ ...(fakeProviderPath ? { modelProviders: providers } : {}), keyStore });
   await engine.start(workspace);
   let http: Awaited<ReturnType<typeof startHttp>> | undefined,
     cli: Awaited<ReturnType<typeof startHttp>> | undefined,
     mcp: Awaited<ReturnType<typeof startMcpHttp>> | undefined;
   const serverFile = join(workspace, ".vibecab", "server.json");
   try {
-    await ensureToken(engine, workspace, "app");
-    await ensureToken(engine, workspace, "cli");
+    await ensureToken(engine, workspace, "app", keyStore);
+    await ensureToken(engine, workspace, "cli", keyStore);
     http = await startHttp(engine, { port: 0, transport: "http" });
     cli = await startHttp(engine, { port: 0, transport: "cli" });
     mcp = await startMcpHttp(engine, { port: 0 });

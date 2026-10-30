@@ -5,32 +5,14 @@ import type { AccessToken, SysCreateAccessTokenOperation } from "../../contract/
 import { CONTRACT_VERSION, Contract } from "../../contract/src/index.js";
 import { inProcess } from "../../adapters/in-process/src/index.js";
 import { fixture } from "../../engine/test/helpers.js";
+import { MemoryKeyStore } from "../../engine/src/gateway/keys.js";
 import type { Engine } from "../../engine/src/engine.js";
+import type { KeyStore } from "../../engine/src/gateway/types.js";
 import { createServerRecord, ensureToken, serve } from "../src/entry.js";
 
-const keychain = vi.hoisted(() => ({ values: new Map<string, string>(), failWrites: false }));
-vi.mock("@napi-rs/keyring", () => ({
-  Entry: class {
-    private readonly key: string;
-    constructor(service: string, account: string) {
-      this.key = service + ":" + account;
-    }
-    getPassword() {
-      return keychain.values.get(this.key) ?? null;
-    }
-    setPassword(value: string) {
-      if (keychain.failWrites) throw new Error("simulated keychain authorization failure");
-      keychain.values.set(this.key, value);
-    }
-    deletePassword() {
-      keychain.values.delete(this.key);
-    }
-  },
-}));
-
-it("creates a private app-token file, reuses it after restart, and migrates the keychain workspace entry", async () => {
-  keychain.values.clear();
+it("creates a private app-token file, reuses it after restart, and migrates the legacy workspace token entry", async () => {
   const f = await fixture(),
+    keyStore = new MemoryKeyStore(),
     log = vi.spyOn(console, "log").mockImplementation(() => undefined),
     warn = vi.spyOn(console, "warn").mockImplementation(() => undefined),
     error = vi.spyOn(console, "error").mockImplementation(() => undefined);
@@ -46,8 +28,8 @@ it("creates a private app-token file, reuses it after restart, and migrates the 
       created.result,
       "#/properties/result",
     ).token;
-    keychain.values.set("VibeCab:app", JSON.stringify({ [f.dir]: legacyToken, "/other/workspace": "other-token" }));
-    await ensureToken(f.rawEngine as Engine, f.dir, "app");
+    keyStore.set("app", JSON.stringify({ [f.dir]: legacyToken, "/other/workspace": "other-token" }));
+    await ensureToken(f.rawEngine as Engine, f.dir, "app", keyStore);
     const tokenPath = join(f.dir, ".vibecab", "app-token"),
       first = await readFile(tokenPath, "utf8"),
       directoryMode = (await stat(join(f.dir, ".vibecab"))).mode & 0o777,
@@ -55,14 +37,14 @@ it("creates a private app-token file, reuses it after restart, and migrates the 
     expect(first).toBe(legacyToken);
     expect(fileMode).toBe(0o600);
     expect(directoryMode).toBe(0o700);
-    expect(JSON.parse(keychain.values.get("VibeCab:app") ?? "{}")).toEqual({
+    expect(JSON.parse(await keyStore.get("app"))).toEqual({
       "/other/workspace": "other-token",
     });
     expect((await readdir(join(f.dir, ".vibecab"))).sort()).toEqual(["app-token"]);
 
     await f.rawEngine.stop();
     await f.rawEngine.start(f.dir);
-    await ensureToken(f.rawEngine as Engine, f.dir, "app");
+    await ensureToken(f.rawEngine as Engine, f.dir, "app", keyStore);
     expect(await readFile(tokenPath, "utf8")).toBe(first);
 
     const tokens = await inProcess(f.rawEngine).query({ name: "sys.AccessTokens", args: {} }),
@@ -75,7 +57,7 @@ it("creates a private app-token file, reuses it after restart, and migrates the 
       payload: { tokenId: tokenRecord.tokenId },
     });
     expect(revoked.ok).toBe(true);
-    await ensureToken(f.rawEngine as Engine, f.dir, "app");
+    await ensureToken(f.rawEngine as Engine, f.dir, "app", keyStore);
     const replacement = await readFile(tokenPath, "utf8");
     expect(replacement).not.toBe(first);
     const capability = await f.rawEngine.query(
@@ -105,12 +87,10 @@ it("creates a private app-token file, reuses it after restart, and migrates the 
     warn.mockRestore();
     error.mockRestore();
     await f.close();
-    keychain.values.clear();
   }
 });
 
 it("secures an overly readable token file and logs only a generic warning", async () => {
-  keychain.values.clear();
   const f = await fixture();
   const warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
   try {
@@ -126,23 +106,27 @@ it("secures an overly readable token file and logs only a generic warning", asyn
   } finally {
     warning.mockRestore();
     await f.close();
-    keychain.values.clear();
   }
 });
 
 it("keeps host startup available when the CLI token cannot be saved to the keychain", async () => {
-  keychain.values.clear();
-  keychain.failWrites = true;
   const f = await fixture(),
-    warning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    warning = vi.spyOn(console, "warn").mockImplementation(() => undefined),
+    keyStore: KeyStore = {
+      get: async () => {
+        throw new Error("missing");
+      },
+      set: () => {
+        throw new Error("simulated storage failure");
+      },
+      delete: async () => undefined,
+    };
   try {
-    await expect(ensureToken(f.rawEngine as Engine, f.dir, "cli")).resolves.toBeUndefined();
-    expect(warning).toHaveBeenCalledWith("CLI access token could not be saved to the OS keychain.");
+    await expect(ensureToken(f.rawEngine as Engine, f.dir, "cli", keyStore)).resolves.toBeUndefined();
+    expect(warning).toHaveBeenCalledWith("CLI access token could not be saved.");
   } finally {
     warning.mockRestore();
-    keychain.failWrites = false;
     await f.close();
-    keychain.values.clear();
   }
 });
 

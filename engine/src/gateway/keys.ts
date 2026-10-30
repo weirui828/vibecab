@@ -43,3 +43,11 @@ export class MemoryKeyStore implements KeyStore {
     if (!this.secrets.delete(ref)) fail("not_found", "Provider key reference was not found");
   }
 }
+
+export function createKeyStoreFromEnvironment(
+  environment: { VIBECAB_DEV?: string; VIBECAB_KEYSTORE?: string } = process.env,
+): KeyStore {
+  return environment.VIBECAB_DEV === "1" && environment.VIBECAB_KEYSTORE === "memory"
+    ? new MemoryKeyStore()
+    : new NativeKeyStore();
+}

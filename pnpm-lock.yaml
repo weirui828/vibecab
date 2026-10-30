@@ -413,9 +413,6 @@ importers:
       "@modelcontextprotocol/server":
         specifier: ^2.4.0
         version: 2.4.0
-      "@napi-rs/keyring":
-        specifier: ^2.1.2
-        version: 2.1.2
       "@vibecab/engine":
         specifier: workspace:*
         version: link:../engine

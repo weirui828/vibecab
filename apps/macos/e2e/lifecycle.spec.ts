@@ -29,6 +29,7 @@ test("first run creates a draft, keeps secrets out of the renderer and stops the
       env: {
         ...process.env,
         VIBECAB_DEV: "1",
+        VIBECAB_KEYSTORE: "memory",
         VIBECAB_WORKSPACE_DIR: workspace,
         VIBECAB_NODE: process.execPath,
         VIBECAB_FAKE_PROVIDER: script,
@@ -64,7 +65,8 @@ test("reuses a host started outside the app and recovers after it is killed", as
   const workspace = await mkdtemp(join(tmpdir(), "vibecab-app-host-e2e-"));
   let app: Awaited<ReturnType<typeof electron.launch>> | undefined;
   const previousDev = process.env.VIBECAB_DEV,
-    previousFakeProvider = process.env.VIBECAB_FAKE_PROVIDER;
+    previousFakeProvider = process.env.VIBECAB_FAKE_PROVIDER,
+    previousKeyStore = process.env.VIBECAB_KEYSTORE;
   try {
     const script = join(workspace, "fake-provider.json");
     await writeFile(
@@ -79,6 +81,7 @@ test("reuses a host started outside the app and recovers after it is killed", as
       }),
     );
     process.env.VIBECAB_DEV = "1";
+    process.env.VIBECAB_KEYSTORE = "memory";
     process.env.VIBECAB_FAKE_PROVIDER = script;
     const existing = await cliMain(["start", "--workspace", workspace], {
       writeOut: () => undefined,
@@ -93,7 +96,13 @@ test("reuses a host started outside the app and recovers after it is killed", as
     if (!host.running) throw Error("CLI did not start the host");
     app = await electron.launch({
       args: [appPath],
-      env: { ...process.env, VIBECAB_DEV: "1", VIBECAB_WORKSPACE_DIR: workspace, VIBECAB_NODE: process.execPath },
+      env: {
+        ...process.env,
+        VIBECAB_DEV: "1",
+        VIBECAB_KEYSTORE: "memory",
+        VIBECAB_WORKSPACE_DIR: workspace,
+        VIBECAB_NODE: process.execPath,
+      },
     });
     const page = await app.firstWindow();
     await expect(page.getByText("Connected")).toBeVisible();
@@ -110,6 +119,8 @@ test("reuses a host started outside the app and recovers after it is killed", as
     else process.env.VIBECAB_DEV = previousDev;
     if (previousFakeProvider === undefined) delete process.env.VIBECAB_FAKE_PROVIDER;
     else process.env.VIBECAB_FAKE_PROVIDER = previousFakeProvider;
+    if (previousKeyStore === undefined) delete process.env.VIBECAB_KEYSTORE;
+    else process.env.VIBECAB_KEYSTORE = previousKeyStore;
     await rm(workspace, { recursive: true, force: true });
   }
 });

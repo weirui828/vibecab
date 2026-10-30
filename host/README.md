@@ -4,6 +4,8 @@
 
 For end-to-end tests, set `VIBECAB_DEV=1` and run `vibecab-host serve --workspace <dir> --fake-provider <script.json>`. Scripts contain a `defaultSequence` array, with one array of gateway events per model call:
 
+Tests can set `VIBECAB_DEV=1 VIBECAB_KEYSTORE=memory` to keep provider keys and host-managed token maps in process memory. The host only honors the memory selection when the development flag is enabled; otherwise it uses the OS keychain.
+
 ```json
 {
   "defaultSequence": [
