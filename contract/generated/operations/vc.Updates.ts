@@ -14,7 +14,10 @@ export interface VcUpdatesOperation {
   payload: {
     artifactId?: string;
   };
-  result: Update[];
+  result: {
+    updates: Update[];
+    scheduledAt?: string;
+  };
 }
 export interface Update {
   updateId: string;

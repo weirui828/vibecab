@@ -123,6 +123,11 @@ export abstract class AgentTriggerRuntime extends AgentServicesRuntime {
         }
         const now = Date.parse(this.deps.clock.now()),
           prefs = this.settings().sessions[sessionId] ?? {},
+          storedTrigger = store.feedback("session-trigger", sessionId),
+          batch = storedTrigger
+            ? this.contract.read<import("../../../contract/src/index.js").ReplyTrigger>("reply-trigger", storedTrigger)
+                .batch
+            : undefined,
           latest = Math.max(...comments.map((c) => Date.parse(c.createdAt)));
         let effectiveMode: "realtime" | "batch" = mode;
         const recentTurns = store
@@ -148,8 +153,8 @@ export abstract class AgentTriggerRuntime extends AgentServicesRuntime {
           return;
         if (
           effectiveMode === "batch" &&
-          comments.length < (prefs.batchCommentThreshold ?? 5) &&
-          now < latest + (prefs.batchIdleMinutes ?? 10) * 60_000
+          comments.length < (batch?.count ?? prefs.batchCommentThreshold ?? 5) &&
+          now < latest + (batch?.idleMinutes ?? prefs.batchIdleMinutes ?? 10) * 60_000
         )
           return;
         this.queueReplyTurn(sessionId, comments, effectiveMode);

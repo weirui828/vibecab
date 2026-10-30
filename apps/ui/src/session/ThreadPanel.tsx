@@ -1,21 +1,44 @@
 import { useMemo, useState } from "react";
-import type { DeliveryState, VcThreadsOperation } from "../../../../contract/generated/index.js";
+import type {
+  AgentTurn,
+  ContextManifest,
+  DeliveryState,
+  VcThreadsOperation,
+} from "../../../../contract/generated/index.js";
 import { terms } from "../copy/terms.js";
 
 export function ThreadPanel({
   threads,
+  turns,
   delivery,
   currentVersion,
   onRefresh,
   onReply,
+  onAskAgent,
+  onSetThreadTrigger,
 }: {
   threads: VcThreadsOperation["result"];
+  turns: AgentTurn[];
   delivery: Record<string, DeliveryState["state"]>;
   currentVersion: number;
   onRefresh: () => Promise<void>;
   onReply: (commentId: string) => void;
+  onAskAgent: (threadId: string) => void;
+  onSetThreadTrigger: (threadId: string, mode: "realtime" | "batch" | "manual") => void;
 }) {
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState("all"),
+    [instructions, setInstructions] = useState<Record<string, string>>({}),
+    [message, setMessage] = useState(""),
+    [manifest, setManifest] = useState<ContextManifest[]>();
+  const submit = async (type: string, payload: unknown) => {
+    const result = await window.vibecab.command(type, payload);
+    if (!result.ok) {
+      setMessage(result.error.message);
+      return;
+    }
+    setMessage("");
+    await onRefresh();
+  };
   const filtered = useMemo(
     () =>
       threads.filter(
@@ -51,6 +74,29 @@ export function ThreadPanel({
             cards[Math.max(0, Math.min(cards.length - 1, index + (event.key === "ArrowDown" ? 1 : -1)))]?.focus();
           }}
         >
+          <details>
+            <summary>Thread reply setting</summary>
+            <label>
+              Reply trigger
+              <select
+                aria-label={`Reply trigger for thread ${thread.threadId}`}
+                value={thread.replyTrigger?.mode ?? "session"}
+                onChange={(event) => {
+                  const mode = event.target.value;
+                  if (mode === "realtime" || mode === "batch" || mode === "manual")
+                    onSetThreadTrigger(thread.threadId, mode);
+                }}
+              >
+                <option value="session">Use session setting</option>
+                <option value="realtime">Realtime</option>
+                <option value="batch">Batch</option>
+                <option value="manual">Manual</option>
+              </select>
+            </label>
+            <button type="button" onClick={() => onAskAgent(thread.threadId)}>
+              Ask agent about this thread
+            </button>
+          </details>
           <button
             onClick={() =>
               document
@@ -66,57 +112,199 @@ export function ThreadPanel({
           {thread.anchorResolutions.some((resolution) => resolution.state === "revised") ? (
             <p>Text changed since this comment.</p>
           ) : null}
-          {thread.comments.map((comment) => (
-            <div key={comment.commentId}>
-              <p>
-                {comment.author.kind === "human" ? "You" : comment.author.kind === "agent" ? "Agent" : "System"} ·{" "}
-                {comment.channel === "mcp" ? "via MCP" : comment.channel === "cli" ? "via CLI" : ""}
-                {comment.createdAt ? ` · ${new Date(comment.createdAt).toLocaleString()}` : ""}
-              </p>
-              <p>{comment.body}</p>
-              <p>{terms[comment.state]}</p>
-              {comment.anchor?.locator ? <blockquote>{comment.anchor.locator.quote}</blockquote> : null}
-              {comment.author.kind === "human" ? (
+          {thread.comments.map((comment) => {
+            const turnId = comment.author.kind === "agent" ? comment.author.turnId : undefined;
+            return (
+              <div key={comment.commentId} className={comment.author.kind === "system" ? "system-comment" : undefined}>
                 <p>
-                  {delivery[comment.commentId] === "queued" || delivery[comment.commentId] === "saved"
-                    ? "Waiting for agent"
-                    : delivery[comment.commentId] === "delivered"
-                      ? "Agent is replying…"
-                      : delivery[comment.commentId] === "replied"
-                        ? "Replied"
-                        : ""}
+                  {comment.author.kind === "human" ? "You" : comment.author.kind === "agent" ? "Agent" : "System"} ·{" "}
+                  {comment.channel === "mcp" ? "via MCP" : comment.channel === "cli" ? "via CLI" : ""}
+                  {comment.createdAt ? ` · ${new Date(comment.createdAt).toLocaleString()}` : ""}
                 </p>
-              ) : null}
-              {comment.author.kind === "human" ? (
-                <>
+                {comment.author.kind === "agent" && comment.proposal ? <p>Agent proposes:</p> : null}
+                <p>{comment.body}</p>
+                {comment.state === "applied" ? (
                   <button
-                    onClick={() => {
-                      const updated = window.prompt("Edit comment", comment.body);
-                      if (updated?.trim())
-                        void window.vibecab
-                          .command("vc.EditComment", { commentId: comment.commentId, body: updated })
-                          .then(onRefresh);
-                    }}
+                    type="button"
+                    onClick={() =>
+                      document.querySelector('[aria-label="Update diff"]')?.scrollIntoView({ block: "start" })
+                    }
                   >
-                    Edit
+                    Applied in v{comment.appliedInVersion ?? currentVersion}
                   </button>
+                ) : (
+                  <p>
+                    {comment.state === "agreed"
+                      ? "Agreed — waiting for the next Update"
+                      : comment.state === "scheduled"
+                        ? "In an Update"
+                        : terms[comment.state]}
+                  </p>
+                )}
+                {comment.anchor?.locator ? <blockquote>{comment.anchor.locator.quote}</blockquote> : null}
+                {comment.author.kind === "human" && ["open", "discussing"].includes(comment.state) ? (
+                  <>
+                    <label>
+                      How to apply this
+                      <textarea
+                        aria-label="How to apply this"
+                        value={instructions[comment.commentId] ?? ""}
+                        onChange={(event) =>
+                          setInstructions((current) => ({ ...current, [comment.commentId]: event.target.value }))
+                        }
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void submit("vc.Agree", {
+                          commentId: comment.commentId,
+                          kind: "as_written",
+                          ...(instructions[comment.commentId]?.trim()
+                            ? { instruction: instructions[comment.commentId]!.trim() }
+                            : {}),
+                        })
+                      }
+                    >
+                      Agree as written
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const reason = window.prompt("Why decline this comment? (optional)");
+                        void submit("vc.Decline", {
+                          commentId: comment.commentId,
+                          ...(reason?.trim() ? { reason: reason.trim() } : {}),
+                        });
+                      }}
+                    >
+                      Decline
+                    </button>
+                  </>
+                ) : null}
+                {comment.author.kind === "agent" && ["open", "discussing"].includes(comment.state) ? (
+                  comment.proposal && Array.isArray(comment.proposal) ? (
+                    comment.proposal.map((option) => (
+                      <button
+                        type="button"
+                        key={option.label}
+                        onClick={() =>
+                          void submit("vc.Agree", {
+                            commentId: comment.commentId,
+                            kind: "option",
+                            optionLabel: option.label,
+                          })
+                        }
+                      >
+                        Agree with option: {option.label}
+                      </button>
+                    ))
+                  ) : comment.proposal ? (
+                    <button
+                      type="button"
+                      onClick={() => void submit("vc.Agree", { commentId: comment.commentId, kind: "agent_proposal" })}
+                    >
+                      Agree with agent&apos;s proposal
+                    </button>
+                  ) : null
+                ) : null}
+                {turnId ? (
                   <button
-                    onClick={() => {
-                      if (window.confirm("Delete this comment?"))
-                        void window.vibecab
-                          .command("vc.DeleteComment", { commentId: comment.commentId })
-                          .then(onRefresh);
-                    }}
+                    type="button"
+                    onClick={() =>
+                      void window.vibecab
+                        .query<ContextManifest[]>("vc.Manifest", { turnId })
+                        .then(setManifest)
+                        .catch(() => setMessage("Could not load the agent's context manifest."))
+                    }
                   >
-                    Delete
+                    Why did the agent say this?
                   </button>
-                </>
-              ) : null}
-              <button onClick={() => onReply(comment.commentId)}>Reply</button>
-            </div>
-          ))}
+                ) : null}
+                {turnId && turns.find((turn) => turn.turnId === turnId)?.status === "running" ? (
+                  <p role="status">Agent is reading…</p>
+                ) : null}
+                {turnId &&
+                ["failed", "uncertain"].includes(turns.find((turn) => turn.turnId === turnId)?.status ?? "") ? (
+                  <p>
+                    Agent reply needs attention.{" "}
+                    <button type="button" onClick={() => onAskAgent(thread.threadId)}>
+                      Retry
+                    </button>
+                  </p>
+                ) : null}
+                {comment.author.kind === "human" ? (
+                  <p>
+                    {delivery[comment.commentId] === "queued" || delivery[comment.commentId] === "saved"
+                      ? "Waiting for agent"
+                      : delivery[comment.commentId] === "delivered"
+                        ? "Agent is replying…"
+                        : delivery[comment.commentId] === "replied"
+                          ? "Replied"
+                          : ""}
+                  </p>
+                ) : null}
+                {comment.author.kind === "human" ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        const updated = window.prompt("Edit comment", comment.body);
+                        if (updated?.trim())
+                          void window.vibecab
+                            .command("vc.EditComment", { commentId: comment.commentId, body: updated })
+                            .then(onRefresh);
+                      }}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (window.confirm("Delete this comment?"))
+                          void window.vibecab
+                            .command("vc.DeleteComment", { commentId: comment.commentId })
+                            .then(onRefresh);
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </>
+                ) : null}
+                <button type="button" onClick={() => onReply(comment.commentId)}>
+                  Reply
+                </button>
+              </div>
+            );
+          })}
         </article>
       ))}
+      {message ? <p role="alert">{message}</p> : null}
+      {manifest ? (
+        <dialog open aria-label="Agent context manifest">
+          {manifest.map((entry) => (
+            <div key={entry.manifestId}>
+              <h3>Context for agent reply</h3>
+              <ul>
+                {entry.items.map((item, index) => (
+                  <li key={index}>
+                    {item.kind}: {item.reason}
+                  </li>
+                ))}
+              </ul>
+              <h4>Not included</h4>
+              <ul>
+                {entry.dropped.map((item, index) => (
+                  <li key={index}>
+                    {item.kind}: {item.reason}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+          <button type="button" onClick={() => setManifest(undefined)}>
+            Close
+          </button>
+        </dialog>
+      ) : null}
     </aside>
   );
 }

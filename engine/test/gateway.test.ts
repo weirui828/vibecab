@@ -47,6 +47,34 @@ const request = {
   maxOutputTokens: 16,
 };
 
+it("resolves first-item and first-element aliases in scripted outputs", async () => {
+  const provider = new ScriptedProvider();
+  provider.enqueueDefaultSequence([
+    [
+      {
+        type: "text_delta",
+        text: '{"itemId":"$first_item","elementId":"$first_element"}',
+      },
+    ],
+  ]);
+  const events: ModelEvent[] = [];
+  for await (const event of provider.call(
+    model,
+    {
+      ...request,
+      messages: [
+        {
+          role: "user",
+          content: JSON.stringify({ items: [{ itemId: "agreement-1" }], elements: [{ elementId: "element-1" }] }),
+        },
+      ],
+    },
+    { reservationId: "scripted", signal: new AbortController().signal },
+  ))
+    events.push(event);
+  expect(events).toEqual([{ type: "text_delta", text: '{"itemId":"agreement-1","elementId":"element-1"}' }]);
+});
+
 it("gates capabilities before calling the provider and validates structured output", async () => {
   const f = setup(),
     provider = new ScriptedProvider();

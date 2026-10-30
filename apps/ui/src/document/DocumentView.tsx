@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { Element } from "../../../../contract/generated/index.js";
+import type { DiffResult, Element } from "../../../../contract/generated/index.js";
 import { Alert } from "@wei/design-system";
 import type { ReactNode } from "react";
 import { InlineText } from "./inline-markdown.js";
@@ -9,11 +9,15 @@ export function DocumentView({
   version,
   elements,
   onComment,
+  diff,
+  showChanges,
 }: {
   artifactId: string;
   version: number;
   elements: Element[];
   onComment: (element: Element, locator?: { quote: string; prefix: string; suffix: string }) => void;
+  diff?: DiffResult;
+  showChanges?: boolean;
 }) {
   const [visibleCount, setVisibleCount] = useState(400);
   const sorted = useMemo(() => [...elements].sort((a, b) => a.order.localeCompare(b.order)), [elements]);
@@ -21,12 +25,40 @@ export function DocumentView({
   const propsText = (element: Element, key: string) =>
     key in element.props ? String(Reflect.get(element.props, key)) : "";
   const renderElement = (element: Element) => {
+    const changeKind = diff?.added.includes(element.elementId)
+      ? "added"
+      : diff?.moved.includes(element.elementId)
+        ? "moved"
+        : showChanges && diff?.changed.includes(element.elementId)
+          ? "changed"
+          : undefined;
     const common = {
       key: element.elementId,
       "data-element-id": element.elementId,
+      ...(changeKind ? { "data-change": changeKind } : {}),
       onDoubleClick: () => onComment(element),
     };
-    const text = "text" in element ? <InlineText text={element.text} /> : null;
+    const parts = "text" in element ? diff?.textDiffs[element.elementId] : undefined,
+      text =
+        "text" in element && showChanges && parts ? (
+          <>
+            {parts.map((part, index) =>
+              part.added ? (
+                <span key={index} className="diff-added">
+                  + {part.value}
+                </span>
+              ) : part.removed ? (
+                <span key={index} className="diff-removed">
+                  − {part.value}
+                </span>
+              ) : (
+                <span key={index}>{part.value}</span>
+              ),
+            )}
+          </>
+        ) : "text" in element ? (
+          <InlineText text={element.text} />
+        ) : null;
     switch (element.type) {
       case "heading": {
         const level = Math.max(1, Math.min(6, element.props.level));

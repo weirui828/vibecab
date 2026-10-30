@@ -63,6 +63,7 @@ export class ScriptedProvider implements ModelProvider {
       .map((message) => message.content)
       .join("\n")
       .match(/threadId=([^;\s]+)/)?.[1];
+    const placeholders = extractPlaceholders(request);
     for (const event of scenario.events) {
       if (options.signal.aborted) {
         yield {
@@ -73,22 +74,59 @@ export class ScriptedProvider implements ModelProvider {
         };
         return;
       }
-      if (
-        event.type === "tool_call" &&
-        threadId &&
-        typeof event.call.arguments === "object" &&
-        event.call.arguments !== null &&
-        !Array.isArray(event.call.arguments) &&
-        Reflect.get(event.call.arguments, "threadId") === "$first_thread"
-      ) {
+      if (event.type === "tool_call" && threadId && getValue(event.call.arguments, "threadId") === "$first_thread") {
         yield {
           ...event,
           call: {
             ...event.call,
-            arguments: { ...event.call.arguments, threadId },
+            arguments: replacePlaceholders(event.call.arguments, { ...placeholders, $first_thread: threadId }),
           },
         };
-      } else yield event;
+      } else yield replaceEvent(event, placeholders);
     }
   }
+}
+
+function extractPlaceholders(request: ModelRequest): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const message of request.messages) {
+    try {
+      const parsed: unknown = JSON.parse(message.content);
+      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) continue;
+      const items = getValue(parsed, "items"),
+        elements = getValue(parsed, "elements"),
+        item = Array.isArray(items) ? items[0] : undefined,
+        element = Array.isArray(elements) ? elements[0] : undefined;
+      const itemId = getValue(item, "itemId"),
+        elementId = getValue(element, "elementId");
+      if (typeof itemId === "string") result.$first_item = itemId;
+      if (typeof elementId === "string") result.$first_element = elementId;
+    } catch {
+      // Non-JSON context messages do not define script aliases.
+    }
+  }
+  return result;
+}
+
+function getValue(value: unknown, key: string): unknown {
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? Reflect.get(value, key) : undefined;
+}
+
+function replacePlaceholders(value: unknown, placeholders: Record<string, string>): unknown {
+  if (typeof value === "string") return placeholders[value] ?? value;
+  if (Array.isArray(value)) return value.map((item) => replacePlaceholders(item, placeholders));
+  if (typeof value !== "object" || value === null) return value;
+  return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, replacePlaceholders(item, placeholders)]));
+}
+
+function replaceEvent(event: ModelEvent, placeholders: Record<string, string>): ModelEvent {
+  if (event.type === "text_delta") {
+    let text = event.text;
+    for (const [alias, value] of Object.entries(placeholders)) text = text.replaceAll(alias, value);
+    return { ...event, text };
+  }
+  if (event.type === "output") return { ...event, json: replacePlaceholders(event.json, placeholders) };
+  if (event.type === "tool_call")
+    return { ...event, call: { ...event.call, arguments: replacePlaceholders(event.call.arguments, placeholders) } };
+  return event;
 }

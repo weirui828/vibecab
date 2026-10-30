@@ -65,7 +65,7 @@ async function addAgreedInstruction(
   prefix: string,
   content: string,
   elementIndex = 0,
-  verbatim?: { quote: string; prefix?: string; suffix?: string; replacement: string },
+  verbatim?: { quote: string; prefix?: string; suffix?: string; replacement: string; instruction?: string },
   format: "markdown" | "text" = "text",
 ) {
   const imported = await engine.command(ctx, {
@@ -144,7 +144,7 @@ async function addAgreedInstruction(
   const agreement = await engine.command(ctx, {
     commandId: `${prefix}-agree`,
     type: "vc.Agree",
-    payload: { commentId, kind: "as_written" },
+    payload: { commentId, kind: "as_written", ...(verbatim?.instruction ? { instruction: verbatim.instruction } : {}) },
   });
   if (!agreement.ok) throw Error(agreement.error.message);
   const { agreementId } = new Contract().read<{ agreementId: string }>(
@@ -355,6 +355,19 @@ it("applies a unique verbatim agreed suggestion without calling a model and comm
       payload: { commentId, kind: "as_written" },
     });
     expect(agreement.ok).toBe(true);
+    if (!agreement.ok) throw Error(agreement.error.message);
+    const { agreementId } = new Contract().read<{ agreementId: string }>(
+      "operations/vc.Agree",
+      agreement.result,
+      "#/properties/result",
+    );
+    const decisionRows = new Contract().read<import("../../contract/src/index.js").Agreement[]>(
+      "operations/vc.DecisionRecord",
+      await f.engine.query(ctx, { name: "vc.DecisionRecord", args: { artifactId } }),
+      "#/properties/result",
+    );
+    expect(decisionRows.find((item) => item.agreementId === agreementId)?.explicitInstruction).toBe(false);
+    expect(decisionRows.find((item) => item.agreementId === agreementId)?.instruction).toBe("swift");
     const update = await f.engine.command(ctx, {
       commandId: "start-update",
       type: "vc.StartUpdate",
@@ -443,6 +456,70 @@ it("maps plain-text verbatim locators across inline formatting", async () => {
       "#/properties/result",
     );
     expect(elements[0]).toMatchObject({ text: "*Before* changed **after**." });
+  } finally {
+    await f.close();
+  }
+});
+
+it("uses an explicit agreement instruction and skips its verbatim fast path", async () => {
+  const f = await fixture();
+  try {
+    const { artifactId, agreementId, sessionId } = await addAgreedInstruction(
+      f.engine,
+      "explicit-verbatim-instruction",
+      "The quick fox.",
+      0,
+      {
+        quote: "quick",
+        prefix: "The ",
+        suffix: " fox",
+        replacement: "swift",
+        instruction: "Keep the original wording.",
+      },
+    );
+    const record = new Contract().read<unknown>(
+      "operations/vc.DecisionRecord",
+      await f.engine.query(ctx, { name: "vc.DecisionRecord", args: { artifactId } }),
+      "#/properties/result",
+    );
+    expect(JSON.stringify(record)).toContain("Keep the original wording.");
+    const updates = new Contract().read<import("../../contract/src/index.js").Agreement[]>(
+      "operations/vc.DecisionRecord",
+      record,
+      "#/properties/result",
+    );
+    expect(updates.find((agreement) => agreement.agreementId === agreementId)?.instruction).toBe(
+      "Keep the original wording.",
+    );
+    expect(updates.find((agreement) => agreement.agreementId === agreementId)?.explicitInstruction).toBe(true);
+    const comments = new Contract().read<import("../../contract/src/index.js").FeedbackComment[]>(
+      "operations/vc.FeedbackItems",
+      await f.engine.query(ctx, { name: "vc.FeedbackItems", args: { sessionId } }),
+      "#/properties/result",
+    );
+    expect(comments[0]).toMatchObject({
+      body: "Improve this block.",
+      suggestion: { replacement: "swift" },
+    });
+    const started = await f.engine.command(ctx, {
+      commandId: "explicit-verbatim-start",
+      type: "vc.StartUpdate",
+      payload: { artifactId },
+    });
+    if (!started.ok) throw Error(started.error.message);
+    const { updateId } = new Contract().read<{ updateId: string }>(
+      "operations/vc.StartUpdate",
+      started.result,
+      "#/properties/result",
+    );
+    const update = await waitForUpdate(f.engine, updateId);
+    expect(update.status).toBe("failed");
+    const elements = new Contract().read<import("../../contract/src/index.js").Element[]>(
+      "operations/vc.Elements",
+      await f.engine.query(ctx, { name: "vc.Elements", args: { artifactId } }),
+      "#/properties/result",
+    );
+    expect(elements[0]).toMatchObject({ text: "The quick fox." });
   } finally {
     await f.close();
   }
@@ -1856,6 +1933,13 @@ it("starts an Update after the session agreement quiet period", async () => {
       type: "vc.Agree",
       payload: { commentId, kind: "as_written" },
     });
+    expect(
+      new Contract().read<import("../../contract/src/index.js").VcUpdatesOperation["result"]>(
+        "operations/vc.Updates",
+        await f.engine.query(ctx, { name: "vc.Updates", args: { artifactId } }),
+        "#/properties/result",
+      ).scheduledAt,
+    ).toBe(new Date(now + 120_000).toISOString());
     now += 120_000;
     let updates: import("../../contract/src/index.js").Update[] = [];
     for (let i = 0; i < 100; i++) {
@@ -1863,11 +1947,11 @@ it("starts an Update after the session agreement quiet period", async () => {
         name: "vc.Updates",
         args: { artifactId },
       });
-      updates = new Contract().read<import("../../contract/src/index.js").Update[]>(
+      updates = new Contract().read<import("../../contract/src/index.js").VcUpdatesOperation["result"]>(
         "operations/vc.Updates",
         value,
         "#/properties/result",
-      );
+      ).updates;
       if (updates.some((u) => u.status === "committed")) break;
       await new Promise<void>((resolve) => setTimeout(resolve, 10));
     }

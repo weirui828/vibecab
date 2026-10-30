@@ -337,7 +337,11 @@ else {
     void (async () => {
       let busy = false;
       try {
-        const updates: unknown = await client?.query({ name: "vc.Updates", args: {} });
+        const updateResult: unknown = await client?.query({ name: "vc.Updates", args: {} });
+        const updates =
+          typeof updateResult === "object" && updateResult !== null && !Array.isArray(updateResult)
+            ? Reflect.get(updateResult, "updates")
+            : undefined;
         const turns: unknown = await client?.query({ name: "vc.AgentTurns", args: {} });
         busy =
           (Array.isArray(updates) &&

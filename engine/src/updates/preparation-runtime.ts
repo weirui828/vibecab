@@ -236,6 +236,10 @@ export abstract class UpdatePreparationRuntime extends AgentRuntime {
       results: Update["itemResults"] = [...blocked],
       remaining: Agreement[] = [];
     for (const agreement of agreements) {
+      if (agreement.explicitInstruction) {
+        remaining.push(agreement);
+        continue;
+      }
       const comment = comments.find((c) => c.commentId === agreement.commentId)!,
         anchor = comment.anchor,
         element = anchor ? elements.find((e) => e.elementId === anchor.elementId) : undefined,

@@ -21,6 +21,9 @@
     "instruction": {
       "type": "string"
     },
+    "explicitInstruction": {
+      "type": "boolean"
+    },
     "kind": {
       "enum": ["as_written", "agent_proposal", "option"]
     },

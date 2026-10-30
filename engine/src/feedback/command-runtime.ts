@@ -245,6 +245,8 @@ export abstract class FeedbackCommandRuntime extends FeedbackCoreRuntime {
             ...session,
             replyTrigger: p.mode,
           });
+        if (!p.threadId && p.batch)
+          this.save<ReplyTrigger>("session-trigger", "reply-trigger", p.sessionId, { mode: p.mode, batch: p.batch });
         this.event(
           "vc.ReplyTriggerChanged",
           { kind: "session", id: p.sessionId },
@@ -298,6 +300,7 @@ export abstract class FeedbackCommandRuntime extends FeedbackCoreRuntime {
       author: { kind: "agent", turnId: input.turnId },
       body: input.body,
       threadId: input.threadId,
+      ...(parent.anchor ? { anchor: parent.anchor } : {}),
       ...(input.replyTo ? { replyTo: input.replyTo } : {}),
       ...(input.proposal === undefined ? {} : { proposal: input.proposal }),
       state: "open",

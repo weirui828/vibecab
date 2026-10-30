@@ -245,6 +245,7 @@ export function App() {
               <SessionView
                 key={activeSession.sessionId}
                 sessionId={activeSession.sessionId}
+                session={activeSession}
                 title={activeSession.title}
                 artifacts={artifacts.filter((artifact) => activeSession.artifactIds.includes(artifact.artifactId))}
                 availableArtifacts={artifacts}

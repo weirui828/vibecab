@@ -4,7 +4,7 @@ Spec gaps found while working. Format: date — where — question — options �
 
 Unresolved questions are recorded below.
 
-- 2026-10-30 — Task A3 §1 / `vc.Agree` — A3 says a human can submit an optional `instruction` with `kind: "as_written"`, but `engine/src/feedback/agreement-runtime.ts` rejects that exact combination and derives the instruction from the comment. Options: permit and store the explicit instruction for `as_written`, or change A3 to use a different agreement kind/field. Recommendation: permit an explicit instruction for a human's `as_written` agreement, since A3 labels it as the person's direction. Status: unresolved; stopped A3 implementation as required by its conflict rule.
+- 2026-10-30 — Task A3 §1 / `vc.Agree` — A3 says a human can submit an optional `instruction` with `kind: "as_written"`, but `engine/src/feedback/agreement-runtime.ts` rejected that combination. Status: resolved by Wei — permit it, store it as the agreement instruction, keep comment and suggestion as writer context, and skip the verbatim fast path for explicitly instructed agreements.
 
 - 2026-10-30 — Task A2 §4 / `vc.Comment` anchor payload — The task says the UI sends `seenHash`, but `contract/schemas/operations/vc.Comment.json` forbids that field and the engine derives it from `seenVersion` + `elementId`. Options: keep the payload minimal and verify the stored anchor has the derived hash, or accept a client hash and validate it against the selected version. Recommendation: keep the hash engine-derived and revise A2's payload/test wording. Status: resolved by Wei — proceed with engine-derived `seenHash`; the UI sends only the schema-defined anchor fields.
 

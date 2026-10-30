@@ -10,8 +10,16 @@
       "additionalProperties": false
     },
     "result": {
-      "type": "array",
-      "items": { "$ref": "https://vibecab.local/schemas/update.json" }
+      "type": "object",
+      "properties": {
+        "updates": {
+          "type": "array",
+          "items": { "$ref": "https://vibecab.local/schemas/update.json" }
+        },
+        "scheduledAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["updates"],
+      "additionalProperties": false
     }
   },
   "required": ["payload", "result"],

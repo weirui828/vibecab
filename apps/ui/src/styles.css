@@ -125,6 +125,70 @@ input {
 .threads-panel {
   border-left: 1px solid var(--color-border-default);
 }
+.system-comment,
+.conflict-list,
+.update-progress,
+.update-result,
+.update-bar {
+  border: 1px solid var(--color-border-default);
+  border-radius: 10px;
+  padding: 12px;
+  margin: 12px 0;
+  background: var(--color-surface-raised);
+}
+.system-comment {
+  border-left: 4px solid var(--color-border-strong);
+}
+.workflow-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border-default);
+}
+.workflow-controls label,
+.session-workflow label {
+  display: inline-grid;
+  gap: 4px;
+}
+.session-workflow button,
+.session-workflow select,
+.session-workflow input,
+.threads-panel textarea {
+  color: inherit;
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-border-default);
+  border-radius: 7px;
+  padding: 6px 9px;
+}
+.update-diff {
+  display: grid;
+  gap: 8px;
+}
+.update-diff [data-change],
+.diff-added,
+.diff-removed {
+  border-left: 3px solid var(--color-border-strong);
+  padding: 4px 8px;
+}
+.diff-added {
+  color: var(--color-success-fg);
+  border-color: var(--color-success-border);
+  text-decoration: underline;
+  text-decoration-style: dashed;
+}
+.diff-removed {
+  color: var(--color-danger-fg);
+  border-color: var(--color-danger-border);
+  text-decoration: line-through;
+}
+[data-change="added"]::before {
+  content: "+ Added block · ";
+}
+[data-change="moved"]::before {
+  content: "↕ Moved · ";
+}
 .session-controls {
   display: grid;
   gap: 8px;

@@ -8,6 +8,7 @@ export interface Agreement {
     findingId: string;
   };
   instruction: string;
+  explicitInstruction?: boolean;
   kind: "as_written" | "agent_proposal" | "option";
   optionLabel?: string;
   agreedBy: "human";

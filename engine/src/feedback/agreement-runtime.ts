@@ -20,13 +20,23 @@ export abstract class FeedbackAgreementRuntime extends FeedbackCommandRuntime {
       if (currentHash !== c.anchor.seenHash && p.instruction === undefined)
         fail("invalid", "A revised review finding requires an explicit instruction");
     }
-    if (p.kind === "as_written" && p.instruction !== undefined)
-      fail("invalid", "As-written agreements derive their instruction from the comment");
-    if (p.kind === "agent_proposal" && c.author.kind !== "agent")
-      fail("conflict", "Only an agent proposal can be agreed as an agent proposal");
+    if (p.kind === "agent_proposal" && (c.author.kind !== "agent" || !c.proposal || Array.isArray(c.proposal)))
+      fail("conflict", "Only an agent's single proposal can be agreed as an agent proposal");
     if (p.kind === "option" && !p.optionLabel) fail("invalid", "Option agreements require an optionLabel");
     if (p.kind !== "option" && p.optionLabel) fail("invalid", "optionLabel is only valid for option agreements");
-    const instruction = p.instruction ?? (p.kind === "as_written" ? (c.suggestion?.replacement ?? c.body) : undefined);
+    const selectedOption =
+      p.kind === "option" && Array.isArray(c.proposal)
+        ? c.proposal.find((option) => option.label === p.optionLabel)
+        : undefined;
+    if (p.kind === "option" && (!selectedOption || c.author.kind !== "agent"))
+      fail("conflict", "The selected option is not available on this agent reply");
+    const instruction =
+      p.instruction ??
+      (p.kind === "as_written"
+        ? (c.suggestion?.replacement ?? c.body)
+        : p.kind === "agent_proposal" && c.proposal && !Array.isArray(c.proposal)
+          ? c.proposal.text
+          : selectedOption?.text);
     if (instruction === undefined) fail("invalid", "Agreement requires an instruction");
     const agreementId = this.ids.next("agreement_"),
       agreedAt = this.clock.now();
@@ -35,6 +45,7 @@ export abstract class FeedbackAgreementRuntime extends FeedbackCommandRuntime {
       commentId: c.commentId,
       ...(c.source ? { source: c.source } : {}),
       instruction,
+      explicitInstruction: p.instruction !== undefined,
       kind: p.kind,
       ...(p.optionLabel ? { optionLabel: p.optionLabel } : {}),
       agreedBy: "human",

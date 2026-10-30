@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { _electron as electron } from "playwright";
 import axe from "axe-core";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { status } from "../../../host/src/index.js";
@@ -26,13 +26,40 @@ test("imports, comments on text, receives a reply, and catches up after relaunch
               call: {
                 id: "reply-1",
                 name: "reply",
-                arguments: { threadId: "$first_thread", body: "Agent reply from test." },
+                arguments: {
+                  threadId: "$first_thread",
+                  body: "I can tighten that sentence.",
+                  proposal: [{ label: "Tighten sentence", text: "The paragraph has a clearer sentence." }],
+                },
               },
             },
             { type: "done", finishReason: "tool_calls" },
           ],
           [
             { type: "text_delta", text: "Reply recorded." },
+            { type: "done", finishReason: "stop" },
+          ],
+          [
+            {
+              type: "text_delta",
+              text: '{"items":[{"itemId":"$first_item","action":"edit","elementIds":["$first_element"],"note":"Apply the agreed rewrite."}]}',
+            },
+            { type: "done", finishReason: "stop" },
+          ],
+          [
+            {
+              type: "text_delta",
+              text: JSON.stringify({
+                changes: [
+                  {
+                    op: "update",
+                    elementId: "$first_element",
+                    element: { type: "paragraph", props: {}, text: "The paragraph has a clearer sentence." },
+                  },
+                ],
+                itemResults: [{ itemId: "$first_item", status: "addressed", elementIds: ["$first_element"] }],
+              }),
+            },
             { type: "done", finishReason: "stop" },
           ],
         ],
@@ -93,7 +120,7 @@ test("imports, comments on text, receives a reply, and catches up after relaunch
                 pricing: { inputMicrosPerMillion: 0, outputMicrosPerMillion: 0 },
               },
             },
-            sessions: { [sessionId]: { realtimeDebounceSeconds: 1 } },
+            sessions: { [sessionId]: { realtimeDebounceSeconds: 1, updateIdleMinutes: 0.02 } },
           },
         }),
       session.sessionId,
@@ -122,9 +149,19 @@ test("imports, comments on text, receives a reply, and catches up after relaunch
       }),
       session.sessionId,
     );
-    if (!JSON.stringify(replyState.threads).includes("Agent reply from test."))
+    if (!JSON.stringify(replyState.threads).includes("I can tighten that sentence."))
       throw new Error(`Scripted reply was not posted: ${JSON.stringify(replyState)}`);
-    await expect(page.getByText("Agent reply from test.", { exact: true })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("I can tighten that sentence.", { exact: true })).toBeVisible({ timeout: 20_000 });
+    await page.getByRole("button", { name: "Agree with option: Tighten sentence" }).click();
+    await expect(page.getByText("Applied in v2", { exact: true })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("heading", { name: "v1 → v2" })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText("The paragraph has a clearer sentence.", { exact: true })).toBeVisible();
+    const screenshots = join(appPath, "test-results");
+    await mkdir(screenshots, { recursive: true });
+    await page.evaluate(() => window.vibecab.app.setTheme("light"));
+    await page.screenshot({ path: join(screenshots, "a3-full-loop-light.png"), fullPage: true });
+    await page.evaluate(() => window.vibecab.app.setTheme("dark"));
+    await page.screenshot({ path: join(screenshots, "a3-full-loop-dark.png"), fullPage: true });
 
     await app.evaluate(({ app: electronApp }) => electronApp.quit());
     await app.close();
@@ -135,8 +172,8 @@ test("imports, comments on text, receives a reply, and catches up after relaunch
       session.sessionId,
     );
     await expect(page.getByText("Since you were here")).toBeVisible();
-    await expect(page.getByText("New reply · Agent reply from test.", { exact: true })).toBeVisible();
-    await expect(page.getByText("Agent reply from test.", { exact: true })).toBeVisible();
+    await expect(page.getByText("New reply · I can tighten that sentence.", { exact: true })).toBeVisible();
+    await expect(page.getByText("I can tighten that sentence.", { exact: true })).toBeVisible();
     await app.evaluate(({ app: electronApp }) => electronApp.quit());
     await app.close();
     app = undefined;

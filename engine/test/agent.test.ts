@@ -211,6 +211,7 @@ it("runs a manual reply through validated tools, records exact manifests and del
             arguments: {
               threadId: commentId.threadId,
               body: "I can tighten that sentence.",
+              proposal: [{ label: "Tighten", text: "A tighter sentence." }],
             },
           },
         },
@@ -305,6 +306,24 @@ it("runs a manual reply through validated tools, records exact manifests and del
     );
     expect(threads[0]!.comments.some((c) => c.author.kind === "agent" && c.replyTo === commentId.commentId)).toBe(true);
     expect(threads[0]!.comments).toHaveLength(2);
+    const proposal = threads[0]!.comments.find((comment) => comment.author.kind === "agent");
+    if (!proposal) throw Error("Agent proposal was not posted");
+    const agreed = await f.engine.command(ctx, {
+      commandId: "agree-option",
+      type: "vc.Agree",
+      payload: { commentId: proposal.commentId, kind: "option", optionLabel: "Tighten" },
+    });
+    expect(agreed.ok).toBe(true);
+    if (!agreed.ok) throw Error(agreed.error.message);
+    const agreementId = new Contract().read<{ agreementId: string }>(
+      "operations/vc.Agree",
+      agreed.result,
+      "#/properties/result",
+    ).agreementId;
+    expect(readFeedback(f.dir, "agreement", agreementId)).toMatchObject({
+      instruction: "A tighter sentence.",
+      optionLabel: "Tighten",
+    });
     expect(
       readEvents(f.dir)
         .filter((event) => event.type === "vc.AgentTurnChanged")

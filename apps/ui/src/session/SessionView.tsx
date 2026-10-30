@@ -7,16 +7,19 @@ import type {
   VcResumeViewOperation,
   VcThreadsOperation,
   VcDigestOperation,
+  VcSessionsOperation,
+  AgentTurn,
 } from "../../../../contract/generated/index.js";
 import { inlineMarkdownToPlainText } from "../../../../contract/src/inline-markdown.js";
-import { DocumentView } from "../document/DocumentView.js";
 import { locatorForTextSelection } from "../document/anchors.js";
 import { ResumeCard } from "./ResumeCard.js";
 import { ThreadPanel } from "./ThreadPanel.js";
+import { SessionWorkflow } from "./SessionWorkflow.js";
 
 type Selected = { element: Element; locator?: { quote: string; prefix: string; suffix: string } };
 export function SessionView({
   sessionId,
+  session,
   title,
   artifacts: initialArtifacts,
   availableArtifacts,
@@ -25,6 +28,7 @@ export function SessionView({
   onRefresh,
 }: {
   sessionId: string;
+  session: VcSessionsOperation["result"][number];
   title: string;
   artifacts: { artifactId: string; title: string; headVersion: number }[];
   availableArtifacts: { artifactId: string; title: string; headVersion: number }[];
@@ -51,6 +55,7 @@ export function SessionView({
   const artifact = artifacts.find((item) => item.artifactId === activeArtifactId);
   const [elements, setElements] = useState<Element[]>([]),
     [threads, setThreads] = useState<VcThreadsOperation["result"]>([]),
+    [turns, setTurns] = useState<AgentTurn[]>([]),
     [delivery, setDelivery] = useState<Record<string, DeliveryState["state"]>>({}),
     [resume, setResume] = useState<VcResumeViewOperation["result"]>(),
     [digest, setDigest] = useState<VcDigestOperation["result"]>([]),
@@ -106,6 +111,7 @@ export function SessionView({
     });
     setElements(list);
     setThreads(nextThreads);
+    setTurns(await window.vibecab.query<AgentTurn[]>("vc.AgentTurns", { sessionId }));
     setResume(await window.vibecab.query<VcResumeViewOperation["result"]>("vc.ResumeView", { sessionId }));
     setDigest(await window.vibecab.query<VcDigestOperation["result"]>("vc.Digest", { sessionId }));
   }, [artifact, sessionId]);
@@ -378,12 +384,22 @@ export function SessionView({
             />
           ) : null}
           {artifact ? (
-            <DocumentView
-              artifactId={artifact.artifactId}
-              version={artifact.headVersion}
-              elements={elements}
-              onComment={(element, locator) => setSelected({ element, ...(locator ? { locator } : {}) })}
-            />
+            <>
+              <SessionWorkflow
+                sessionId={sessionId}
+                session={session}
+                artifact={artifact}
+                threads={threads}
+                currentElements={elements}
+                onRefresh={refresh}
+                onFocusElement={(elementId) =>
+                  document
+                    .querySelector(`[data-element-id="${CSS.escape(elementId)}"]`)
+                    ?.scrollIntoView({ block: "center" })
+                }
+                onComment={(element, locator) => setSelected({ element, ...(locator ? { locator } : {}) })}
+              />
+            </>
           ) : (
             <p>Attach a Draft to read its Document.</p>
           )}
@@ -423,6 +439,7 @@ export function SessionView({
         {showThreads ? (
           <ThreadPanel
             threads={threads}
+            turns={turns}
             delivery={delivery}
             currentVersion={artifact?.headVersion ?? 0}
             onRefresh={refresh}
@@ -430,6 +447,12 @@ export function SessionView({
               setReplyTo(commentId);
               setSelected(undefined);
             }}
+            onAskAgent={(threadId) =>
+              void window.vibecab.command("vc.AskAgent", { sessionId, threadIds: [threadId] }).then(refresh)
+            }
+            onSetThreadTrigger={(threadId, mode) =>
+              void window.vibecab.command("vc.SetReplyTrigger", { sessionId, threadId, mode }).then(refresh)
+            }
           />
         ) : null}
       </div>

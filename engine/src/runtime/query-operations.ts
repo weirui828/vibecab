@@ -238,10 +238,21 @@ export abstract class QueryOperations extends CommandOperations {
             q.args,
             "#/properties/payload",
           );
-          return store
+          const updates = store
             .feedbackList("update")
             .map((x) => this.contract.read<Update>("update", x))
             .filter((x) => !p.artifactId || x.artifactId === p.artifactId);
+          const scheduledAt = store
+            .jobs()
+            .filter((job) => job.kind === "agent.update.trigger" && job.state === "pending")
+            .flatMap((job) => {
+              if (typeof job.payload !== "object" || job.payload === null || Array.isArray(job.payload)) return [];
+              const artifactId = Reflect.get(job.payload, "artifactId"),
+                notBefore = Reflect.get(job.payload, "notBefore");
+              return typeof notBefore === "string" && (!p.artifactId || artifactId === p.artifactId) ? [notBefore] : [];
+            })
+            .sort()[0];
+          return { updates, ...(scheduledAt ? { scheduledAt } : {}) };
         }
         const p = this.contract.read<{ updateId: string }>(
           "operations/vc.UpdateDetail",
