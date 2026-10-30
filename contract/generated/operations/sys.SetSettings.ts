@@ -8,6 +8,7 @@ export interface SysSetSettingsOperation {
       };
       budgets?: Budgets;
       sessions?: Sessions;
+      trashRetentionDays?: number;
     };
   };
   result: {
@@ -44,6 +45,7 @@ export interface Sessions {
   [k: string]: SessionSettings;
 }
 export interface SessionSettings {
+  replyTrigger?: "realtime" | "batch" | "manual";
   tokenLimit?: number;
   toolCallLimit?: number;
   replyRateLimitPerHour?: number;

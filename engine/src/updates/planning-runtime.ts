@@ -14,6 +14,7 @@ import type { ModelEvent as GatewayEvent, ModelRequest as GatewayRequest } from 
 import { UpdatePreparationRuntime } from "./preparation-runtime.js";
 import { storeRequestIndex } from "./helpers.js";
 import { untrustedMcpResult } from "../agent/tools/external.js";
+import { sessionPreferences } from "../session-preferences.js";
 
 export abstract class UpdatePlanningRuntime extends UpdatePreparationRuntime {
   protected async judgeUpdateConflicts(
@@ -108,7 +109,7 @@ export abstract class UpdatePlanningRuntime extends UpdatePreparationRuntime {
     if (!model || !this.gateway) return undefined;
     const prompt = await readFile(new URL(`../agent/prompts/${promptName}.md`, import.meta.url), "utf8"),
       promptHash = createHash("sha256").update(prompt).digest("hex");
-    const sessionSettings = settings.sessions[this.updateSessionId(update)],
+    const sessionSettings = sessionPreferences(settings, this.updateSessionId(update)),
       tokenLimit = sessionSettings?.tokenLimit ?? settings.budgets.defaultTurnTokenLimit ?? 8192;
     const sessionId = this.updateSessionId(update),
       externalTools = this.externalToolRuntime(),
@@ -195,7 +196,7 @@ export abstract class UpdatePlanningRuntime extends UpdatePreparationRuntime {
       (event): event is Extract<GatewayEvent, { type: "tool_call" }> => event.type === "tool_call",
     );
     if (calls.length) {
-      const limit = this.settings().sessions[sessionId]?.toolCallLimit ?? settings.budgets.toolCallLimit ?? 12,
+      const limit = sessionPreferences(settings, sessionId).toolCallLimit ?? settings.budgets.toolCallLimit ?? 12,
         toolResults: Array<{ id: string; name: string; content: string }> = [],
         manifestItems: ContextManifest["items"] = [];
       for (const [index, event] of calls.entries()) {

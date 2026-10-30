@@ -75,6 +75,43 @@ async function setupSession(
     version,
   };
 }
+
+it("applies schema-defined agent defaults when starting a new session", async () => {
+  const f = await fixture();
+  try {
+    const saved = await command(f, "sys.SetSettings", {
+      patch: {
+        sessions: {
+          default: {
+            replyTrigger: "batch",
+            batchCommentThreshold: 2,
+            batchIdleMinutes: 3,
+            updateIdleMinutes: 4,
+            planReview: true,
+            agentProfile: "Editor",
+            brief: "Keep the writer's tone.",
+          },
+        },
+      },
+    });
+    if (!saved.ok) throw Error(JSON.stringify(saved.error));
+    const started = await command(f, "vc.StartSession", { title: "Defaults" });
+    if (!started.ok) throw Error(started.error.message);
+    const { sessionId } = new Contract().read<{ sessionId: string }>(
+        "operations/vc.StartSession",
+        started.result,
+        "#/properties/result",
+      ),
+      sessions = new Contract().read<import("../../contract/src/index.js").VcSessionsOperation["result"]>(
+        "operations/vc.Sessions",
+        await f.engine.query(ctx, { name: "vc.Sessions", args: { sessionId } }),
+        "#/properties/result",
+      );
+    expect(sessions[0]).toMatchObject({ sessionId, replyTrigger: "batch" });
+  } finally {
+    await f.close();
+  }
+});
 async function comment(
   f: Awaited<ReturnType<typeof fixture>>,
   sessionId: string,

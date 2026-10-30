@@ -8,6 +8,7 @@ import type {
   VcResolveConflictOperation,
 } from "../../../contract/src/index.js";
 import { FeedbackCommandRuntime } from "./command-runtime.js";
+import { sessionPreferences } from "../session-preferences.js";
 export abstract class FeedbackAgreementRuntime extends FeedbackCommandRuntime {
   protected agree(p: VcAgreeOperation["payload"]): {
     agreementId: string;
@@ -64,7 +65,7 @@ export abstract class FeedbackAgreementRuntime extends FeedbackCommandRuntime {
     );
     this.detectConflicts(agreementId);
     if (c.anchor?.artifactId) {
-      const settings = this.settings().sessions[c.sessionId],
+      const settings = sessionPreferences(this.settings(), c.sessionId),
         delay = settings?.updateIdleMinutes ?? 2;
       this.store.enqueue(
         "agent.update.trigger",

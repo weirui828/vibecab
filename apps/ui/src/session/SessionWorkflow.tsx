@@ -330,10 +330,7 @@ export function SessionWorkflow({
           <h3>
             v{completed.baseVersion} → v{completed.resultVersion}
           </h3>
-          <p>
-            {completed.itemResults.filter((item) => item.status === "addressed").length} items applied ·{" "}
-            {completed.itemResults.filter((item) => item.status === "not_addressed").length} not applied
-          </p>
+          <p>{updateResultCounts(completed.itemResults)}</p>
           {completed.status === "partially_committed" ? <p>Some items were held back and are agreed again.</p> : null}
           <button type="button" onClick={() => setShowChanges((shown) => !shown)}>
             {showChanges ? "Clean view" : "Show changes"}
@@ -441,6 +438,12 @@ function activeStatus(status: Update["status"]): boolean {
 
 function statusLabel(status: Update["status"]): string {
   return status.replaceAll("_", " ");
+}
+
+function updateResultCounts(results: Update["itemResults"]): string {
+  const applied = results.filter((item) => item.status === "addressed").length,
+    notApplied = results.filter((item) => item.status === "not_addressed").length;
+  return `${applied} item${applied === 1 ? "" : "s"} applied · ${notApplied} not applied`;
 }
 
 function formatCountdown(seconds: number): string {

@@ -15,6 +15,7 @@ import type { ModelEvent as GatewayEvent, ModelRequest as GatewayRequest } from 
 import { replyToolNames, replyToolSchemas } from "./tools.js";
 import { AgentExternalRuntime } from "./external-runtime.js";
 import { untrustedMcpResult } from "./tools/external.js";
+import { sessionPreferences } from "../session-preferences.js";
 
 export abstract class AgentRuntime extends AgentExternalRuntime {
   protected async runReply(job: Job): Promise<void> {
@@ -104,7 +105,9 @@ export abstract class AgentRuntime extends AgentExternalRuntime {
       externalByName = new Map(offeredExternal.map((tool) => [tool.name, tool]));
     const schemas = replyToolSchemas(this.contract);
     const turnLimit =
-      this.settings().sessions[turn.sessionId]?.tokenLimit ?? this.settings().budgets.defaultTurnTokenLimit ?? 8192;
+      sessionPreferences(this.settings(), turn.sessionId).tokenLimit ??
+      this.settings().budgets.defaultTurnTokenLimit ??
+      8192;
     const request: GatewayRequest = {
       modelRef,
       messages,
@@ -195,7 +198,9 @@ export abstract class AgentRuntime extends AgentExternalRuntime {
           toolCount++;
           if (
             toolCount >
-            (this.settings().sessions[turn.sessionId]?.toolCallLimit ?? this.settings().budgets.toolCallLimit ?? 12)
+            (sessionPreferences(this.settings(), turn.sessionId).toolCallLimit ??
+              this.settings().budgets.toolCallLimit ??
+              12)
           ) {
             toolResults.push({
               id: event.call.id,

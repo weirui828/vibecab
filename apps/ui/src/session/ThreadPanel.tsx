@@ -115,14 +115,14 @@ export function ThreadPanel({
             <p>Text changed since this comment.</p>
           ) : null}
           {thread.comments.map((comment) => {
-            const turnId = comment.author.kind === "agent" ? comment.author.turnId : undefined;
+            const turnId = comment.author.kind === "agent" ? comment.author.turnId : undefined,
+              author = comment.author.kind === "human" ? "You" : comment.author.kind === "agent" ? "Agent" : "System",
+              channel = comment.channel === "mcp" ? "via MCP" : comment.channel === "cli" ? "via CLI" : "",
+              created = comment.createdAt ? relativeTime(comment.createdAt) : "",
+              header = [author, channel, created].filter(Boolean).join(" · ");
             return (
               <div key={comment.commentId} className={comment.author.kind === "system" ? "system-comment" : undefined}>
-                <p>
-                  {comment.author.kind === "human" ? "You" : comment.author.kind === "agent" ? "Agent" : "System"} ·{" "}
-                  {comment.channel === "mcp" ? "via MCP" : comment.channel === "cli" ? "via CLI" : ""}
-                  {comment.createdAt ? ` · ${new Date(comment.createdAt).toLocaleString()}` : ""}
-                </p>
+                <p className="comment-meta">{header}</p>
                 {comment.author.kind === "agent" && comment.proposal ? <p>Agent proposes:</p> : null}
                 <p>{comment.body}</p>
                 {comment.state === "applied" ? (
@@ -311,4 +311,20 @@ export function ThreadPanel({
       ) : null}
     </aside>
   );
+}
+
+function relativeTime(timestamp: string): string {
+  const seconds = (Date.parse(timestamp) - Date.now()) / 1_000,
+    magnitude = Math.abs(seconds),
+    [value, unit] =
+      magnitude < 60
+        ? [Math.round(seconds), "second"]
+        : magnitude < 3_600
+          ? [Math.round(seconds / 60), "minute"]
+          : magnitude < 86_400
+            ? [Math.round(seconds / 3_600), "hour"]
+            : magnitude < 2_592_000
+              ? [Math.round(seconds / 86_400), "day"]
+              : [Math.round(seconds / 2_592_000), "month"];
+  return new Intl.RelativeTimeFormat(undefined, { numeric: "auto" }).format(value, unit as Intl.RelativeTimeFormatUnit);
 }

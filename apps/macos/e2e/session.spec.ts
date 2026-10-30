@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { _electron as electron } from "playwright";
 import axe from "axe-core";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { status } from "../../../host/src/index.js";
@@ -9,6 +9,64 @@ import { Contract } from "../../../contract/src/index.js";
 import type { VcImportContentOperation, VcStartSessionOperation } from "../../../contract/generated/index.js";
 
 const appPath = resolve(import.meta.dirname, "..");
+
+test("creates a Snapshot and saves its Markdown export", async () => {
+  const workspace = await mkdtemp(join(tmpdir(), "vibecab-snapshot-e2e-")),
+    script = join(workspace, "fake-provider.json");
+  await writeFile(script, JSON.stringify({ defaultSequence: [] }));
+  let app: Awaited<ReturnType<typeof electron.launch>> | undefined;
+  try {
+    app = await launchApp(workspace, script);
+    const page = await app.firstWindow();
+    await page.getByRole("button", { name: "Get started" }).click();
+    await page.getByRole("button", { name: "Skip for now" }).click();
+    const imported = await page.evaluate(async () =>
+      window.vibecab.command("vc.ImportContent", {
+        title: "Snapshot E2E",
+        format: "markdown",
+        content: "Snapshot export includes this Document text.",
+      }),
+    );
+    if (!imported.ok) throw new Error(imported.error.message);
+    if (typeof imported.result !== "object" || imported.result === null) throw new Error("Import returned no result");
+    const artifactId = Reflect.get(imported.result, "artifactId");
+    if (typeof artifactId !== "string") throw new Error("Import did not return an artifact id");
+    const started = await page.evaluate(async () =>
+      window.vibecab.command("vc.StartSession", { title: "Snapshot session" }),
+    );
+    if (!started.ok) throw new Error(started.error.message);
+    if (typeof started.result !== "object" || started.result === null) throw new Error("Session returned no result");
+    const sessionId = Reflect.get(started.result, "sessionId");
+    if (typeof sessionId !== "string") throw new Error("Session did not return an id");
+    const attached = await page.evaluate(
+      async ({ sessionId, artifactId }) =>
+        window.vibecab.command("vc.AttachArtifact", { sessionId, artifactId, role: "primary" }),
+      { sessionId, artifactId },
+    );
+    if (!attached.ok) throw new Error(attached.error.message);
+    await page.evaluate((sessionId) => {
+      window.location.hash = `/s/${encodeURIComponent(sessionId)}`;
+    }, sessionId);
+    await page.getByRole("button", { name: "Save Snapshot" }).click();
+    await page.getByLabel("Snapshot label").fill("Ready to share");
+    await page.getByRole("button", { name: "Create Snapshot" }).click();
+    await expect(page.getByText("Ready to share")).toBeVisible();
+    await page.getByRole("button", { name: "Export Snapshot" }).click();
+    await page.getByRole("button", { name: "Export Markdown" }).click();
+    const saveDirectory = join(workspace, "saved-files");
+    await expect.poll(async () => (await readdir(saveDirectory).catch(() => [])).length).toBe(1);
+    const [filename] = await readdir(saveDirectory);
+    expect(await readFile(join(saveDirectory, filename!), "utf8")).toContain(
+      "Snapshot export includes this Document text.",
+    );
+    await app.evaluate(({ app: electronApp }) => electronApp.quit());
+    await app.close();
+    app = undefined;
+  } finally {
+    await app?.close();
+    await rm(workspace, { recursive: true, force: true });
+  }
+});
 
 test("imports, comments on text, receives a reply, and catches up after relaunch", async () => {
   const workspace = await mkdtemp(join(tmpdir(), "vibecab-session-e2e-")),
@@ -205,6 +263,9 @@ test("imports, comments on text, receives a reply, and catches up after relaunch
     await page.evaluate(() => window.vibecab.app.setTheme("light"));
     await page.screenshot({ path: join(screenshots, "a3-full-loop-light.png"), fullPage: true });
     await page.evaluate(() => window.vibecab.app.setTheme("dark"));
+    await expect.poll(() => page.locator("html").evaluate((element) => element.classList.contains("dark"))).toBe(true);
+    await expect.poll(() => seriousAxeViolations(page)).toBe(0);
+    expect(await page.locator(".session-nav-item").evaluate((element) => getComputedStyle(element).gap)).toBe("8px");
     await page.screenshot({ path: join(screenshots, "a3-full-loop-dark.png"), fullPage: true });
 
     await app.evaluate(({ app: electronApp }) => electronApp.quit());
@@ -238,6 +299,7 @@ async function launchApp(workspace: string, fakeProvider: string) {
       VIBECAB_WORKSPACE_DIR: workspace,
       VIBECAB_NODE: process.execPath,
       VIBECAB_FAKE_PROVIDER: fakeProvider,
+      VIBECAB_TEST_SAVE_DIR: join(workspace, "saved-files"),
     },
   });
 }

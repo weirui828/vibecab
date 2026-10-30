@@ -3,6 +3,7 @@ import type { Json, FeedbackComment, Agreement, Update, Job } from "../../../con
 import { AgentRuntime } from "../agent/runtime.js";
 import { findVerbatimQuote } from "./helpers.js";
 import { inlineMarkdownToPlainText, replaceInlineMarkdownText } from "../../../contract/src/inline-markdown.js";
+import { sessionPreferences } from "../session-preferences.js";
 
 export abstract class UpdatePreparationRuntime extends AgentRuntime {
   protected abstract judgeUpdateConflicts(
@@ -38,7 +39,8 @@ export abstract class UpdatePreparationRuntime extends AgentRuntime {
       .feedbackList("attachment")
       .map((x) => this.contract.read<{ sessionId: string; artifactId: string }>("session-artifact", x))
       .some(
-        (link) => link.artifactId === artifactId && this.settings().sessions[link.sessionId]?.directEditing === true,
+        (link) =>
+          link.artifactId === artifactId && sessionPreferences(this.settings(), link.sessionId).directEditing === true,
       );
   }
 
@@ -60,7 +62,7 @@ export abstract class UpdatePreparationRuntime extends AgentRuntime {
         : [];
     const timeout =
       attached
-        .map((x) => this.settings().sessions[x.sessionId]?.holdIdleMinutes)
+        .map((x) => sessionPreferences(this.settings(), x.sessionId).holdIdleMinutes)
         .find((value): value is number => value !== undefined) ?? 30;
     return Date.parse(this.deps.clock.now()) - Date.parse(hold.lastActivity) < timeout * 60_000;
   }
@@ -323,7 +325,7 @@ export abstract class UpdatePreparationRuntime extends AgentRuntime {
             .map((x) => this.contract.read<{ sessionId: string; artifactId: string }>("session-artifact", x))
             .filter((x) => x.artifactId === update.artifactId)
             .map((x) => x.sessionId);
-          const review = sessions.some((id) => this.settings().sessions[id]?.planReview === true);
+          const review = sessions.some((id) => sessionPreferences(this.settings(), id).planReview === true);
           if (review) {
             await this.queue.run(() =>
               store.transaction(() => {

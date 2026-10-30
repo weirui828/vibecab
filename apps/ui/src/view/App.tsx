@@ -9,6 +9,8 @@ import type { ConnectionEvent, ConnectionState } from "../connection.js";
 import type { AttentionItem } from "../../../../contract/generated/index.js";
 import { SessionView } from "../session/SessionView.js";
 import { Onboarding } from "./Onboarding.js";
+import { SettingsView } from "./SettingsView.js";
+import { TrashView } from "./TrashView.js";
 
 export function App() {
   const [state, setState] = useState<ConnectionState>("Starting"),
@@ -171,6 +173,15 @@ export function App() {
             Settings
           </button>
         </p>
+        <p>
+          <button
+            onClick={() => {
+              window.location.hash = "/trash";
+            }}
+          >
+            Trash
+          </button>
+        </p>
         <p className="notice">{state}</p>
         {state === "Engine stopped" || state === "Engine unreachable" ? (
           <Button onClick={() => void window.vibecab.app.startEngine().then(() => setConnection("connected"))}>
@@ -206,20 +217,18 @@ export function App() {
             }}
           />
         ) : route === "/settings" ? (
-          <>
-            <div className="row">
-              <h2>Settings</h2>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  window.location.hash = "/";
-                }}
-              >
-                Back
-              </Button>
-            </div>
-            <p>Model configuration and theme preferences are available here.</p>
-          </>
+          <SettingsView
+            onBack={() => {
+              window.location.hash = "/";
+            }}
+          />
+        ) : route === "/trash" ? (
+          <TrashView
+            onBack={() => {
+              window.location.hash = "/";
+            }}
+            onChanged={() => void refresh()}
+          />
         ) : selectedArtifact ? (
           <>
             <div className="row">

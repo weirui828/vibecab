@@ -13,6 +13,7 @@ import type {
 } from "../../../contract/src/index.js";
 import type { Clock, IdGenerator } from "../dependencies.js";
 import type { Repository } from "../storage/repository.js";
+import { sessionPreferences } from "../session-preferences.js";
 export type FeedbackInput = VcCommentOperation["payload"];
 export abstract class FeedbackCoreRuntime {
   constructor(
@@ -143,7 +144,7 @@ export abstract class FeedbackCoreRuntime {
         ? session.replyTrigger
         : this.contract.read<ReplyTrigger>("reply-trigger", triggerRecord).mode;
     if (mode !== "manual") {
-      const prefs = this.settings().sessions[p.sessionId] ?? {},
+      const prefs = sessionPreferences(this.settings(), p.sessionId),
         batch =
           triggerRecord === undefined
             ? undefined

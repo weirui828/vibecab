@@ -1,6 +1,6 @@
 import { JSDOM } from "jsdom";
 import { afterEach, expect, it } from "vitest";
-import { Contract, type Json, type SysCreateAccessTokenOperation } from "../../../contract/src/index.js";
+import { Contract, type Json, type Settings, type SysCreateAccessTokenOperation } from "../../../contract/src/index.js";
 import { inProcess } from "../../../adapters/in-process/src/index.js";
 import { httpClient, startHttp } from "../../../adapters/http/src/index.js";
 import { ctx, fixture } from "../../../engine/test/helpers.js";
@@ -90,6 +90,7 @@ it("holds an Update for plan approval and applies the plan after approval", asyn
     await app.waitFor(async () => expect(await app.headVersion()).toBe(2), { timeout: 10_000 });
     await app.waitFor(async () => expect(await app.latestUpdateStatus()).toBe("committed"), { timeout: 10_000 });
     expect(await app.screen.findByText("Rewrite this paragraph — Applied", {}, { timeout: 4_000 })).toBeTruthy();
+    expect(app.screen.getByText("1 item applied · 0 not applied")).toBeTruthy();
   } finally {
     await app.close();
   }
@@ -314,6 +315,227 @@ it("shows the auto-agreement notice only for an active grant covering this sessi
   }
 });
 
+it("refreshes the Session version and toast after vc.VersionCommitted", async () => {
+  const app = await mountSession({ content: "A paragraph." });
+  try {
+    await app.reloadSession();
+    expect(app.screen.getByText("v1")).toBeTruthy();
+    await app.command("vc.RestoreVersion", { artifactId: app.artifactId, version: 1 });
+    expect(await app.screen.findByText("v2", {}, { timeout: 4_000 })).toBeTruthy();
+    expect(await app.screen.findByText("Updated to v2", {}, { timeout: 4_000 })).toBeTruthy();
+  } finally {
+    await app.close();
+  }
+});
+
+it("uses friendly feedback labels and a single separator with relative comment times", async () => {
+  const app = await mountSession({ content: "A paragraph." });
+  try {
+    await app.comment("Needs a response", app.elements[0]!.elementId);
+    await app.reloadSession();
+    const comment = await app.screen.findByText("Needs a response");
+    const article = comment.closest("article");
+    if (!article) throw new Error("Comment has no thread article");
+    expect(app.within(article).getByText("Open")).toBeTruthy();
+    expect(app.within(article).getByText(/^You · \d+ days? ago$/)).toBeTruthy();
+    expect(app.within(article).queryByText(/You ·\s+·/)).toBeNull();
+  } finally {
+    await app.close();
+  }
+});
+
+it("shows History, Snapshots, decision records, and version restore in the Session UI", async () => {
+  const app = await mountSession({ content: "Original." });
+  try {
+    await app.command("vc.RestoreVersion", { artifactId: app.artifactId, version: 1 });
+    await app.reloadSession();
+    await app.screen.getByRole("button", { name: "History" }).click();
+    expect(await app.screen.findByText("Version 2")).toBeTruthy();
+    expect(await app.screen.findByText("Version 1")).toBeTruthy();
+    await app.screen.getByRole("button", { name: "View version 1" }).click();
+    expect(app.screen.getByText("Viewing v1 — read only")).toBeTruthy();
+    await app.screen.getByRole("button", { name: "Back to latest" }).click();
+    let confirmation = "";
+    app.dom.confirm = (message) => {
+      confirmation = message ?? "";
+      return true;
+    };
+    await app.screen.getByRole("button", { name: "Restore version 1" }).click();
+    expect(confirmation).toBe("Creates v3 with the content of v1. Nothing is lost.");
+    await app.screen.getByRole("button", { name: "Why is this here?" }).click();
+    expect(await app.screen.findByRole("region", { name: "Decision record" })).toBeTruthy();
+  } finally {
+    await app.close();
+  }
+});
+
+it("creates a stable Snapshot, labels it, and exports its Markdown through the UI", async () => {
+  const app = await mountSession({ content: "Snapshot export text." });
+  try {
+    await app.reloadSession();
+    await app.screen.getByRole("button", { name: "Save Snapshot" }).click();
+    app.fireEvent.change(app.screen.getByLabelText("Snapshot label"), { target: { value: "Sent to editor" } });
+    await app.screen.getByRole("button", { name: "Create Snapshot" }).click();
+    expect(await app.screen.findByText("Sent to editor")).toBeTruthy();
+    await app.screen.getByRole("button", { name: "Export Snapshot" }).click();
+    await app.screen.getByRole("button", { name: "Export Markdown" }).click();
+    expect(await app.screen.findByText("Snapshot export text.")).toBeTruthy();
+    await app.waitFor(() => expect(app.savedFiles.at(-1)?.bytes).toContain("Snapshot export text."), {
+      timeout: 5_000,
+    });
+    const set = await app.query<
+      Array<{ outputSetId: string; members: Array<{ artifactId: string; version: number }> }>
+    >("vc.OutputSets", { sessionId: app.sessionId });
+    expect(set[0]?.members).toMatchObject([{ artifactId: app.artifactId, version: 1 }]);
+    await app.command("vc.RestoreVersion", { artifactId: app.artifactId, version: 1 });
+    expect(
+      (
+        await app.query<Array<{ members: Array<{ version: number }> }>>("vc.OutputSets", { sessionId: app.sessionId })
+      )[0]?.members[0]?.version,
+    ).toBe(1);
+  } finally {
+    await app.close();
+  }
+}, 15_000);
+
+it("shows a newly created MCP token once and omits its secret from the list", async () => {
+  const app = await mountSession({ content: "A paragraph." });
+  try {
+    await app.screen.getByRole("button", { name: "Settings" }).click();
+    await app.screen.findByRole("heading", { name: "Settings" });
+    await app.screen.getByRole("button", { name: "AI assistant (MCP)" }).click();
+    await app.screen.getByRole("button", { name: "Create access" }).click();
+    await app.screen.getByRole("button", { name: "Can comment and agree" }).click();
+    const secret = await app.screen.findByLabelText("MCP access token");
+    const value = secret.getAttribute("value");
+    expect(value).toMatch(/^[A-Za-z0-9_-]{40,}$/);
+    await app.screen.getByRole("button", { name: "Done" }).click();
+    expect(app.screen.queryByLabelText("MCP access token")).toBeNull();
+    const tokens = await app.query<Array<Record<string, unknown>>>("sys.AccessTokens", {});
+    expect(JSON.stringify(tokens)).not.toContain(value);
+  } finally {
+    await app.close();
+  }
+});
+
+it("keeps schema-defined settings outside edited fields unchanged across tabs", async () => {
+  const app = await mountSession({ content: "Settings preservation." });
+  try {
+    await app.command("sys.SetSettings", {
+      patch: {
+        models: {
+          default: { ...model, model: "before", baseUrl: "https://before.invalid/v1" },
+          planner: model,
+          writer: model,
+        },
+        budgets: {
+          localTimeZone: "UTC",
+          defaultTurnLimitMicros: 1234,
+          defaultTurnTokenLimit: 321,
+          realtimeDebounceSeconds: 7,
+          toolCallLimit: 9,
+          toolTimeoutMs: 12345,
+          toolResultByteLimit: 23456,
+        },
+        sessions: {
+          default: {
+            replyTrigger: "batch",
+            tokenLimit: 222,
+            toolCallLimit: 8,
+            replyRateLimitPerHour: 12,
+            realtimeDebounceSeconds: 6,
+            batchCommentThreshold: 4,
+            batchIdleMinutes: 5,
+            agentProfile: "Original profile",
+            brief: "Original brief",
+            planReview: true,
+            directEditing: false,
+            holdIdleMinutes: 11,
+            updateIdleMinutes: 13,
+          },
+          [app.sessionId]: { tokenLimit: 345, directEditing: false },
+        },
+        trashRetentionDays: 45,
+      },
+    });
+    await app.screen.getByRole("button", { name: "Settings" }).click();
+    await app.screen.findByRole("heading", { name: "Settings" });
+    await app.screen.findByLabelText("Model name");
+    await app.screen.findByDisplayValue("https://before.invalid/v1");
+    app.fireEvent.change(app.screen.getByLabelText("Model name"), { target: { value: "after" } });
+    app.fireEvent.click(app.screen.getByRole("button", { name: "Save model" }));
+    await app.waitFor(async () =>
+      expect(
+        (
+          await app.query<{
+            models: { default: { model: string }; planner: unknown };
+            budgets: { toolCallLimit: number };
+            sessions: Record<string, Record<string, unknown>>;
+          }>("sys.Settings", {})
+        ).models.default.model,
+      ).toBe("after"),
+    );
+    let saved = await app.query<Settings>("sys.Settings", {});
+    expect(saved.models.default?.baseUrl).toBe("https://before.invalid/v1");
+    expect(saved.models.planner).toEqual(model);
+    expect(saved.models.writer).toEqual(model);
+    expect(saved.budgets).toMatchObject({
+      localTimeZone: "UTC",
+      defaultTurnLimitMicros: 1234,
+      toolCallLimit: 9,
+      toolResultByteLimit: 23456,
+    });
+    expect(saved.sessions[app.sessionId]).toMatchObject({ tokenLimit: 345, directEditing: false });
+    await app.screen.getByRole("button", { name: "Agent" }).click();
+    app.fireEvent.change(app.screen.getByLabelText("Agent profile"), { target: { value: "Updated profile" } });
+    app.fireEvent.change(app.screen.getByLabelText("Agent brief"), { target: { value: "Updated brief" } });
+    app.fireEvent.click(app.screen.getByRole("button", { name: "Save agent defaults" }));
+    await app.waitFor(async () =>
+      expect(
+        (await app.query<{ sessions: Record<string, Record<string, unknown>> }>("sys.Settings", {})).sessions.default
+          ?.agentProfile,
+      ).toBe("Updated profile"),
+    );
+    saved = await app.query("sys.Settings", {});
+    expect(saved.sessions[app.sessionId]).toMatchObject({ tokenLimit: 345, directEditing: false });
+    expect(saved.sessions.default).toMatchObject({
+      replyTrigger: "batch",
+      tokenLimit: 222,
+      toolCallLimit: 8,
+      replyRateLimitPerHour: 12,
+      realtimeDebounceSeconds: 6,
+      agentProfile: "Updated profile",
+      brief: "Updated brief",
+      batchCommentThreshold: 4,
+      batchIdleMinutes: 5,
+      planReview: true,
+      directEditing: false,
+      holdIdleMinutes: 11,
+      updateIdleMinutes: 13,
+    });
+    expect(saved.trashRetentionDays).toBe(45);
+    for (const tab of ["Spending", "Grants", "Connected tools", "AI assistant (MCP)", "Data", "Appearance", "About"]) {
+      await app.screen.getByRole("button", { name: tab }).click();
+      if (tab === "Spending") {
+        app.fireEvent.change(await app.screen.findByLabelText("Daily limit"), { target: { value: "5000" } });
+        app.fireEvent.click(app.screen.getByRole("button", { name: "Save daily limit" }));
+        await app.screen.findByText("Spending limit saved");
+      }
+      if (tab === "Data") {
+        app.fireEvent.change(await app.screen.findByLabelText("Trash retention days"), { target: { value: "90" } });
+        app.fireEvent.click(app.screen.getByRole("button", { name: "Save retention" }));
+        await app.screen.findByText("Settings saved");
+        saved = await app.query("sys.Settings", {});
+        expect(saved.trashRetentionDays).toBe(90);
+      }
+      if (tab === "Appearance") app.fireEvent.click(app.screen.getByRole("button", { name: "dark" }));
+      expect(await app.query("sys.Settings", {})).toEqual(saved);
+    }
+  } finally {
+    await app.close();
+  }
+});
+
 it("labels agreements made during a running Update for the next Update", async () => {
   const app = await mountSession({ content: "First block.\n\nSecond block.", planReview: true });
   try {
@@ -429,6 +651,7 @@ async function mountSession(options: {
     const testing = await import("@testing-library/react");
     cleanup = cleanupRenderer = testing.cleanup;
     const screen = testing.within(dom.window.document.body);
+    const savedFiles: Array<{ name: string; bytes: string }> = [];
     const bridge: ContractBridge = {
       command: (type, payload, commandId = crypto.randomUUID()) =>
         client.command({ type, payload: contract.read<Json>("json", payload), commandId }),
@@ -437,12 +660,22 @@ async function mountSession(options: {
         return contract.read<T>("json", result);
       },
       subscribe: (afterSeq, filter, onEvent) => {
-        void afterSeq;
-        void filter;
-        void onEvent;
-        return () => undefined;
+        const controller = new AbortController();
+        void (async () => {
+          try {
+            const subscription = contract.read<import("../../../contract/src/index.js").Subscription>("subscription", {
+              afterSeq,
+              filter,
+            });
+            for await (const event of client.subscribe(subscription, undefined, controller.signal)) onEvent(event);
+          } catch {
+            // Aborting or closing the host ends the test-only event stream.
+          }
+        })();
+        return () => controller.abort();
       },
       putBlob: (bytes, mediaType) => client.putBlob(bytes, mediaType),
+      getBlob: (hash) => client.getBlob(hash),
       blobUrl: (hash) => `vc-blob://${hash}`,
       app: {
         state: async () => "Connected",
@@ -451,6 +684,16 @@ async function mountSession(options: {
         openMarkdown: async () => undefined,
         openExternal: async () => undefined,
         setTheme: async () => undefined,
+        saveFiles: async (files) => {
+          savedFiles.push(...files.map((file) => ({ name: file.name, bytes: new TextDecoder().decode(file.bytes) })));
+        },
+        copyText: async () => undefined,
+        reveal: async () => undefined,
+        workspacePath: async () => f.dir,
+        restoreBackup: async () => undefined,
+        mcpRelayPath: async () => "/vibecab-mcp",
+        openMcpConfig: async () => undefined,
+        nodeVersion: async () => "v26",
         version: async () => "test",
         onNewDraft: () => () => undefined,
         onImport: () => () => undefined,
@@ -496,6 +739,7 @@ async function mountSession(options: {
       elements,
       dom: window,
       screen: testing.within(window.document.body),
+      savedFiles,
       fireEvent: testing.fireEvent,
       waitFor: testing.waitFor,
       within: testing.within,
@@ -532,7 +776,6 @@ async function mountSession(options: {
         await f.close();
       },
       async reloadSession() {
-        testing.fireEvent.click(screen.getByRole("button", { name: "Home" }));
         window.location.hash = `/s/${encodeURIComponent(sessionId)}`;
         window.dispatchEvent(new window.HashChangeEvent("hashchange"));
         await screen.findByRole("region", { name: "Session workflow" });

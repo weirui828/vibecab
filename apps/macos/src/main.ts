@@ -1,5 +1,7 @@
-import { app, BrowserWindow, dialog, ipcMain, Menu, nativeTheme, protocol, shell } from "electron";
+import { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, nativeTheme, protocol, shell } from "electron";
 import { execFileSync } from "node:child_process";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
@@ -8,10 +10,13 @@ import type { CommandEnvelope, QueryEnvelope, Subscription } from "../../../cont
 import { start, status, stop } from "../../../host/src/index.js";
 import { httpClient } from "../../../adapters/http/src/index.js";
 import { workspacePath } from "./paths.js";
+import type { Settings } from "../../../contract/generated/index.js";
 import { isUnauthenticated, reconnectEvents, retryUnauthenticated } from "./bridge-runtime.js";
+import { switchWorkspaceFromBackup } from "./restore-workspace.js";
 
 const contract = new Contract(),
   workspace = resolve(workspacePath());
+const execFileAsync = promisify(execFile);
 type Preferences = { theme?: "system" | "light" | "dark"; width?: number; height?: number; x?: number; y?: number };
 const preferencesPath = () => join(app.getPath("userData"), "preferences.json");
 async function preferences(): Promise<Preferences> {
@@ -108,6 +113,13 @@ function installBridge(): void {
       return client!.putBlob(input.bytes, input.mediaType);
     }, recoverAuthentication),
   );
+  ipcMain.handle("vibe:get-blob", (_event, raw: unknown) =>
+    retryUnauthenticated(async () => {
+      if (!client) await connect();
+      if (typeof raw !== "string" || !/^[a-f0-9]{64}$/.test(raw)) fail("invalid", "Invalid blob hash");
+      return client!.getBlob(raw);
+    }, recoverAuthentication),
+  );
   ipcMain.handle("vibe:subscribe", async (event, raw: unknown) => {
     const input = contract.read<{ id: string; afterSeq: number; filter: unknown }>("json", raw),
       controller = new AbortController();
@@ -154,19 +166,22 @@ function installBridge(): void {
     const input = contract.read<{ baseUrl: string; model: string; apiKey: string }>("json", raw);
     const engine = client;
     if (!engine) throw Error("Engine is not connected");
+    const existing = contract.read<Settings>("settings", await engine.query({ name: "sys.Settings", args: {} }));
+    const existingModel = existing.models.default;
     const model = {
+      ...existingModel,
       provider: "openai-compatible",
       baseUrl: input.baseUrl,
       model: input.model,
       keyRef: "provider:default",
-      capabilities: {
+      capabilities: existingModel?.capabilities ?? {
         tools: true,
         jsonSchemaOutput: true,
         streaming: true,
         maxContextTokens: 32768,
         reportsUsage: false,
       },
-      pricing: { inputMicrosPerMillion: 0, outputMicrosPerMillion: 0 },
+      pricing: existingModel?.pricing ?? { inputMicrosPerMillion: 0, outputMicrosPerMillion: 0 },
     };
     const settings = await engine.command(
       contract.read<CommandEnvelope>("command-envelope", {
@@ -203,6 +218,91 @@ function installBridge(): void {
     void savePreferences({ theme });
   });
   ipcMain.handle("app:version", () => app.getVersion());
+  ipcMain.handle("app:node-version", () =>
+    execFileSync(process.env.VIBECAB_NODE ?? process.execPath, ["--version"], { encoding: "utf8" }).trim(),
+  );
+  ipcMain.handle("app:workspace-path", () => workspace);
+  ipcMain.handle(
+    "app:mcp-relay-path",
+    () => new URL("../../../adapters/mcp-server/bin/vibecab-mcp.mjs", import.meta.url).pathname,
+  );
+  ipcMain.handle("app:open-mcp-config", async () => {
+    const configPath = join(app.getPath("appData"), "Claude", "claude_desktop_config.json");
+    await shell.showItemInFolder(configPath);
+  });
+  ipcMain.handle("app:copy-text", (_event, raw: unknown) => {
+    if (typeof raw === "string") clipboard.writeText(raw);
+  });
+  ipcMain.handle("app:reveal", async (_event, raw: unknown) => {
+    if (typeof raw === "string") await shell.showItemInFolder(raw);
+  });
+  ipcMain.handle("app:save-files", async (_event, raw: unknown) => {
+    if (
+      !Array.isArray(raw) ||
+      raw.some((item) => !item || typeof item.name !== "string" || !(item.bytes instanceof Uint8Array))
+    )
+      fail("invalid", "Invalid export files");
+    const files = raw as Array<{ name: string; bytes: Uint8Array }>;
+    const testDirectory = process.env.VIBECAB_DEV === "1" ? process.env.VIBECAB_TEST_SAVE_DIR : undefined;
+    if (testDirectory) {
+      await mkdir(testDirectory, { recursive: true });
+      for (const file of files) await writeFile(join(testDirectory, file.name.replace(/[^\w.-]+/g, "-")), file.bytes);
+      return;
+    }
+    if (files.length > 1) {
+      const picked = await dialog.showOpenDialog({ properties: ["openDirectory", "createDirectory"] });
+      if (picked.canceled || !picked.filePaths[0]) return;
+      for (const file of files)
+        await writeFile(join(picked.filePaths[0], file.name.replace(/[^\w.-]+/g, "-")), file.bytes);
+      return;
+    }
+    for (const file of files) {
+      const picked = await dialog.showSaveDialog({ defaultPath: file.name });
+      if (!picked.canceled && picked.filePath) await writeFile(picked.filePath, file.bytes);
+    }
+  });
+  ipcMain.handle("app:restore-backup", async () => {
+    const picked = await dialog.showOpenDialog({
+      properties: ["openFile"],
+      filters: [{ name: "VibeCab backup", extensions: ["tgz", "tar.gz", "gz"] }],
+    });
+    const archive = picked.filePaths[0];
+    if (picked.canceled || !archive) return;
+    const confirmation = await dialog.showMessageBox(windowRef!, {
+      type: "warning",
+      buttons: ["Restore", "Cancel"],
+      defaultId: 1,
+      cancelId: 1,
+      message: "VibeCab will stop, restore into a new workspace and switch to it.",
+      detail: `Your current workspace will be kept in workspaces/ as default-before-restore-${new Date().toISOString().slice(0, 10)}.`,
+    });
+    if (confirmation.response !== 0) return;
+    const hostEntry = new URL("../../../host/bin/vibecab-host.mjs", import.meta.url).pathname,
+      nodePath = process.env.VIBECAB_NODE ?? process.execPath;
+    try {
+      await switchWorkspaceFromBackup({
+        workspace,
+        archive,
+        stop: async () => {
+          for (const controller of subscriptions.values()) controller.abort();
+          subscriptions.clear();
+          client = undefined;
+          await stop(workspace);
+        },
+        start: async () => {
+          await start(workspace, hostOptions());
+          await connect();
+        },
+        restore: async (archivePath, destination) => {
+          await execFileAsync(nodePath, [hostEntry, "restore", "--archive", archivePath, "--workspace", destination], {
+            timeout: 300_000,
+          });
+        },
+      });
+    } catch (error) {
+      throw new Error(error instanceof Error ? error.message : "Could not restore backup.", { cause: error });
+    }
+  });
 }
 
 async function createWindow(): Promise<void> {

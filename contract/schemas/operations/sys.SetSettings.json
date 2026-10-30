@@ -21,6 +21,9 @@
             },
             "sessions": {
               "$ref": "https://vibecab.local/schemas/settings.json#/properties/sessions"
+            },
+            "trashRetentionDays": {
+              "$ref": "https://vibecab.local/schemas/settings.json#/properties/trashRetentionDays"
             }
           },
           "additionalProperties": false

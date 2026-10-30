@@ -1,6 +1,7 @@
 import { fail } from "../../../contract/src/index.js";
 import type { Json, AgentTurn, FeedbackComment, Job } from "../../../contract/src/index.js";
 import { AgentServicesRuntime } from "./services-runtime.js";
+import { sessionPreferences } from "../session-preferences.js";
 
 export abstract class AgentTriggerRuntime extends AgentServicesRuntime {
   protected askAgent(raw: unknown): { turnId: string } {
@@ -122,7 +123,7 @@ export abstract class AgentTriggerRuntime extends AgentServicesRuntime {
           return;
         }
         const now = Date.parse(this.deps.clock.now()),
-          prefs = this.settings().sessions[sessionId] ?? {},
+          prefs = sessionPreferences(this.settings(), sessionId),
           storedTrigger = store.feedback("session-trigger", sessionId),
           batch = storedTrigger
             ? this.contract.read<import("../../../contract/src/index.js").ReplyTrigger>("reply-trigger", storedTrigger)

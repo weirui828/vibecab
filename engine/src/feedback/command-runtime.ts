@@ -72,7 +72,7 @@ export abstract class FeedbackCommandRuntime extends FeedbackCoreRuntime {
           title: p.title,
           ...(p.primaryProjectId ? { primaryProjectId: p.primaryProjectId } : {}),
           state: "active",
-          replyTrigger: p.replyTrigger ?? "manual",
+          replyTrigger: p.replyTrigger ?? this.settings().sessions.default?.replyTrigger ?? "manual",
           createdAt: this.clock.now(),
         });
         this.event("vc.SessionStarted", { kind: "session", id: sessionId }, { sessionId });

@@ -4,6 +4,7 @@
   "title": "SessionSettings",
   "type": "object",
   "properties": {
+    "replyTrigger": { "enum": ["realtime", "batch", "manual"] },
     "tokenLimit": { "type": "integer", "minimum": 1 },
     "toolCallLimit": { "type": "integer", "minimum": 1 },
     "replyRateLimitPerHour": { "type": "integer", "minimum": 1 },

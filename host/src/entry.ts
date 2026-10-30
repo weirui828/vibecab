@@ -267,6 +267,15 @@ export async function serve(
   }
 }
 
+export async function restoreBackup(archivePath: string, destinationDir: string): Promise<void> {
+  const engine = createEngine({ keyStore: createKeyStoreFromEnvironment() });
+  try {
+    await engine.restoreBackup(resolve(archivePath), resolve(destinationDir));
+  } finally {
+    await engine.stop();
+  }
+}
+
 function isModelEvent(value: unknown): value is ModelEvent {
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const type = Reflect.get(value, "type");

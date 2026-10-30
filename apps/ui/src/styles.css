@@ -107,6 +107,21 @@ input {
   margin: 0;
   font-weight: 600;
 }
+.session-nav-item {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.draft-actions {
+  display: flex;
+  gap: 8px;
+}
+.comment-meta {
+  display: flex;
+  gap: 8px;
+  color: var(--color-fg-muted);
+  font-size: 0.875rem;
+}
 .session-grid {
   flex: 1;
   display: grid;
@@ -306,12 +321,12 @@ input {
   background: color-mix(in srgb, var(--color-surface-raised) 60%, transparent);
 }
 ::highlight(vibecab-current) {
-  background: #fff0a8;
-  color: inherit;
+  background-color: var(--color-warning-subtle);
+  color: var(--color-fg-default);
 }
 ::highlight(vibecab-revised) {
-  background: #ffe0b2;
-  color: inherit;
+  background-color: var(--color-info-subtle);
+  color: var(--color-fg-default);
 }
 @media (max-width: 1100px) {
   .session-grid {

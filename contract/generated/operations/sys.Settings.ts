@@ -40,6 +40,7 @@ export interface ProviderModel {
   };
 }
 export interface SessionSettings {
+  replyTrigger?: "realtime" | "batch" | "manual";
   tokenLimit?: number;
   toolCallLimit?: number;
   replyRateLimitPerHour?: number;

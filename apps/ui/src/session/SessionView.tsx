@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type {
-  AnchorResolution,
   DeliveryState,
   Element,
   Outline,
+  DiffResult,
   VcResumeViewOperation,
   VcThreadsOperation,
   VcDigestOperation,
@@ -15,11 +15,16 @@ import type {
 } from "../../../../contract/generated/index.js";
 import { inlineMarkdownToPlainText } from "../../../../contract/src/inline-markdown.js";
 import { locatorForTextSelection } from "../document/anchors.js";
+import { DocumentView } from "../document/DocumentView.js";
 import { ResumeCard } from "./ResumeCard.js";
 import { ThreadPanel } from "./ThreadPanel.js";
 import { SessionWorkflow } from "./SessionWorkflow.js";
+import { SessionHeader, SessionSidebar } from "./SessionChrome.js";
+import { useAnchorHighlights } from "./useAnchorHighlights.js";
+import { CommentComposer } from "./CommentComposer.js";
+import { DecisionRecordPanel } from "./DecisionRecordPanel.js";
+import type { Selected } from "./types.js";
 
-type Selected = { element: Element; locator?: { quote: string; prefix: string; suffix: string } };
 export function SessionView({
   sessionId,
   session,
@@ -57,6 +62,11 @@ export function SessionView({
   }, [initialArtifacts, activeArtifactId]);
   const artifact = artifacts.find((item) => item.artifactId === activeArtifactId);
   const [elements, setElements] = useState<Element[]>([]),
+    [viewingVersion, setViewingVersion] = useState<number>(),
+    [snapshots, setSnapshots] = useState<import("../../../../contract/generated/index.js").OutputSet[]>([]),
+    [showHistory, setShowHistory] = useState(false),
+    [comparison, setComparison] = useState<DiffResult>(),
+    [pendingExportId, setPendingExportId] = useState<string>(),
     [threads, setThreads] = useState<VcThreadsOperation["result"]>([]),
     [turns, setTurns] = useState<AgentTurn[]>([]),
     [nextUpdateCommentIds, setNextUpdateCommentIds] = useState<string[]>([]),
@@ -71,15 +81,34 @@ export function SessionView({
     [updatedToast, setUpdatedToast] = useState(""),
     [message, setMessage] = useState("");
   const onRefreshRef = useRef(onRefresh);
-  useEffect(() => {
-    onRefreshRef.current = onRefresh;
-  }, [onRefresh]);
+  const savedExports = useRef(new Set<string>());
+  const [decisionRecord, setDecisionRecord] = useState<unknown[]>();
+  useEffect(() => void (onRefreshRef.current = onRefresh), [onRefresh]);
   const refresh = useCallback(async () => {
     if (!artifact) return;
-    const outline = await window.vibecab.query<Outline>("vc.Outline", {
+    const [latestArtifacts, outline] = await Promise.all([
+      window.vibecab.query<import("../../../../contract/generated/index.js").VcArtifactsOperation["result"]>(
+        "vc.Artifacts",
+        {},
+      ),
+      window.vibecab.query<Outline>("vc.Outline", {
+        artifactId: artifact.artifactId,
+        ...(viewingVersion ? { version: viewingVersion } : {}),
+      }),
+    ]);
+    const latestVersion = latestArtifacts.find((item) => item.artifactId === artifact.artifactId)?.headVersion;
+    if (latestVersion && latestVersion > artifact.headVersion) {
+      setArtifacts((current) =>
+        current.map((item) =>
+          item.artifactId === artifact.artifactId ? { ...item, headVersion: latestVersion } : item,
+        ),
+      );
+      setUpdatedToast(`Updated to v${latestVersion}`);
+    }
+    const list = await window.vibecab.query<Element[]>("vc.Elements", {
       artifactId: artifact.artifactId,
+      ...(viewingVersion ? { version: viewingVersion } : {}),
     });
-    const list = await window.vibecab.query<Element[]>("vc.Elements", { artifactId: artifact.artifactId });
     const nextThreads = await window.vibecab.query<VcThreadsOperation["result"]>("vc.Threads", {
       sessionId,
       artifactId: artifact.artifactId,
@@ -135,14 +164,58 @@ export function SessionView({
       return left[0] - right[0] || left[1] - right[1];
     });
     setElements(list);
+    if (!viewingVersion) {
+      const outputSets = await window.vibecab.query<import("../../../../contract/generated/index.js").OutputSet[]>(
+        "vc.OutputSets",
+        { sessionId },
+      );
+      setSnapshots(outputSets);
+    }
     setThreads(nextThreads);
     setTurns(await window.vibecab.query<AgentTurn[]>("vc.AgentTurns", { sessionId }));
     setResume(await window.vibecab.query<VcResumeViewOperation["result"]>("vc.ResumeView", { sessionId }));
     setDigest(await window.vibecab.query<VcDigestOperation["result"]>("vc.Digest", { sessionId }));
-  }, [artifact, sessionId]);
+  }, [artifact, sessionId, viewingVersion]);
   useEffect(() => {
-    void refresh().catch(() => setMessage("Could not load this session."));
+    let active = true;
+    void refresh().catch(() => {
+      if (active) setMessage("Could not load this session.");
+    });
+    return () => {
+      active = false;
+    };
   }, [refresh]);
+  useEffect(() => {
+    if (!pendingExportId || savedExports.current.has(pendingExportId)) return;
+    let cancelled = false;
+    const waitForExport = async () => {
+      for (let attempt = 0; attempt < 60 && !cancelled; attempt++) {
+        const exports = await window.vibecab.query<
+            Array<{ exportId: string; status: string; blobHash?: string; format: string }>
+          >("vc.Exports", {}),
+          item = exports.find((candidate) => candidate.exportId === pendingExportId);
+        if (item?.status === "failed") throw new Error("Export failed.");
+        if (item?.status === "completed" && item.blobHash) {
+          savedExports.current.add(pendingExportId);
+          const bytes = await window.vibecab.getBlob(item.blobHash),
+            ext = item.format === "markdown" ? "md" : item.format;
+          if (!cancelled) {
+            await window.vibecab.app.saveFiles([{ name: `${artifact?.title ?? "VibeCab"}.${ext}`, bytes }]);
+            setMessage("Export saved");
+            setPendingExportId(undefined);
+          }
+          return;
+        }
+        await new Promise((resolve) => window.setTimeout(resolve, 250));
+      }
+    };
+    void waitForExport().catch((error: unknown) => {
+      if (!cancelled) setMessage(error instanceof Error ? error.message : "Could not save export.");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [pendingExportId, artifact?.title]);
   useEffect(() => {
     const unsub = window.vibecab.subscribe(0, {}, (event) => {
       if (
@@ -154,6 +227,11 @@ export function SessionView({
       ) {
         const version = Reflect.get(event.payload, "version");
         setUpdatedToast(typeof version === "number" ? `Updated to v${version}` : "Document updated");
+        if (typeof version === "number")
+          setArtifacts((current) =>
+            current.map((item) => (item.artifactId === artifact.artifactId ? { ...item, headVersion: version } : item)),
+          );
+        setViewingVersion(undefined);
         const topId = document.elementFromPoint(220, 100)?.closest<HTMLElement>("[data-element-id]")?.dataset.elementId;
         onRefreshRef.current();
         window.requestAnimationFrame(() => {
@@ -171,9 +249,19 @@ export function SessionView({
           "vc.AgentTurnChanged",
         ].includes(event.type)
       )
-        void refresh();
+        void refresh().catch(() => undefined);
+      if (
+        event.type === "vc.LifecycleChanged" &&
+        typeof event.payload === "object" &&
+        event.payload !== null &&
+        Reflect.get(event.payload, "kind") === "export" &&
+        Reflect.get(event.payload, "action") === "completed"
+      ) {
+        const exportId = Reflect.get(event.payload, "id");
+        if (typeof exportId === "string") setPendingExportId(exportId);
+      }
     });
-    const fallback = window.setInterval(() => void refresh(), 1_500);
+    const fallback = window.setInterval(() => void refresh().catch(() => undefined), 1_500);
     return () => {
       unsub();
       window.clearInterval(fallback);
@@ -200,69 +288,7 @@ export function SessionView({
       window.removeEventListener("blur", blur);
     };
   }, [sessionId]);
-  useEffect(() => {
-    const ranges: Range[] = [],
-      revised: Range[] = [];
-    for (const thread of threads)
-      for (const resolution of thread.anchorResolutions as AnchorResolution[]) {
-        if (resolution.state === "removed") continue;
-        const node = document.querySelector(`[data-element-id="${CSS.escape(resolution.anchor.elementId)}"]`);
-        if (!node) continue;
-        const range = document.createRange();
-        if (resolution.state === "revised") {
-          range.selectNodeContents(node);
-          revised.push(range);
-          continue;
-        }
-        const quote = resolution.anchor.locator?.quote;
-        if (!quote) continue;
-        const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT),
-          textNodes: Text[] = [];
-        let current = walker.nextNode();
-        while (current) {
-          if (current instanceof Text) textNodes.push(current);
-          current = walker.nextNode();
-        }
-        const fullText = textNodes.map((textNode) => textNode.data).join(""),
-          start = fullText.indexOf(quote);
-        if (start < 0) continue;
-        let cursor = 0,
-          startNode: Text | undefined,
-          endNode: Text | undefined,
-          startOffset = 0,
-          endOffset = 0;
-        for (const textNode of textNodes) {
-          const next = cursor + textNode.data.length;
-          if (!startNode && start >= cursor && start < next) {
-            startNode = textNode;
-            startOffset = start - cursor;
-          }
-          if (start + quote.length >= cursor && start + quote.length <= next) {
-            endNode = textNode;
-            endOffset = start + quote.length - cursor;
-            break;
-          }
-          cursor = next;
-        }
-        if (startNode && endNode) {
-          range.setStart(startNode, startOffset);
-          range.setEnd(endNode, endOffset);
-          ranges.push(range);
-        }
-      }
-    if (typeof CSS !== "undefined" && "highlights" in CSS && typeof Highlight !== "undefined") {
-      CSS.highlights.delete("vibecab-current");
-      CSS.highlights.delete("vibecab-revised");
-      if (ranges.length) CSS.highlights.set("vibecab-current", new Highlight(...ranges));
-      if (revised.length) CSS.highlights.set("vibecab-revised", new Highlight(...revised));
-    }
-    return () => {
-      if (typeof CSS !== "undefined" && "highlights" in CSS) {
-        CSS.highlights.delete("vibecab-current");
-        CSS.highlights.delete("vibecab-revised");
-      }
-    };
-  }, [threads, elements]);
+  useAnchorHighlights(threads);
   const chooseRange = () => {
     const selection = window.getSelection(),
       selectionRange = selection?.rangeCount ? selection.getRangeAt(0) : undefined,
@@ -320,67 +346,32 @@ export function SessionView({
   };
   return (
     <section className="session-view">
-      <header className="session-header">
-        <button onClick={onBack}>Home</button>
-        <div>
-          <p>
-            {title} · {artifact?.title ?? "No Draft"}
-          </p>
-          <span>v{artifact?.headVersion ?? "—"}</span>
-        </div>
-        <span role="status">Connected</span>
-        <button aria-label="Toggle threads" onClick={() => setShowThreads((open) => !open)}>
-          Threads
-        </button>
-      </header>
+      <SessionHeader
+        title={title}
+        artifact={artifact}
+        artifacts={artifacts}
+        sessionId={sessionId}
+        snapshots={snapshots}
+        showHistory={showHistory}
+        setShowHistory={setShowHistory}
+        setViewingVersion={setViewingVersion}
+        setComparison={setComparison}
+        refresh={refresh}
+        setPendingExportId={setPendingExportId}
+        setShowThreads={setShowThreads}
+        onBack={onBack}
+      />
       <div className="session-grid">
-        <nav className="session-sidebar" aria-label="Session drafts">
-          <h2>Drafts</h2>
-          {artifacts.length ? (
-            artifacts.map((item) => (
-              <button
-                key={item.artifactId}
-                aria-current={item.artifactId === activeArtifactId}
-                onClick={() => setActiveArtifactId(item.artifactId)}
-              >
-                {item.title}
-              </button>
-            ))
-          ) : (
-            <p>No Draft attached</p>
-          )}
-          <button onClick={() => void onAddDraft()}>Add new Draft</button>
-          {availableArtifacts
-            .filter((item) => !artifacts.some((attached) => attached.artifactId === item.artifactId))
-            .map((item) => (
-              <button
-                key={item.artifactId}
-                onClick={() =>
-                  void window.vibecab
-                    .command("vc.AttachArtifact", { sessionId, artifactId: item.artifactId, role: "supporting" })
-                    .then((result) => {
-                      if (result.ok) {
-                        setArtifacts((current) => [...current, item]);
-                        setActiveArtifactId(item.artifactId);
-                      }
-                    })
-                }
-              >
-                Attach {item.title}
-              </button>
-            ))}
-          <div className="session-controls">
-            <button onClick={() => void window.vibecab.command("vc.PauseSession", { sessionId }).then(onRefresh)}>
-              Pause
-            </button>
-            <button onClick={() => void window.vibecab.command("vc.ResumeSession", { sessionId }).then(onRefresh)}>
-              Resume
-            </button>
-            <button onClick={() => void window.vibecab.command("vc.EndSession", { sessionId }).then(onRefresh)}>
-              End
-            </button>
-          </div>
-        </nav>
+        <SessionSidebar
+          artifacts={artifacts}
+          activeArtifactId={activeArtifactId}
+          setActiveArtifactId={setActiveArtifactId}
+          availableArtifacts={availableArtifacts}
+          sessionId={sessionId}
+          setArtifacts={setArtifacts}
+          onAddDraft={onAddDraft}
+          onRefresh={onRefresh}
+        />
         <main
           className="document-region"
           onMouseUp={chooseRange}
@@ -398,6 +389,19 @@ export function SessionView({
             }
           }}
         >
+          {viewingVersion ? (
+            <p role="status">
+              Viewing v{viewingVersion} — read only{" "}
+              <button
+                onClick={() => {
+                  setViewingVersion(undefined);
+                  setComparison(undefined);
+                }}
+              >
+                Back to latest
+              </button>
+            </p>
+          ) : null}
           {resume ? (
             <ResumeCard
               resume={resume}
@@ -409,51 +413,59 @@ export function SessionView({
             />
           ) : null}
           {artifact ? (
-            <>
-              <SessionWorkflow
-                sessionId={sessionId}
-                session={session}
-                artifact={artifact}
-                threads={threads}
-                currentElements={elements}
-                onRefresh={refresh}
-                onFocusElement={(elementId) =>
-                  document
-                    .querySelector(`[data-element-id="${CSS.escape(elementId)}"]`)
-                    ?.scrollIntoView({ block: "center" })
-                }
-                onComment={(element, locator) => setSelected({ element, ...(locator ? { locator } : {}) })}
+            viewingVersion ? (
+              <DocumentView
+                artifactId={artifact.artifactId}
+                version={viewingVersion}
+                elements={elements}
+                onComment={() => undefined}
+                diff={comparison}
+                showChanges={Boolean(comparison)}
               />
-            </>
+            ) : (
+              <>
+                <SessionWorkflow
+                  sessionId={sessionId}
+                  session={session}
+                  artifact={artifact}
+                  threads={threads}
+                  currentElements={elements}
+                  onRefresh={refresh}
+                  onFocusElement={(elementId) =>
+                    document
+                      .querySelector(`[data-element-id="${CSS.escape(elementId)}"]`)
+                      ?.scrollIntoView({ block: "center" })
+                  }
+                  onComment={(element, locator) => setSelected({ element, ...(locator ? { locator } : {}) })}
+                />
+              </>
+            )
           ) : (
             <p>Attach a Draft to read its Document.</p>
           )}
-          <button className="comment-toolbar" onClick={chooseRange}>
-            Comment
-          </button>
-          <form
-            className="comment-form"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void post();
-            }}
-          >
-            <label>
-              Comment
-              <textarea aria-label="Comment" value={body} onChange={(event) => setBody(event.target.value)} />
-            </label>
-            {selected ? (
-              <label>
-                Suggest replacement
-                <input
-                  value={suggestion}
-                  onChange={(event) => setSuggestion(event.target.value)}
-                  placeholder={selected.locator?.quote ?? "Optional"}
-                />
-              </label>
-            ) : null}
-            <button type="submit">Post comment</button>
-          </form>
+          {artifact && !viewingVersion ? (
+            <button
+              onClick={() =>
+                void window.vibecab
+                  .query<unknown[]>("vc.DecisionRecord", { artifactId: artifact.artifactId })
+                  .then(setDecisionRecord)
+              }
+            >
+              Why is this here?
+            </button>
+          ) : null}
+          {decisionRecord ? <DecisionRecordPanel items={decisionRecord} /> : null}
+          {!viewingVersion ? (
+            <CommentComposer
+              body={body}
+              setBody={setBody}
+              selected={selected}
+              suggestion={suggestion}
+              setSuggestion={setSuggestion}
+              onSubmit={() => void post()}
+              onChooseRange={chooseRange}
+            />
+          ) : null}
           <p role="status">{message}</p>
           {updatedToast ? (
             <p className="update-toast" role="status">
@@ -461,7 +473,7 @@ export function SessionView({
             </p>
           ) : null}
         </main>
-        {showThreads ? (
+        {showThreads && !viewingVersion ? (
           <ThreadPanel
             threads={threads}
             turns={turns}

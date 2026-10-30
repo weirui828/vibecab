@@ -17,6 +17,7 @@ const bridge: ContractBridge = {
     };
   },
   putBlob: (bytes, mediaType) => ipcRenderer.invoke("vibe:put-blob", { bytes, mediaType }),
+  getBlob: (hash) => ipcRenderer.invoke("vibe:get-blob", hash),
   blobUrl: (hash) => `vc-blob://${hash}`,
   app: {
     state: () => ipcRenderer.invoke("app:state"),
@@ -25,6 +26,14 @@ const bridge: ContractBridge = {
     openMarkdown: () => ipcRenderer.invoke("app:open-markdown"),
     openExternal: (url: string) => ipcRenderer.invoke("app:open-external", url),
     setTheme: (theme) => ipcRenderer.invoke("app:set-theme", theme),
+    saveFiles: (files) => ipcRenderer.invoke("app:save-files", files),
+    copyText: (text) => ipcRenderer.invoke("app:copy-text", text),
+    reveal: (path) => ipcRenderer.invoke("app:reveal", path),
+    workspacePath: () => ipcRenderer.invoke("app:workspace-path"),
+    restoreBackup: () => ipcRenderer.invoke("app:restore-backup"),
+    mcpRelayPath: () => ipcRenderer.invoke("app:mcp-relay-path"),
+    openMcpConfig: () => ipcRenderer.invoke("app:open-mcp-config"),
+    nodeVersion: () => ipcRenderer.invoke("app:node-version"),
     version: () => ipcRenderer.invoke("app:version"),
     onNewDraft: (listener: () => void) => {
       const handler = () => listener();

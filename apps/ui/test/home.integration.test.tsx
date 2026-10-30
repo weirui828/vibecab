@@ -67,6 +67,7 @@ it("renders Drafts and Sessions from the host using the test HTTP ContractBridge
           return () => controller.abort();
         },
         putBlob: (bytes, mediaType) => client.putBlob(bytes, mediaType),
+        getBlob: async () => new Uint8Array(),
         blobUrl: (hash) => `vc-blob://${hash}`,
         app: {
           state: async () => "Connected",
@@ -75,6 +76,14 @@ it("renders Drafts and Sessions from the host using the test HTTP ContractBridge
           openMarkdown: async () => undefined,
           openExternal: async () => undefined,
           setTheme: async () => undefined,
+          saveFiles: async () => undefined,
+          copyText: async () => undefined,
+          reveal: async () => undefined,
+          workspacePath: async () => "/workspace",
+          restoreBackup: async () => undefined,
+          mcpRelayPath: async () => "/vibecab-mcp",
+          openMcpConfig: async () => undefined,
+          nodeVersion: async () => "v26",
           version: async () => "test",
           onNewDraft: () => () => undefined,
           onImport: () => () => undefined,

@@ -33,6 +33,7 @@ export abstract class CommandOperations extends StorageAccessRuntime {
             models?: Record<string, ProviderModel>;
             budgets?: SettingsDocument["budgets"];
             sessions?: Record<string, Json>;
+            trashRetentionDays?: SettingsDocument["trashRetentionDays"];
           };
         }>("operations/sys.SetSettings", cmd.payload, "#/properties/payload");
         const current = this.settings(),
@@ -44,10 +45,19 @@ export abstract class CommandOperations extends StorageAccessRuntime {
             fail("invalid", "Invalid local time zone");
           }
         }
+        const sessions = { ...current.sessions };
+        for (const [sessionId, patch] of Object.entries(p.patch.sessions ?? {})) {
+          const existing = sessions[sessionId] ?? {},
+            next = typeof patch === "object" && patch !== null && !Array.isArray(patch) ? patch : {};
+          sessions[sessionId] = { ...existing, ...next };
+        }
         const settings = this.saveSettings({
           models: { ...current.models, ...p.patch.models },
           budgets,
-          sessions: { ...current.sessions, ...p.patch.sessions },
+          sessions,
+          ...(p.patch.trashRetentionDays !== undefined || current.trashRetentionDays !== undefined
+            ? { trashRetentionDays: p.patch.trashRetentionDays ?? current.trashRetentionDays }
+            : {}),
         });
         store.appendEvent({
           ts: this.deps.clock.now(),

@@ -21,6 +21,7 @@ import type {
 } from "../../../contract/src/index.js";
 import { LifecycleHelpersRuntime } from "./helpers-runtime.js";
 import { escapeHtml } from "./helpers-runtime.js";
+import { sessionPreferences } from "../session-preferences.js";
 import { renderHtmlDocument, renderHtmlFragment, renderMarkdown } from "./render.js";
 
 const runFile = promisify(execFile);
@@ -317,7 +318,7 @@ export abstract class LifecycleJobsRuntime extends LifecycleHelpersRuntime {
         output: { kind: "json", schema: this.contract.schema("digest-content"), name: "digest-content" },
         maxOutputTokens: Math.min(
           1500,
-          settings.sessions[sessionId]?.tokenLimit ?? settings.budgets.defaultTurnTokenLimit ?? 8192,
+          sessionPreferences(settings, sessionId).tokenLimit ?? settings.budgets.defaultTurnTokenLimit ?? 8192,
         ),
       };
     if (estimateInputTokens(request) + request.maxOutputTokens > model.capabilities.maxContextTokens)
