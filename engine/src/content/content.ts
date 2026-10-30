@@ -88,20 +88,18 @@ export class Content {
         },
       });
       const result = this.commitInitial(artifactId, nodes, principal, source);
-      return { artifactId, ...result };
+      return { artifactId, version: result.version, idMap: result.idMap };
     }
     const artifactId = input.artifactId,
       head = this.store.artifact(artifactId).headVersion;
-    return {
+    const result = this.commit({
       artifactId,
-      ...this.commit({
-        artifactId,
-        baseVersion: head,
-        changes: nodes,
-        createdBy: principal,
-        source,
-      }),
-    };
+      baseVersion: head,
+      changes: nodes,
+      createdBy: principal,
+      source,
+    });
+    return { artifactId, version: result.version, idMap: result.idMap };
   }
   private commitInitial(
     artifactId: string,

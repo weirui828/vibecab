@@ -11,6 +11,7 @@ export interface ContractBridge {
     startEngine(): Promise<string>;
     saveProvider(baseUrl: string, model: string, apiKey: string): Promise<void>;
     openMarkdown(): Promise<{ name: string; content: string } | undefined>;
+    openExternal(url: string): Promise<void>;
     setTheme(theme: "system" | "light" | "dark"): Promise<void>;
     version(): Promise<string>;
     onNewDraft(listener: () => void): () => void;

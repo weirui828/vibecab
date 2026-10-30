@@ -52,7 +52,9 @@ export abstract class AgentRuntime extends AgentExternalRuntime {
         content:
           (digest ? `<derived-session-digest>\n${JSON.stringify(digest)}\n</derived-session-digest>\n` : "") +
           "<untrusted-comments>\n" +
-          selected.map((c) => `${c.author.kind}: ${c.body}`).join("\n") +
+          selected
+            .map((c) => `${c.author.kind} [threadId=${c.threadId}; commentId=${c.commentId}]: ${c.body}`)
+            .join("\n") +
           "\n</untrusted-comments>",
       },
     ];

@@ -6,12 +6,18 @@ import { attachArtifact, listSessions, startSession } from "../api/sessions.js";
 import { terms } from "../copy/terms.js";
 import { connectionTransition } from "../connection.js";
 import type { ConnectionEvent, ConnectionState } from "../connection.js";
+import type { AttentionItem } from "../../../../contract/generated/index.js";
+import { SessionView } from "../session/SessionView.js";
 
 export function App() {
   const [state, setState] = useState<ConnectionState>("Starting"),
     [artifacts, setArtifacts] = useState<VcArtifactsOperation["result"]>([]),
     [sessions, setSessions] = useState<VcSessionsOperation["result"]>([]),
     [error, setError] = useState(""),
+    [attention, setAttention] = useState<AttentionItem[]>([]),
+    [filter, setFilter] = useState(""),
+    [undoTarget, setUndoTarget] = useState<{ kind: "artifact" | "session"; id: string } | undefined>(),
+    [draftSessionId, setDraftSessionId] = useState("new"),
     [onboarding, setOnboarding] = useState(false),
     [selected, setSelected] = useState(""),
     [route, setRoute] = useState(window.location.hash.slice(1) || "/"),
@@ -19,9 +25,15 @@ export function App() {
   const setConnection = (event: ConnectionEvent) => setState((current) => connectionTransition(current, event));
   const refresh = async () => {
     try {
-      const [nextArtifacts, nextSessions] = await Promise.all([listArtifacts(), listSessions()]);
+      const [nextArtifacts, nextSessions, nextAttention] = await Promise.all([
+        listArtifacts(),
+        listSessions(),
+        window.vibecab.query<AttentionItem[]>("vc.AttentionInbox", {}),
+      ]);
+      nextArtifacts.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
       setArtifacts(nextArtifacts);
       setSessions(nextSessions);
+      setAttention(nextAttention);
       setConnection("connected");
       setError("");
     } catch {
@@ -30,6 +42,7 @@ export function App() {
   };
   useEffect(() => {
     void window.vibecab.app.state().then((current) => setConnection(current === "Connected" ? "connected" : "stopped"));
+    void refresh();
     void Promise.all([listArtifacts(), window.vibecab.query<Settings>("sys.Settings", {})]).then(
       ([existing, settings]) => {
         const models = settings.models;
@@ -62,17 +75,18 @@ export function App() {
       window.removeEventListener("hashchange", onHash);
     };
   }, []);
-  const createDraft = async (content?: string, title?: string) => {
+  const createDraft = async (content?: string, title?: string, targetSessionId = draftSessionId) => {
     try {
       const record =
         content === undefined
           ? await createBlank(title ?? "Untitled")
           : await importMarkdownContent(title ?? "Untitled", content);
-      const session = await startSession(title ?? "New session");
-      await attachArtifact(session.sessionId, record.artifactId);
+      const sessionId =
+        targetSessionId === "new" ? (await startSession(title ?? "New session")).sessionId : targetSessionId;
+      await attachArtifact(sessionId, record.artifactId);
       await refresh();
       setSelected("");
-      window.location.hash = "/s/" + encodeURIComponent(session.sessionId);
+      window.location.hash = "/s/" + encodeURIComponent(sessionId);
     } catch (failure) {
       setError(failure instanceof Error ? failure.message : "Could not create draft.");
     }
@@ -84,6 +98,11 @@ export function App() {
   const selectedArtifact = artifacts.find((artifact) => artifact.artifactId === selected);
   const activeSessionId = route.match(/^\/s\/([^/]+)$/)?.[1],
     activeSession = sessions.find((session) => session.sessionId === decodeURIComponent(activeSessionId ?? ""));
+  const groupedAttention = new Map<string, AttentionItem[]>();
+  for (const item of attention) {
+    const group = item.sessionId ?? "workspace";
+    groupedAttention.set(group, [...(groupedAttention.get(group) ?? []), item]);
+  }
   return (
     <div className="shell">
       <aside className="sidebar">
@@ -101,16 +120,45 @@ export function App() {
         </p>
         <div>
           {sessions.map((session) => (
-            <button
-              className="draft"
-              key={session.sessionId}
-              onClick={() => {
-                setSelected("");
-                window.location.hash = "/s/" + encodeURIComponent(session.sessionId);
-              }}
-            >
-              {session.title}
-            </button>
+            <div key={session.sessionId} className="session-nav-item">
+              <button
+                className="draft"
+                onClick={() => {
+                  setSelected("");
+                  window.location.hash = "/s/" + encodeURIComponent(session.sessionId);
+                }}
+              >
+                {session.title}{" "}
+                <small>
+                  {session.state} · {attention.filter((item) => item.sessionId === session.sessionId).length} needs you
+                </small>
+              </button>
+              <button
+                aria-label={`Rename ${session.title}`}
+                onClick={() => {
+                  const title = window.prompt("Rename Session", session.title);
+                  if (title)
+                    void window.vibecab
+                      .command("vc.RenameSession", { sessionId: session.sessionId, title })
+                      .then(refresh);
+                }}
+              >
+                Rename
+              </button>
+              <button
+                aria-label={`Move ${session.title} to trash`}
+                onClick={() => {
+                  void window.vibecab
+                    .command("vc.Trash", { target: { kind: "session", id: session.sessionId } })
+                    .then(() => {
+                      setUndoTarget({ kind: "session", id: session.sessionId });
+                      return refresh();
+                    });
+                }}
+              >
+                Trash
+              </button>
+            </div>
           ))}
         </div>
         <p>
@@ -193,34 +241,23 @@ export function App() {
         ) : (
           <>
             {activeSession ? (
-              <>
-                <div className="row">
-                  <div>
-                    <p className="eyebrow">{terms.session}</p>
-                    <h2>{activeSession.title}</h2>
-                  </div>
-                  <Button
-                    variant="secondary"
-                    onClick={() => {
-                      window.location.hash = "/";
-                    }}
-                  >
-                    Back
-                  </Button>
-                </div>
-                <p>Drafts and conversations for this session will appear here.</p>
-                {artifacts
-                  .filter((artifact) => activeSession.artifactIds.includes(artifact.artifactId))
-                  .map((artifact) => (
-                    <button
-                      className="draft"
-                      key={artifact.artifactId}
-                      onClick={() => setSelected(artifact.artifactId)}
-                    >
-                      {artifact.title}
-                    </button>
-                  ))}
-              </>
+              <SessionView
+                key={activeSession.sessionId}
+                sessionId={activeSession.sessionId}
+                title={activeSession.title}
+                artifacts={artifacts.filter((artifact) => activeSession.artifactIds.includes(artifact.artifactId))}
+                availableArtifacts={artifacts}
+                onAddDraft={async () => {
+                  const draft = await createBlank("Untitled");
+                  await attachArtifact(activeSession.sessionId, draft.artifactId);
+                  await refresh();
+                }}
+                onBack={() => {
+                  window.location.hash = "/";
+                  void refresh();
+                }}
+                onRefresh={() => void refresh()}
+              />
             ) : (
               <>
                 <div className="row">
@@ -229,10 +266,35 @@ export function App() {
                     <h2>Your {terms.draft}s</h2>
                   </div>
                   <Button onClick={() => setShowNewDraft((shown) => !shown)}>New {terms.draft.toLowerCase()}</Button>
+                  <Button
+                    variant="secondary"
+                    onClick={() =>
+                      void startSession("New session")
+                        .then(refresh)
+                        .catch((failure) => setError(String(failure)))
+                    }
+                  >
+                    New {terms.session.toLowerCase()}
+                  </Button>
                 </div>
                 {showNewDraft ? (
                   <Card>
                     <CardBody>
+                      <label className="draft-session-select">
+                        Add to session
+                        <select
+                          aria-label="Add to session"
+                          value={draftSessionId}
+                          onChange={(event) => setDraftSessionId(event.target.value)}
+                        >
+                          <option value="new">New session</option>
+                          {sessions.map((session) => (
+                            <option key={session.sessionId} value={session.sessionId}>
+                              {session.title}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
                       <div className="row">
                         <Button
                           onClick={() => {
@@ -260,6 +322,50 @@ export function App() {
                     {error}
                   </p>
                 ) : null}
+                <label className="home-filter">
+                  Filter Drafts{" "}
+                  <input
+                    aria-label="Filter Drafts"
+                    value={filter}
+                    onChange={(event) => setFilter(event.target.value)}
+                  />
+                </label>
+                <section aria-label="Needs you">
+                  <h3>Needs you</h3>
+                  {groupedAttention.size ? (
+                    Array.from(groupedAttention, ([group, items]) => (
+                      <div key={group}>
+                        <h4>{sessions.find((session) => session.sessionId === group)?.title ?? "Workspace"}</h4>
+                        {items.map((item) => (
+                          <button
+                            className="draft"
+                            key={item.kind + item.id}
+                            onClick={() => {
+                              if (item.sessionId) window.location.hash = "/s/" + encodeURIComponent(item.sessionId);
+                            }}
+                          >
+                            {item.kind.replaceAll("_", " ")}
+                          </button>
+                        ))}
+                      </div>
+                    ))
+                  ) : (
+                    <p>No items need your attention.</p>
+                  )}
+                </section>
+                {undoTarget ? (
+                  <p role="status">
+                    Moved to trash.{" "}
+                    <button
+                      onClick={() => {
+                        void window.vibecab.command("vc.Restore", { target: undoTarget }).then(refresh);
+                        setUndoTarget(undefined);
+                      }}
+                    >
+                      Undo
+                    </button>
+                  </p>
+                ) : null}
                 {artifacts.length === 0 ? (
                   <Card>
                     <CardBody>
@@ -269,17 +375,49 @@ export function App() {
                   </Card>
                 ) : (
                   <div className="list">
-                    {artifacts.map((artifact) => (
-                      <button
-                        className="draft"
-                        key={artifact.artifactId}
-                        onClick={() => setSelected(artifact.artifactId)}
-                      >
-                        <strong>{artifact.title}</strong>
-                        <span> · {terms.document}</span>
-                        <small> · Updated {new Date(artifact.updatedAt).toLocaleDateString()}</small>
-                      </button>
-                    ))}
+                    {artifacts
+                      .filter((artifact) => artifact.title.toLowerCase().includes(filter.toLowerCase()))
+                      .map((artifact) => (
+                        <article className="draft" key={artifact.artifactId}>
+                          <button className="draft-open" onClick={() => setSelected(artifact.artifactId)}>
+                            <strong>{artifact.title}</strong>
+                            <span> · {terms.document}</span>
+                            <small>
+                              {" "}
+                              · Updated {new Date(artifact.updatedAt).toLocaleDateString()} · Sessions:{" "}
+                              {sessions
+                                .filter((session) => session.artifactIds.includes(artifact.artifactId))
+                                .map((session) => session.title)
+                                .join(", ") || "None"}
+                            </small>
+                          </button>
+                          <div className="draft-actions">
+                            <button
+                              onClick={() => {
+                                const title = window.prompt("Rename Draft", artifact.title);
+                                if (title)
+                                  void window.vibecab
+                                    .command("vc.RenameArtifact", { artifactId: artifact.artifactId, title })
+                                    .then(refresh);
+                              }}
+                            >
+                              Rename
+                            </button>
+                            <button
+                              onClick={() => {
+                                void window.vibecab
+                                  .command("vc.Trash", { target: { kind: "artifact", id: artifact.artifactId } })
+                                  .then(() => {
+                                    setUndoTarget({ kind: "artifact", id: artifact.artifactId });
+                                    return refresh();
+                                  });
+                              }}
+                            >
+                              Move to trash
+                            </button>
+                          </div>
+                        </article>
+                      ))}
                   </div>
                 )}
               </>

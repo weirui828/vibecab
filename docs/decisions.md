@@ -2,6 +2,10 @@
 
 Choices not dictated by the design, newest last. Format: date — decision — reason — who.
 
+- 2026-10-30 — A2 comment locators use the contract's shared inline-Markdown plain-text normalization; `seenHash` remains engine-derived because the comment schema does not accept it from callers. — Keeps client and engine quote positions consistent and prevents adapters from supplying a manifest hash. — Wei
+- 2026-10-30 — A2 accessibility checks use axe-core as a macOS E2E dev dependency. — The Home and Session pages need automated serious/critical accessibility regression coverage without adding runtime weight. — Wei
+- 2026-10-30 — Reply context includes thread and comment IDs so the agent can call the thread-bound reply tool; the scripted provider resolves `$first_thread` in test tool-call arguments from that context. — Reply calls must address a selected thread, and the fake-provider E2E needs stable scripts despite generated IDs. — Wei
+
 ## Pre-seeded (Wei, 2026-10-28)
 
 - 2026-10-28 — Engine language: TypeScript on Node.js 26 LTS. — Mature model-provider and MCP SDKs; strongest coding-agent fluency; shares contract types with a future TypeScript UI. — Wei

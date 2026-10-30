@@ -6,4 +6,11 @@ export const terms = {
   update: "Update",
   agree: "Agree",
   decline: "Decline",
+  open: "Open",
+  discussing: "Discussing",
+  agreed: "Agreed",
+  scheduled: "Scheduled",
+  applied: "Applied",
+  declined: "Declined",
+  superseded: "Superseded",
 } as const;

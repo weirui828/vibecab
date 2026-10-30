@@ -73,6 +73,7 @@ it("renders Drafts and Sessions from the host using the test HTTP ContractBridge
           startEngine: async () => "Connected",
           saveProvider: async () => undefined,
           openMarkdown: async () => undefined,
+          openExternal: async () => undefined,
           setTheme: async () => undefined,
           version: async () => "test",
           onNewDraft: () => () => undefined,
@@ -115,7 +116,7 @@ it("renders Drafts and Sessions from the host using the test HTTP ContractBridge
     fireEvent.click(await screen.findByRole("button", { name: "Get started" }));
     fireEvent.click(await screen.findByRole("button", { name: "Skip for now" }));
     expect(await screen.findByText("Host draft")).toBeTruthy();
-    expect(await screen.findByText("Host session")).toBeTruthy();
+    expect(await screen.findByRole("button", { name: /^Host session/ })).toBeTruthy();
   } finally {
     await server?.close();
     await f.close();

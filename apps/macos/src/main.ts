@@ -91,12 +91,7 @@ function installBridge(): void {
       if (!client) await connect();
       const input = contract.read<CommandEnvelope>("command-envelope", raw);
       const result = await client!.command(input);
-      if (result.ok)
-        contract.read(
-          "operations/" + input.type,
-          { payload: input.payload, result: result.result },
-          "#/properties/result",
-        );
+      if (result.ok) contract.read("operations/" + input.type, result.result, "#/properties/result");
       return result;
     }, recoverAuthentication),
   );
@@ -198,6 +193,9 @@ function installBridge(): void {
     if (picked.canceled || !picked.filePaths[0]) return undefined;
     const path = picked.filePaths[0];
     return { name: path.split(/[\\/]/).at(-1) ?? "Document.md", content: await readFile(path, "utf8") };
+  });
+  ipcMain.handle("app:open-external", async (_event, url: unknown) => {
+    if (typeof url === "string" && /^(https:|mailto:)/i.test(url)) await shell.openExternal(url);
   });
   ipcMain.handle("app:set-theme", (_event, theme: unknown) => {
     if (theme !== "system" && theme !== "light" && theme !== "dark") fail("invalid", "Invalid theme");

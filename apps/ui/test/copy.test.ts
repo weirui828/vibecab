@@ -12,6 +12,13 @@ it("centralizes the visible domain labels and maps contract errors", () => {
     update: "Update",
     agree: "Agree",
     decline: "Decline",
+    open: "Open",
+    discussing: "Discussing",
+    agreed: "Agreed",
+    scheduled: "Scheduled",
+    applied: "Applied",
+    declined: "Declined",
+    superseded: "Superseded",
   });
   expect(errorMessage("budget_exceeded")).toBe("Spending limit reached for today.");
   expect(errorMessage("stale_base")).toBe("This changed while you were editing.");

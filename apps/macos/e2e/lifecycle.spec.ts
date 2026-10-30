@@ -39,7 +39,7 @@ test("first run creates a draft, keeps secrets out of the renderer and stops the
     await page.getByRole("button", { name: "Get started" }).click();
     await page.getByRole("button", { name: "Skip for now" }).click();
     await page.getByRole("button", { name: "Blank Document" }).click();
-    await expect(page.getByText("Untitled")).toBeVisible();
+    await expect(page.getByText("Untitled", { exact: true })).toBeVisible();
     const exposure = await page.evaluate(() => ({
       requireType: typeof Reflect.get(window, "require"),
       processType: typeof Reflect.get(window, "process"),

@@ -59,31 +59,35 @@ export class Feedback extends FeedbackAgreementRuntime {
           (c) =>
             (!p.sessionId || c.sessionId === p.sessionId) &&
             (!p.state || c.state === p.state) &&
-            (name !== "vc.Threads" || includeDeleted || !c.deleted) &&
-            (!p.artifactId || c.anchor?.artifactId === p.artifactId),
+            (name !== "vc.Threads" || includeDeleted || !c.deleted),
         );
-        if (name === "vc.FeedbackItems") return comments;
+        if (name === "vc.FeedbackItems")
+          return p.artifactId ? comments.filter((c) => c.anchor?.artifactId === p.artifactId) : comments;
         const groups = new Map<string, FeedbackComment[]>();
         for (const c of comments) {
           const group = groups.get(c.threadId) ?? [];
           group.push(c);
           groups.set(c.threadId, group);
         }
-        return [...groups].map(([threadId, threadComments]) => {
-          const anchors = threadComments.flatMap((c) => (c.anchor ? [c.anchor] : []));
-          const anchorResolutions: AnchorResolution[] = anchors.length ? resolveAnchors(this.store, anchors) : [];
-          const trigger = this.store.feedback("thread-trigger", `${threadComments[0]!.sessionId}:${threadId}`);
-          const replyTrigger =
-            trigger === undefined ? undefined : this.contract.read<ReplyTrigger>("reply-trigger", trigger);
-          const thread = {
-            threadId,
-            sessionId: threadComments[0]!.sessionId,
-            comments: threadComments,
-            anchorResolutions,
-            ...(replyTrigger ? { replyTrigger } : {}),
-          };
-          return this.contract.read<Thread>("thread", thread);
-        });
+        return [...groups]
+          .map(([threadId, threadComments]) => {
+            if (p.artifactId && !threadComments.some((comment) => comment.anchor?.artifactId === p.artifactId))
+              return undefined;
+            const anchors = threadComments.flatMap((c) => (c.anchor ? [c.anchor] : []));
+            const anchorResolutions: AnchorResolution[] = anchors.length ? resolveAnchors(this.store, anchors) : [];
+            const trigger = this.store.feedback("thread-trigger", `${threadComments[0]!.sessionId}:${threadId}`);
+            const replyTrigger =
+              trigger === undefined ? undefined : this.contract.read<ReplyTrigger>("reply-trigger", trigger);
+            const thread = {
+              threadId,
+              sessionId: threadComments[0]!.sessionId,
+              comments: threadComments,
+              anchorResolutions,
+              ...(replyTrigger ? { replyTrigger } : {}),
+            };
+            return this.contract.read<Thread>("thread", thread);
+          })
+          .filter((thread): thread is Thread => thread !== undefined);
       }
       case "vc.DecisionRecord": {
         const p = this.contract.read<VcDecisionRecordOperation["payload"]>(

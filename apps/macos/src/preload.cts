@@ -23,6 +23,7 @@ const bridge: ContractBridge = {
     startEngine: () => ipcRenderer.invoke("app:start-engine"),
     saveProvider: (baseUrl, model, apiKey) => ipcRenderer.invoke("app:save-provider", { baseUrl, model, apiKey }),
     openMarkdown: () => ipcRenderer.invoke("app:open-markdown"),
+    openExternal: (url: string) => ipcRenderer.invoke("app:open-external", url),
     setTheme: (theme) => ipcRenderer.invoke("app:set-theme", theme),
     version: () => ipcRenderer.invoke("app:version"),
     onNewDraft: (listener: () => void) => {

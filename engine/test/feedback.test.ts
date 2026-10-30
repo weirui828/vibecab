@@ -107,6 +107,42 @@ async function agree(f: Awaited<ReturnType<typeof fixture>>, commentId: string, 
   return new Contract().read<{ agreementId: string }>("operations/vc.Agree", result.result, "#/properties/result");
 }
 describe("feedback", () => {
+  it("keeps replies visible when Threads is filtered to the anchored artifact", async () => {
+    const f = await fixture();
+    try {
+      const session = await setupSession(f, "A sentence to discuss.");
+      const root = await comment(
+        f,
+        session.sessionId,
+        {
+          artifactId: session.artifactId,
+          elementId: session.elements[0]!.elementId,
+          seenVersion: session.version.version,
+        },
+        "Please look at this.",
+        undefined,
+        "anchored-root",
+      );
+      await command(
+        f,
+        "vc.Comment",
+        { sessionId: session.sessionId, replyTo: root.commentId, body: "I have a thought." },
+        "anchored-reply",
+      );
+      const threads = new Contract().read<import("../../contract/src/index.js").Thread[]>(
+        "operations/vc.Threads",
+        await f.engine.query(ctx, {
+          name: "vc.Threads",
+          args: { sessionId: session.sessionId, artifactId: session.artifactId },
+        }),
+        "#/properties/result",
+      );
+      expect(threads).toHaveLength(1);
+      expect(threads[0]!.comments).toHaveLength(2);
+    } finally {
+      await f.close();
+    }
+  });
   it("captures ideas, lists projects, and validates session lifecycle and reply-trigger settings", async () => {
     const f = await fixture();
     try {

@@ -221,6 +221,7 @@ export async function serve(
       throw Error("Invalid fake provider script");
     for (const turn of sequence) provider.enqueueDefaultSequence([turn]);
     providers["vibecab-fake"] = provider;
+    providers["openai-compatible"] = provider;
   }
   const workspace = resolve(workspaceDir),
     engine = createEngine({ ...(fakeProviderPath ? { modelProviders: providers } : {}), keyStore });

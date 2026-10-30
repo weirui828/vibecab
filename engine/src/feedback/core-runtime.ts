@@ -1,4 +1,5 @@
 import { fail, type Contract } from "../../../contract/src/index.js";
+import { inlineMarkdownToPlainText } from "../../../contract/src/inline-markdown.js";
 import type {
   Agreement,
   Anchor,
@@ -71,7 +72,10 @@ export abstract class FeedbackCoreRuntime {
         .elements(p.anchor.artifactId, p.anchor.seenVersion)
         .find((e) => e.elementId === p.anchor!.elementId);
       if (!seenElement) fail("invalid", "Anchor element is absent at seenVersion");
-      if (p.anchor.locator && (!("text" in seenElement) || !seenElement.text.includes(p.anchor.locator.quote)))
+      if (
+        p.anchor.locator &&
+        (!("text" in seenElement) || !inlineMarkdownToPlainText(seenElement.text).includes(p.anchor.locator.quote))
+      )
         fail("invalid", "Anchor quote must match text at seenVersion");
       anchor = this.contract.read<Anchor>("anchor", {
         artifactId: p.anchor.artifactId,

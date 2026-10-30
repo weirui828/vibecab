@@ -1,0 +1,537 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type {
+  AnchorResolution,
+  DeliveryState,
+  Element,
+  Outline,
+  VcResumeViewOperation,
+  VcThreadsOperation,
+  VcDigestOperation,
+} from "../../../../contract/generated/index.js";
+import { inlineMarkdownToPlainText } from "../../../../contract/src/inline-markdown.js";
+import { DocumentView } from "../document/DocumentView.js";
+import { locatorForTextSelection } from "../document/anchors.js";
+import { ResumeCard } from "./ResumeCard.js";
+import { terms } from "../copy/terms.js";
+
+type Selected = { element: Element; locator?: { quote: string; prefix: string; suffix: string } };
+export function SessionView({
+  sessionId,
+  title,
+  artifacts: initialArtifacts,
+  availableArtifacts,
+  onAddDraft,
+  onBack,
+  onRefresh,
+}: {
+  sessionId: string;
+  title: string;
+  artifacts: { artifactId: string; title: string; headVersion: number }[];
+  availableArtifacts: { artifactId: string; title: string; headVersion: number }[];
+  onAddDraft: () => Promise<void>;
+  onBack: () => void;
+  onRefresh: () => void;
+}) {
+  const [artifacts, setArtifacts] = useState(initialArtifacts),
+    [activeArtifactId, setActiveArtifactId] = useState(initialArtifacts[0]?.artifactId ?? "");
+  useEffect(() => {
+    setArtifacts((current) =>
+      current.length === initialArtifacts.length &&
+      current.every(
+        (item, index) =>
+          item.artifactId === initialArtifacts[index]?.artifactId &&
+          item.headVersion === initialArtifacts[index]?.headVersion,
+      )
+        ? current
+        : initialArtifacts,
+    );
+    if (!initialArtifacts.some((item) => item.artifactId === activeArtifactId))
+      setActiveArtifactId(initialArtifacts[0]?.artifactId ?? "");
+  }, [initialArtifacts, activeArtifactId]);
+  const artifact = artifacts.find((item) => item.artifactId === activeArtifactId);
+  const [elements, setElements] = useState<Element[]>([]),
+    [threads, setThreads] = useState<VcThreadsOperation["result"]>([]),
+    [delivery, setDelivery] = useState<Record<string, DeliveryState["state"]>>({}),
+    [resume, setResume] = useState<VcResumeViewOperation["result"]>(),
+    [digest, setDigest] = useState<VcDigestOperation["result"]>([]),
+    [selected, setSelected] = useState<Selected>(),
+    [body, setBody] = useState(""),
+    [suggestion, setSuggestion] = useState(""),
+    [replyTo, setReplyTo] = useState(""),
+    [showThreads, setShowThreads] = useState(true),
+    [filter, setFilter] = useState("all"),
+    [updatedToast, setUpdatedToast] = useState(""),
+    [message, setMessage] = useState("");
+  const onRefreshRef = useRef(onRefresh);
+  useEffect(() => {
+    onRefreshRef.current = onRefresh;
+  }, [onRefresh]);
+  const refresh = useCallback(async () => {
+    if (!artifact) return;
+    const outline = await window.vibecab.query<Outline>("vc.Outline", {
+      artifactId: artifact.artifactId,
+    });
+    const list = await window.vibecab.query<Element[]>("vc.Elements", { artifactId: artifact.artifactId });
+    const nextThreads = await window.vibecab.query<VcThreadsOperation["result"]>("vc.Threads", {
+      sessionId,
+      artifactId: artifact.artifactId,
+    });
+    const humanCommentIds = nextThreads.flatMap((thread) =>
+      thread.comments.filter((comment) => comment.author.kind === "human").map((comment) => comment.commentId),
+    );
+    const states = humanCommentIds.length
+      ? await window.vibecab.query<DeliveryState[]>("vc.DeliveryState", { commentIds: humanCommentIds })
+      : [];
+    setDelivery(Object.fromEntries(states.map((state) => [state.commentId, state.state])));
+    const positions = new Map<string, number>();
+    const visit = (nodes: Outline) =>
+      nodes.forEach((node) => {
+        positions.set(node.elementId, positions.size);
+        visit(node.children);
+      });
+    visit(outline);
+    const position = (thread: VcThreadsOperation["result"][number]) => {
+      const anchor = thread.comments.find((comment) => comment.anchor)?.anchor;
+      if (!anchor) return [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER] as const;
+      const resolution = thread.anchorResolutions.find((item) => item.anchor.elementId === anchor.elementId);
+      if (resolution?.state === "removed") return [Number.MAX_SAFE_INTEGER, Number.MAX_SAFE_INTEGER] as const;
+      return [
+        positions.get(anchor.elementId) ?? Number.MAX_SAFE_INTEGER - 1,
+        resolution?.range?.start ?? Number.MAX_SAFE_INTEGER,
+      ] as const;
+    };
+    nextThreads.sort((a, b) => {
+      const left = position(a),
+        right = position(b);
+      return left[0] - right[0] || left[1] - right[1];
+    });
+    setElements(list);
+    setThreads(nextThreads);
+    setResume(await window.vibecab.query<VcResumeViewOperation["result"]>("vc.ResumeView", { sessionId }));
+    setDigest(await window.vibecab.query<VcDigestOperation["result"]>("vc.Digest", { sessionId }));
+  }, [artifact, sessionId]);
+  useEffect(() => {
+    void refresh().catch(() => setMessage("Could not load this session."));
+  }, [refresh]);
+  useEffect(() => {
+    const unsub = window.vibecab.subscribe(0, {}, (event) => {
+      if (
+        event.type === "vc.VersionCommitted" &&
+        artifact &&
+        typeof event.payload === "object" &&
+        event.payload !== null &&
+        Reflect.get(event.payload, "artifactId") === artifact.artifactId
+      ) {
+        const version = Reflect.get(event.payload, "version");
+        setUpdatedToast(typeof version === "number" ? `Updated to v${version}` : "Document updated");
+        const topId = document.elementFromPoint(220, 100)?.closest<HTMLElement>("[data-element-id]")?.dataset.elementId;
+        onRefreshRef.current();
+        window.requestAnimationFrame(() => {
+          if (topId)
+            document.querySelector(`[data-element-id="${CSS.escape(topId)}"]`)?.scrollIntoView({ block: "start" });
+        });
+      }
+      if (
+        [
+          "vc.VersionCommitted",
+          "vc.CommentPosted",
+          "vc.CommentEdited",
+          "vc.CommentDeleted",
+          "vc.DeliveryStateChanged",
+          "vc.AgentTurnChanged",
+        ].includes(event.type)
+      )
+        void refresh();
+    });
+    const fallback = window.setInterval(() => void refresh(), 1_500);
+    return () => {
+      unsub();
+      window.clearInterval(fallback);
+    };
+  }, [artifact, refresh]);
+  useEffect(() => {
+    let timer: number | undefined;
+    const mark = () => {
+      if (document.hasFocus())
+        timer = window.setTimeout(() => {
+          void window.vibecab.command("vc.MarkSeen", { sessionId });
+        }, 3000);
+    };
+    const focus = () => mark(),
+      blur = () => {
+        if (timer) window.clearTimeout(timer);
+      };
+    mark();
+    window.addEventListener("focus", focus);
+    window.addEventListener("blur", blur);
+    return () => {
+      if (timer) window.clearTimeout(timer);
+      window.removeEventListener("focus", focus);
+      window.removeEventListener("blur", blur);
+    };
+  }, [sessionId]);
+  useEffect(() => {
+    const ranges: Range[] = [],
+      revised: Range[] = [];
+    for (const thread of threads)
+      for (const resolution of thread.anchorResolutions as AnchorResolution[]) {
+        if (resolution.state === "removed") continue;
+        const node = document.querySelector(`[data-element-id="${CSS.escape(resolution.anchor.elementId)}"]`);
+        if (!node) continue;
+        const range = document.createRange();
+        if (resolution.state === "revised") {
+          range.selectNodeContents(node);
+          revised.push(range);
+          continue;
+        }
+        const quote = resolution.anchor.locator?.quote;
+        if (!quote) continue;
+        const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT),
+          textNodes: Text[] = [];
+        let current = walker.nextNode();
+        while (current) {
+          if (current instanceof Text) textNodes.push(current);
+          current = walker.nextNode();
+        }
+        const fullText = textNodes.map((textNode) => textNode.data).join(""),
+          start = fullText.indexOf(quote);
+        if (start < 0) continue;
+        let cursor = 0,
+          startNode: Text | undefined,
+          endNode: Text | undefined,
+          startOffset = 0,
+          endOffset = 0;
+        for (const textNode of textNodes) {
+          const next = cursor + textNode.data.length;
+          if (!startNode && start >= cursor && start < next) {
+            startNode = textNode;
+            startOffset = start - cursor;
+          }
+          if (start + quote.length >= cursor && start + quote.length <= next) {
+            endNode = textNode;
+            endOffset = start + quote.length - cursor;
+            break;
+          }
+          cursor = next;
+        }
+        if (startNode && endNode) {
+          range.setStart(startNode, startOffset);
+          range.setEnd(endNode, endOffset);
+          ranges.push(range);
+        }
+      }
+    if (typeof CSS !== "undefined" && "highlights" in CSS && typeof Highlight !== "undefined") {
+      CSS.highlights.delete("vibecab-current");
+      CSS.highlights.delete("vibecab-revised");
+      if (ranges.length) CSS.highlights.set("vibecab-current", new Highlight(...ranges));
+      if (revised.length) CSS.highlights.set("vibecab-revised", new Highlight(...revised));
+    }
+    return () => {
+      if (typeof CSS !== "undefined" && "highlights" in CSS) {
+        CSS.highlights.delete("vibecab-current");
+        CSS.highlights.delete("vibecab-revised");
+      }
+    };
+  }, [threads, elements]);
+  const chooseRange = () => {
+    const selection = window.getSelection(),
+      selectionRange = selection?.rangeCount ? selection.getRangeAt(0) : undefined,
+      textNode = selectionRange?.startContainer,
+      el = textNode instanceof globalThis.Element ? textNode : textNode?.parentElement?.closest("[data-element-id]");
+    if (!selection || !selectionRange || !el) return;
+    const element = elements.find((candidate) => candidate.elementId === el.getAttribute("data-element-id"));
+    if (!element || !("text" in element)) return;
+    const contents = document.createRange();
+    contents.selectNodeContents(el);
+    const clipped = selectionRange.cloneRange();
+    if (clipped.compareBoundaryPoints(Range.END_TO_END, contents) > 0)
+      clipped.setEnd(contents.endContainer, contents.endOffset);
+    const startRange = document.createRange();
+    startRange.selectNodeContents(el);
+    startRange.setEnd(clipped.startContainer, clipped.startOffset);
+    const start = inlineMarkdownToPlainText(startRange.toString()).length,
+      quote = clipped.toString();
+    if (!quote) return;
+    const boundedStart = start;
+    setSelected({
+      element,
+      locator: locatorForTextSelection(
+        element.text,
+        boundedStart < 0 ? 0 : boundedStart,
+        (boundedStart < 0 ? 0 : boundedStart) + quote.length,
+      ),
+    });
+  };
+  const post = async () => {
+    if (!body.trim()) return;
+    const payload: Record<string, unknown> = { sessionId, body: body.trim() };
+    if (replyTo) payload.replyTo = replyTo;
+    else if (selected && artifact)
+      payload.anchor = {
+        artifactId: artifact.artifactId,
+        elementId: selected.element.elementId,
+        seenVersion: artifact.headVersion,
+        ...(selected.locator ? { locator: selected.locator } : {}),
+      };
+    if (suggestion) payload.suggestion = { replacement: suggestion };
+    setMessage("Sending comment…");
+    try {
+      const result = await window.vibecab.command("vc.Comment", payload);
+      if (!result.ok) throw new Error(result.error.message);
+      setBody("");
+      setSuggestion("");
+      setReplyTo("");
+      setSelected(undefined);
+      setMessage("Comment posted");
+      await refresh();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Could not post comment.");
+    }
+  };
+  const filtered = useMemo(
+    () =>
+      threads.filter(
+        (thread) =>
+          filter === "all" ||
+          (filter === "mine"
+            ? thread.comments.some((comment) => comment.author.kind === "human")
+            : thread.comments.some((comment) => comment.author.kind === "agent")),
+      ),
+    [threads, filter],
+  );
+  return (
+    <section className="session-view">
+      <header className="session-header">
+        <button onClick={onBack}>Home</button>
+        <div>
+          <p>
+            {title} · {artifact?.title ?? "No Draft"}
+          </p>
+          <span>v{artifact?.headVersion ?? "—"}</span>
+        </div>
+        <span role="status">Connected</span>
+        <button aria-label="Toggle threads" onClick={() => setShowThreads((open) => !open)}>
+          Threads
+        </button>
+      </header>
+      <div className="session-grid">
+        <nav className="session-sidebar" aria-label="Session drafts">
+          <h2>Drafts</h2>
+          {artifacts.length ? (
+            artifacts.map((item) => (
+              <button
+                key={item.artifactId}
+                aria-current={item.artifactId === activeArtifactId}
+                onClick={() => setActiveArtifactId(item.artifactId)}
+              >
+                {item.title}
+              </button>
+            ))
+          ) : (
+            <p>No Draft attached</p>
+          )}
+          <button onClick={() => void onAddDraft()}>Add new Draft</button>
+          {availableArtifacts
+            .filter((item) => !artifacts.some((attached) => attached.artifactId === item.artifactId))
+            .map((item) => (
+              <button
+                key={item.artifactId}
+                onClick={() =>
+                  void window.vibecab
+                    .command("vc.AttachArtifact", { sessionId, artifactId: item.artifactId, role: "supporting" })
+                    .then((result) => {
+                      if (result.ok) {
+                        setArtifacts((current) => [...current, item]);
+                        setActiveArtifactId(item.artifactId);
+                      }
+                    })
+                }
+              >
+                Attach {item.title}
+              </button>
+            ))}
+          <div className="session-controls">
+            <button onClick={() => void window.vibecab.command("vc.PauseSession", { sessionId }).then(onRefresh)}>
+              Pause
+            </button>
+            <button onClick={() => void window.vibecab.command("vc.ResumeSession", { sessionId }).then(onRefresh)}>
+              Resume
+            </button>
+            <button onClick={() => void window.vibecab.command("vc.EndSession", { sessionId }).then(onRefresh)}>
+              End
+            </button>
+          </div>
+        </nav>
+        <main
+          className="document-region"
+          onMouseUp={chooseRange}
+          onKeyDown={(event) => {
+            if (event.metaKey && event.altKey && event.key.toLowerCase() === "m") {
+              event.preventDefault();
+              chooseRange();
+              window.setTimeout(
+                () => document.querySelector<HTMLTextAreaElement>(".comment-form textarea")?.focus(),
+                0,
+              );
+            } else if (event.metaKey && event.key === "Enter") {
+              event.preventDefault();
+              void post();
+            }
+          }}
+        >
+          {resume ? (
+            <ResumeCard
+              resume={resume}
+              digest={digest[0]}
+              onGotIt={() => {
+                void window.vibecab.command("vc.MarkSeen", { sessionId });
+                setResume(undefined);
+              }}
+            />
+          ) : null}
+          {artifact ? (
+            <DocumentView
+              artifactId={artifact.artifactId}
+              version={artifact.headVersion}
+              elements={elements}
+              onComment={(element, locator) => setSelected({ element, ...(locator ? { locator } : {}) })}
+            />
+          ) : (
+            <p>Attach a Draft to read its Document.</p>
+          )}
+          <button className="comment-toolbar" onClick={chooseRange}>
+            Comment
+          </button>
+          <form
+            className="comment-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void post();
+            }}
+          >
+            <label>
+              Comment
+              <textarea aria-label="Comment" value={body} onChange={(event) => setBody(event.target.value)} />
+            </label>
+            {selected ? (
+              <label>
+                Suggest replacement
+                <input
+                  value={suggestion}
+                  onChange={(event) => setSuggestion(event.target.value)}
+                  placeholder={selected.locator?.quote ?? "Optional"}
+                />
+              </label>
+            ) : null}
+            <button type="submit">Post comment</button>
+          </form>
+          <p role="status">{message}</p>
+          {updatedToast ? (
+            <p className="update-toast" role="status">
+              {updatedToast}
+            </p>
+          ) : null}
+        </main>
+        {showThreads ? (
+          <aside className="threads-panel" aria-label="Threads">
+            <h2>Threads</h2>
+            <label>
+              Filter{" "}
+              <select value={filter} onChange={(event) => setFilter(event.target.value)}>
+                <option value="all">All</option>
+                <option value="mine">Mine</option>
+                <option value="agent">Agent</option>
+              </select>
+            </label>
+            {filtered.map((thread) => (
+              <article
+                key={thread.threadId}
+                className="thread-card"
+                tabIndex={0}
+                onKeyDown={(event) => {
+                  if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+                  event.preventDefault();
+                  const cards = Array.from(document.querySelectorAll<HTMLElement>(".thread-card"));
+                  const index = cards.indexOf(event.currentTarget);
+                  cards[Math.max(0, Math.min(cards.length - 1, index + (event.key === "ArrowDown" ? 1 : -1)))]?.focus();
+                }}
+              >
+                <button
+                  onClick={() =>
+                    document
+                      .querySelector(`[data-element-id="${thread.comments[0].anchor?.elementId ?? ""}"]`)
+                      ?.scrollIntoView({ block: "center" })
+                  }
+                >
+                  Open thread
+                </button>
+                {thread.anchorResolutions.some((resolution) => resolution.state === "removed") ? (
+                  <p>This part was removed in v{artifact?.headVersion ?? "the current version"}.</p>
+                ) : null}
+                {thread.anchorResolutions.some((resolution) => resolution.state === "revised") ? (
+                  <p>Text changed since this comment.</p>
+                ) : null}
+                {thread.comments.map((comment) => (
+                  <div key={comment.commentId}>
+                    <p>
+                      {comment.author.kind === "human" ? "You" : comment.author.kind === "agent" ? "Agent" : "System"} ·{" "}
+                      {comment.channel === "mcp" ? "via MCP" : comment.channel === "cli" ? "via CLI" : ""}
+                      {comment.createdAt ? ` · ${new Date(comment.createdAt).toLocaleString()}` : ""}
+                    </p>
+                    <p>{comment.body}</p>
+                    <p>{terms[comment.state]}</p>
+                    {comment.anchor?.locator ? <blockquote>{comment.anchor.locator.quote}</blockquote> : null}
+                    {comment.author.kind === "human" ? (
+                      <p>
+                        {delivery[comment.commentId] === "queued" || delivery[comment.commentId] === "saved"
+                          ? "Waiting for agent"
+                          : delivery[comment.commentId] === "delivered"
+                            ? "Agent is replying…"
+                            : delivery[comment.commentId] === "replied"
+                              ? "Replied"
+                              : ""}
+                      </p>
+                    ) : null}
+                    {comment.author.kind === "human" ? (
+                      <>
+                        <button
+                          onClick={() => {
+                            const updated = window.prompt("Edit comment", comment.body);
+                            if (updated?.trim())
+                              void window.vibecab
+                                .command("vc.EditComment", { commentId: comment.commentId, body: updated })
+                                .then(refresh);
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (window.confirm("Delete this comment?"))
+                              void window.vibecab
+                                .command("vc.DeleteComment", { commentId: comment.commentId })
+                                .then(refresh);
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </>
+                    ) : null}
+                    <button
+                      onClick={() => {
+                        setReplyTo(comment.commentId);
+                        setSelected(undefined);
+                      }}
+                    >
+                      Reply
+                    </button>
+                  </div>
+                ))}
+              </article>
+            ))}
+          </aside>
+        ) : null}
+      </div>
+    </section>
+  );
+}

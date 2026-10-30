@@ -59,6 +59,10 @@ export class ScriptedProvider implements ModelProvider {
       };
       return;
     }
+    const threadId = request.messages
+      .map((message) => message.content)
+      .join("\n")
+      .match(/threadId=([^;\s]+)/)?.[1];
     for (const event of scenario.events) {
       if (options.signal.aborted) {
         yield {
@@ -69,7 +73,22 @@ export class ScriptedProvider implements ModelProvider {
         };
         return;
       }
-      yield event;
+      if (
+        event.type === "tool_call" &&
+        threadId &&
+        typeof event.call.arguments === "object" &&
+        event.call.arguments !== null &&
+        !Array.isArray(event.call.arguments) &&
+        Reflect.get(event.call.arguments, "threadId") === "$first_thread"
+      ) {
+        yield {
+          ...event,
+          call: {
+            ...event.call,
+            arguments: { ...event.call.arguments, threadId },
+          },
+        };
+      } else yield event;
     }
   }
 }
