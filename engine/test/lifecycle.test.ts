@@ -486,6 +486,35 @@ it("trashes recoverably, previews purge contents, and removes the selected conte
   }
 });
 
+it("filters trashed artifacts from artifact lists instead of failing the whole query", async () => {
+  const f = await fixture();
+  try {
+    const artifact = await importArtifact(f.engine, "Hidden from the normal artifact list.");
+    const trash = await f.engine.command(ctx, {
+      commandId: "artifact-list-trash",
+      type: "vc.Trash",
+      payload: { target: { kind: "artifact", id: artifact.artifactId } },
+    });
+    expect(trash.ok).toBe(true);
+
+    const visible = new Contract().read<Array<{ artifactId: string }>>(
+      "operations/vc.Artifacts",
+      await f.engine.query(ctx, { name: "vc.Artifacts", args: {} }),
+      "#/properties/result",
+    );
+    const includingTrashed = new Contract().read<Array<{ artifactId: string }>>(
+      "operations/vc.Artifacts",
+      await f.engine.query(ctx, { name: "vc.Artifacts", args: { includeTrashed: true } }),
+      "#/properties/result",
+    );
+
+    expect(visible).toEqual([]);
+    expect(includingTrashed.map((item) => item.artifactId)).toEqual([artifact.artifactId]);
+  } finally {
+    await f.close();
+  }
+});
+
 it("restores a verified backup through the stopped lifecycle and rejects tampered archives", async () => {
   const f = await fixture();
   try {

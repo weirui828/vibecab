@@ -403,6 +403,10 @@ export abstract class EngineCore {
     id: string,
     includeTrashed?: boolean,
   ): void;
+  protected abstract isLifecycleTrashed(
+    kind: "artifact" | "session" | "comment" | "idea" | "project",
+    id: string,
+  ): boolean;
 }
 
 function isCode(error: unknown, code: string): boolean {

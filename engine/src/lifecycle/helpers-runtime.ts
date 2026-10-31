@@ -340,6 +340,10 @@ export abstract class LifecycleHelpersRuntime extends UpdateRuntime {
     return this.available().feedback("trash", this.trashKey({ kind, id })) !== undefined;
   }
 
+  protected isLifecycleTrashed(kind: TrashTarget["kind"], id: string): boolean {
+    return this.isTrashed(kind, id);
+  }
+
   protected assertLifecycleVisible(kind: TrashTarget["kind"], id: string, includeTrashed = false): void {
     if (!includeTrashed && this.isTrashed(kind, id)) fail("not_found", "Item not found");
   }

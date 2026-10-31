@@ -72,10 +72,10 @@ export abstract class QueryOperations extends CommandOperations {
             ? links.filter((link) => link.sessionId === p.sessionId).map((link) => link.artifactId)
             : store.artifactIds();
         return [...new Set(ids)]
+          .filter((artifactId) => p.includeTrashed === true || !this.isLifecycleTrashed("artifact", artifactId))
           .map((artifactId) => {
             const artifact = store.artifact(artifactId),
               related = links.filter((link) => link.artifactId === artifactId);
-            this.assertLifecycleVisible("artifact", artifactId, p.includeTrashed);
             const role = related.find((link) => link.sessionId === p.sessionId)?.role;
             return { ...artifact, sessionIds: related.map((link) => link.sessionId), ...(role ? { role } : {}) };
           })
