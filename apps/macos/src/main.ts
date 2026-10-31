@@ -1,4 +1,4 @@
-import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeTheme, protocol, shell } from "electron";
+import { app, clipboard, dialog, ipcMain, nativeTheme, protocol, shell } from "electron";
 import { execFileSync } from "node:child_process";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -17,9 +17,15 @@ import { createTrayManager } from "./tray.js";
 import { installApplicationMenu } from "./app-menu.js";
 import { assertNode26, engineNodePath, hostEntryPath, mcpRelayPath } from "./runtime.js";
 import { readAppToken } from "./app-token.js";
+import { waitForEngineHandlers } from "./ready-ipc.js";
+import { createWindowManager } from "./window-manager.js";
+import { configureSmokeArguments, installSmokeHooks, markSmokeReady } from "./smoke-lifecycle.js";
+
+configureSmokeArguments(process.argv, process.env);
 
 const contract = new Contract(),
   workspace = resolve(workspacePath());
+installSmokeHooks(process.env, (code) => app.exit(code));
 const developmentHostEntry = resolve(app.getAppPath(), "../../host/bin/vibecab-host.mjs");
 const developmentMcpRelay = resolve(app.getAppPath(), "../../adapters/mcp-server/bin/vibecab-mcp.mjs");
 const execFileAsync = promisify(execFile);
@@ -58,11 +64,27 @@ async function savePreferences(patch: Partial<Preferences>): Promise<void> {
   await mkdir(app.getPath("userData"), { recursive: true });
   await writeFile(preferencesPath(), JSON.stringify(next), { mode: 0o600 });
 }
-let windowRef: BrowserWindow | undefined,
+let windowRef: import("electron").BrowserWindow | undefined,
   client: ReturnType<typeof httpClient> | undefined,
   apiUrl = "",
   token = "";
+let resolveEngineReady!: () => void, rejectEngineReady!: (error: unknown) => void;
+const engineReady = new Promise<void>((resolveReady, rejectReady) => {
+    resolveEngineReady = resolveReady;
+    rejectEngineReady = rejectReady;
+  }),
+  readyIpcMain = waitForEngineHandlers(ipcMain, engineReady);
+void engineReady.catch(() => undefined);
 let isQuitting = false;
+const createWindow = createWindowManager({
+  preferences,
+  savePreferences,
+  getWindow: () => windowRef,
+  setWindow: (window) => {
+    windowRef = window;
+  },
+  isQuitting: () => isQuitting,
+});
 const subscriptions = new Map<string, AbortController>();
 let trayManager: ReturnType<typeof createTrayManager> | undefined;
 
@@ -96,7 +118,7 @@ function createTray(): void {
     ? join(process.resourcesPath, "engine", "iconTemplate.png")
     : join(import.meta.dirname, "../../../../apps/macos/build/iconTemplate.png");
   trayManager = createTrayManager({
-    client: client!,
+    client: requireClient(),
     workspace,
     iconPath: templatePath,
     getNotificationsEnabled: async () => (await preferences()).notificationsEnabled ?? false,
@@ -115,48 +137,48 @@ function createTray(): void {
   trayManager.startEvents();
 }
 
+function requireClient(): ReturnType<typeof httpClient> {
+  if (!client) throw Error("Engine is not connected");
+  return client;
+}
+
 function installBridge(): void {
-  ipcMain.handle("vibe:command", (_event, raw: unknown) =>
+  readyIpcMain.handle("vibe:command", (_event, raw: unknown) =>
     retryUnauthenticated(async () => {
-      if (!client) await connect();
       const input = contract.read<CommandEnvelope>("command-envelope", raw);
-      const result = await client!.command(input);
+      const result = await requireClient().command(input);
       if (result.ok) contract.read("operations/" + input.type, result.result, "#/properties/result");
       return result;
     }, recoverAuthentication),
   );
-  ipcMain.handle("vibe:query", (_event, raw: unknown) =>
+  readyIpcMain.handle("vibe:query", (_event, raw: unknown) =>
     retryUnauthenticated(async () => {
-      if (!client) await connect();
-      return client!.query(contract.read<QueryEnvelope>("query-envelope", raw));
+      return requireClient().query(contract.read<QueryEnvelope>("query-envelope", raw));
     }, recoverAuthentication),
   );
-  ipcMain.handle("vibe:put-blob", (_event, raw: unknown) =>
+  readyIpcMain.handle("vibe:put-blob", (_event, raw: unknown) =>
     retryUnauthenticated(async () => {
-      if (!client) await connect();
       const input = contract.read<{ bytes: Uint8Array; mediaType: string }>("json", raw);
-      return client!.putBlob(input.bytes, input.mediaType);
+      return requireClient().putBlob(input.bytes, input.mediaType);
     }, recoverAuthentication),
   );
-  ipcMain.handle("vibe:get-blob", (_event, raw: unknown) =>
+  readyIpcMain.handle("vibe:get-blob", (_event, raw: unknown) =>
     retryUnauthenticated(async () => {
-      if (!client) await connect();
       if (typeof raw !== "string" || !/^[a-f0-9]{64}$/.test(raw)) fail("invalid", "Invalid blob hash");
-      return client!.getBlob(raw);
+      return requireClient().getBlob(raw);
     }, recoverAuthentication),
   );
-  ipcMain.handle("vibe:subscribe", async (event, raw: unknown) => {
+  readyIpcMain.handle("vibe:subscribe", async (event, raw: unknown) => {
     const input = contract.read<{ id: string; afterSeq: number; filter: unknown }>("json", raw),
       controller = new AbortController();
     subscriptions.set(input.id, controller);
     void (async () => {
       try {
-        if (!client) await connect();
         for await (const item of reconnectEvents(
           input.afterSeq,
           controller.signal,
           (afterSeq) =>
-            client!.subscribe(
+            requireClient().subscribe(
               contract.read<Subscription>("subscription", { afterSeq, filter: input.filter }),
               undefined,
               controller.signal,
@@ -173,21 +195,21 @@ function installBridge(): void {
       }
     })();
   });
-  ipcMain.handle("vibe:unsubscribe", (_event, id: unknown) => {
+  readyIpcMain.handle("vibe:unsubscribe", (_event, id: unknown) => {
     if (typeof id === "string") {
       subscriptions.get(id)?.abort();
       subscriptions.delete(id);
     }
   });
-  ipcMain.handle("app:state", async () => ((await status(workspace)).running ? "Connected" : "Engine stopped"));
-  ipcMain.handle("app:start-engine", async () => {
+  readyIpcMain.handle("app:state", async () => ((await status(workspace)).running ? "Connected" : "Engine stopped"));
+  readyIpcMain.handle("app:start-engine", async () => {
     const nodePath = engineNodePath(app.isPackaged, process.resourcesPath, process.env.VIBECAB_NODE);
     assertNode26(nodePath);
     await start(workspace, hostOptions());
     await connect();
     return "Connected";
   });
-  ipcMain.handle("app:save-provider", async (_event, raw: unknown) => {
+  readyIpcMain.handle("app:save-provider", async (_event, raw: unknown) => {
     const input = contract.read<{ baseUrl: string; model: string; apiKey: string }>("json", raw);
     const engine = client;
     if (!engine) throw Error("Engine is not connected");
@@ -225,7 +247,7 @@ function installBridge(): void {
     );
     if (!key.ok) fail(key.error.code, key.error.message, key.error.details);
   });
-  ipcMain.handle("app:open-markdown", async () => {
+  readyIpcMain.handle("app:open-markdown", async () => {
     const picked = await dialog.showOpenDialog({
       properties: ["openFile"],
       filters: [{ name: "Markdown", extensions: ["md", "markdown"] }],
@@ -234,31 +256,31 @@ function installBridge(): void {
     const path = picked.filePaths[0];
     return { name: path.split(/[\\/]/).at(-1) ?? "Document.md", content: await readFile(path, "utf8") };
   });
-  ipcMain.handle("app:open-external", async (_event, url: unknown) => {
+  readyIpcMain.handle("app:open-external", async (_event, url: unknown) => {
     if (typeof url === "string" && /^(https:|mailto:)/i.test(url)) await shell.openExternal(url);
   });
-  ipcMain.handle("app:set-theme", (_event, theme: unknown) => {
+  readyIpcMain.handle("app:set-theme", (_event, theme: unknown) => {
     if (theme !== "system" && theme !== "light" && theme !== "dark") fail("invalid", "Invalid theme");
     nativeTheme.themeSource = theme;
     void savePreferences({ theme });
   });
-  ipcMain.handle("app:get-login-item", () => app.getLoginItemSettings().openAtLogin);
-  ipcMain.handle("app:set-login-item", (_event, enabled: unknown) => {
+  readyIpcMain.handle("app:get-login-item", () => app.getLoginItemSettings().openAtLogin);
+  readyIpcMain.handle("app:set-login-item", (_event, enabled: unknown) => {
     if (typeof enabled !== "boolean") fail("invalid", "Invalid login item setting");
     app.setLoginItemSettings({ openAtLogin: enabled });
     return app.getLoginItemSettings().openAtLogin;
   });
-  ipcMain.handle("app:get-notifications-enabled", async () => (await preferences()).notificationsEnabled ?? false);
-  ipcMain.handle("app:set-notifications-enabled", async (_event, enabled: unknown) => {
+  readyIpcMain.handle("app:get-notifications-enabled", async () => (await preferences()).notificationsEnabled ?? false);
+  readyIpcMain.handle("app:set-notifications-enabled", async (_event, enabled: unknown) => {
     if (typeof enabled !== "boolean") fail("invalid", "Invalid notification setting");
     await savePreferences({ notificationsEnabled: enabled });
   });
-  ipcMain.handle("app:tray-status", async () => {
+  readyIpcMain.handle("app:tray-status", async () => {
     await trayManager?.refresh();
     return trayManager?.snapshot();
   });
-  ipcMain.handle("app:version", () => app.getVersion());
-  ipcMain.handle("app:node-version", () =>
+  readyIpcMain.handle("app:version", () => app.getVersion());
+  readyIpcMain.handle("app:node-version", () =>
     execFileSync(
       engineNodePath(app.isPackaged, process.resourcesPath, process.env.VIBECAB_NODE ?? process.execPath),
       ["--version"],
@@ -267,19 +289,21 @@ function installBridge(): void {
       },
     ).trim(),
   );
-  ipcMain.handle("app:workspace-path", () => workspace);
-  ipcMain.handle("app:mcp-relay-path", () => mcpRelayPath(app.isPackaged, process.resourcesPath, developmentMcpRelay));
-  ipcMain.handle("app:open-mcp-config", async () => {
+  readyIpcMain.handle("app:workspace-path", () => workspace);
+  readyIpcMain.handle("app:mcp-relay-path", () =>
+    mcpRelayPath(app.isPackaged, process.resourcesPath, developmentMcpRelay),
+  );
+  readyIpcMain.handle("app:open-mcp-config", async () => {
     const configPath = join(app.getPath("appData"), "Claude", "claude_desktop_config.json");
     await shell.showItemInFolder(configPath);
   });
-  ipcMain.handle("app:copy-text", (_event, raw: unknown) => {
+  readyIpcMain.handle("app:copy-text", (_event, raw: unknown) => {
     if (typeof raw === "string") clipboard.writeText(raw);
   });
-  ipcMain.handle("app:reveal", async (_event, raw: unknown) => {
+  readyIpcMain.handle("app:reveal", async (_event, raw: unknown) => {
     if (typeof raw === "string") await shell.showItemInFolder(raw);
   });
-  ipcMain.handle("app:save-files", async (_event, raw: unknown) => {
+  readyIpcMain.handle("app:save-files", async (_event, raw: unknown) => {
     if (
       !Array.isArray(raw) ||
       raw.some((item) => !item || typeof item.name !== "string" || !(item.bytes instanceof Uint8Array))
@@ -304,7 +328,7 @@ function installBridge(): void {
       if (!picked.canceled && picked.filePath) await writeFile(picked.filePath, file.bytes);
     }
   });
-  ipcMain.handle("app:restore-backup", async () => {
+  readyIpcMain.handle("app:restore-backup", async () => {
     const picked = await dialog.showOpenDialog({
       properties: ["openFile"],
       filters: [{ name: "VibeCab backup", extensions: ["tgz", "tar.gz", "gz"] }],
@@ -348,105 +372,68 @@ function installBridge(): void {
   });
 }
 
-async function createWindow(): Promise<void> {
-  const saved = await preferences();
-  windowRef = new BrowserWindow({
-    width: saved.width ?? 1120,
-    height: saved.height ?? 760,
-    ...(saved.x !== undefined ? { x: saved.x } : {}),
-    ...(saved.y !== undefined ? { y: saved.y } : {}),
-    minWidth: 960,
-    minHeight: 640,
-    titleBarStyle: "hiddenInset",
-    webPreferences: {
-      preload: join(import.meta.dirname, "preload.cjs"),
-      contextIsolation: true,
-      sandbox: true,
-      nodeIntegration: false,
-      webSecurity: true,
-    },
-  });
-  nativeTheme.on("updated", () => windowRef?.webContents.send("app:theme", nativeTheme.shouldUseDarkColors));
-  windowRef.on("close", (event) => {
-    if (!isQuitting) {
-      event.preventDefault();
-      windowRef?.hide();
-      app.dock?.hide();
-    }
-  });
-  const saveBounds = () => {
-    const bounds = windowRef?.getBounds();
-    if (bounds) void savePreferences(bounds);
-  };
-  windowRef.on("resize", saveBounds);
-  windowRef.on("move", saveBounds);
-  windowRef.webContents.on("did-finish-load", () =>
-    windowRef?.webContents.send("app:theme", nativeTheme.shouldUseDarkColors),
-  );
-  windowRef.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https:|^mailto:/.test(url)) void shell.openExternal(url);
-    return { action: "deny" };
-  });
-  windowRef.webContents.on("will-navigate", (event, url) => {
-    if (url !== windowRef?.webContents.getURL()) event.preventDefault();
-  });
-  if (process.env.VITE_DEV_SERVER_URL) await windowRef.loadURL(process.env.VITE_DEV_SERVER_URL);
-  else await windowRef.loadFile(join(import.meta.dirname, "../../ui/index.html"));
-  app.dock?.show();
-}
+installBridge();
 
 app.setName("VibeCab");
 protocol.registerSchemesAsPrivileged([
   { scheme: "vc-blob", privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },
 ]);
-const lock = app.requestSingleInstanceLock();
+const lock = process.env.VIBECAB_SMOKE === "1" || app.requestSingleInstanceLock();
 if (!lock) app.quit();
 else {
   app.on("second-instance", () => {
-    if (windowRef) {
-      windowRef.show();
-      windowRef.focus();
-    }
-  });
-  app.whenReady().then(async () => {
-    nativeTheme.themeSource = (await preferences()).theme ?? "system";
-    const nodePath = engineNodePath(app.isPackaged, process.resourcesPath, process.env.VIBECAB_NODE);
-    assertNode26(nodePath);
-    protocol.handle("vc-blob", async (request) => {
-      const hash = new URL(request.url).hostname;
-      if (!/^[a-f0-9]{64}$/.test(hash)) return new Response("Not found", { status: 404 });
-      const response = await fetch(apiUrl + "/v1/blobs/" + hash, { headers: { Authorization: "Bearer " + token } });
-      return new Response(response.body, {
-        status: response.status,
-        headers: { "Content-Type": "application/octet-stream", "Cache-Control": "no-store" },
-      });
-    });
-    await start(workspace, hostOptions());
-    await connect();
-    installBridge();
-    createTray();
-    const trayTimer = setInterval(() => void trayManager?.refresh(), 5000);
-    app.on("before-quit", () => clearInterval(trayTimer));
-    installApplicationMenu({
-      openSettings: () => {
-        void trayManager?.refresh();
-        windowRef?.webContents.send("app:navigate", "/settings");
-      },
-      newDraft: () => windowRef?.webContents.send("app:new-draft"),
-      importMarkdown: () => windowRef?.webContents.send("app:import"),
-      quit: () => app.quit(),
-    });
-    if (!app.getLoginItemSettings().wasOpenedAtLogin) {
+    void engineReady.then(async () => {
       await createWindow();
-      if (process.env.VIBECAB_SMOKE === "1") process.stdout.write("VIBECAB_READY\n");
-    } else app.dock?.hide();
+      windowRef?.show();
+      windowRef?.focus();
+    });
   });
+  app
+    .whenReady()
+    .then(async () => {
+      nativeTheme.themeSource = (await preferences()).theme ?? "system";
+      const nodePath = engineNodePath(app.isPackaged, process.resourcesPath, process.env.VIBECAB_NODE);
+      assertNode26(nodePath);
+      protocol.handle("vc-blob", async (request) => {
+        const hash = new URL(request.url).hostname;
+        if (!/^[a-f0-9]{64}$/.test(hash)) return new Response("Not found", { status: 404 });
+        const response = await fetch(apiUrl + "/v1/blobs/" + hash, { headers: { Authorization: "Bearer " + token } });
+        return new Response(response.body, {
+          status: response.status,
+          headers: { "Content-Type": "application/octet-stream", "Cache-Control": "no-store" },
+        });
+      });
+      await start(workspace, hostOptions());
+      await connect();
+      resolveEngineReady();
+      createTray();
+      const trayTimer = setInterval(() => void trayManager?.refresh(), 5000);
+      app.on("before-quit", () => clearInterval(trayTimer));
+      installApplicationMenu({
+        openSettings: () => {
+          void trayManager?.refresh();
+          windowRef?.webContents.send("app:navigate", "/settings");
+        },
+        newDraft: () => windowRef?.webContents.send("app:new-draft"),
+        importMarkdown: () => windowRef?.webContents.send("app:import"),
+        quit: () => app.quit(),
+      });
+      if (!app.getLoginItemSettings().wasOpenedAtLogin) {
+        await createWindow();
+        if (process.env.VIBECAB_SMOKE === "1") markSmokeReady(process.env, process.stdout);
+      } else app.dock?.hide();
+    })
+    .catch((error: unknown) => {
+      rejectEngineReady(error);
+      console.error("VibeCab startup failed", error);
+    });
   app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) void createWindow();
-    else {
+    void engineReady.then(async () => {
+      await createWindow();
       app.dock?.show();
       windowRef?.show();
-    }
+      windowRef?.focus();
+    });
   });
   app.on("before-quit", (event) => {
     if (isQuitting) return;
