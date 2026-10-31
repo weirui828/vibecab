@@ -2,7 +2,6 @@ import { spawn } from "node:child_process";
 import { open, mkdir, readFile, rm } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
-import { fileURLToPath } from "node:url";
 import type { HostStartOptions, HostStatus, HostStopOptions } from "./types.js";
 
 type RuntimeFile = {
@@ -14,6 +13,7 @@ type RuntimeFile = {
   mcpUrl: string;
 };
 const timeoutMs = 35_000;
+type ControlStartOptions = HostStartOptions & { hostEntry: string };
 
 function runtimePath(workspace: string): string {
   return join(workspace, ".vibecab", "server.json");
@@ -60,7 +60,7 @@ export async function status(workspaceDir: string): Promise<HostStatus> {
   return { running: true, ...value };
 }
 
-export async function start(workspaceDir: string, options: HostStartOptions = {}): Promise<HostStatus> {
+export async function start(workspaceDir: string, options: ControlStartOptions): Promise<HostStatus> {
   const workspace = resolve(workspaceDir),
     current = await status(workspace);
   if (current.running) return current;
@@ -84,11 +84,10 @@ export async function start(workspaceDir: string, options: HostStartOptions = {}
     if (afterLock.running) return afterLock;
     const stale = await runtime(workspace);
     if (stale && !processExists(stale.pid)) await rm(runtimePath(workspace), { force: true });
-    const hostEntry = options.hostEntry ?? fileURLToPath(new URL("../bin/vibecab-host.mjs", import.meta.url));
     const child = spawn(
       options.nodePath ?? process.execPath,
       [
-        hostEntry,
+        options.hostEntry,
         "serve",
         "--workspace",
         workspace,

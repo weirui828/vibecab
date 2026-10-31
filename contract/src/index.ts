@@ -1,11 +1,9 @@
-import { readFileSync, readdirSync } from "node:fs";
-import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 import { Ajv2020 } from "ajv/dist/2020.js";
 import { fullFormats } from "ajv-formats/dist/formats.js";
 import type { ErrorObject } from "ajv";
 import type { AnySchema } from "ajv";
 import type { ContractError, Element, Json, OperationMeta } from "../generated/index.js";
+import { schemasById, schemasByPath } from "../generated/schemas.js";
 export type * from "../generated/index.js";
 export type JsonSchema = Exclude<AnySchema, boolean>;
 export const CONTRACT_VERSION = "1.0";
@@ -118,7 +116,6 @@ export class Contract {
       schemaType: "boolean",
       validate: (_: boolean, data: unknown[]) => this.validTree(data),
     });
-    const root = fileURLToPath(new URL("../schemas/", import.meta.url));
     const childSchema = this.ajv.compile<{
       docChildren: Record<string, string[]>;
     }>({
@@ -131,7 +128,7 @@ export class Contract {
         },
       },
     });
-    const element: unknown = JSON.parse(readFileSync(resolve(root, "element.json"), "utf8"));
+    const element: unknown = schemasById[schemasByPath["element.json"] ?? ""];
     if (!childSchema(element)) throw new Error("Invalid child rules");
     this.children = element.docChildren;
     const metaSchema = this.ajv.compile<{
@@ -167,9 +164,7 @@ export class Contract {
         },
       },
     });
-    for (const file of readdirSync(root, { recursive: true })) {
-      if (typeof file !== "string" || !file.endsWith(".json")) continue;
-      const schema: unknown = JSON.parse(readFileSync(resolve(root, file), "utf8"));
+    for (const schema of Object.values(schemasById)) {
       if (!schema || typeof schema !== "object") throw new Error("Invalid schema");
       this.ajv.addSchema(schema);
       if (metaSchema(schema))

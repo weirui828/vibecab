@@ -20,8 +20,8 @@ import { readAppToken } from "./app-token.js";
 
 const contract = new Contract(),
   workspace = resolve(workspacePath());
-const developmentHostEntry = new URL("../../../host/bin/vibecab-host.mjs", import.meta.url).pathname;
-const developmentMcpRelay = new URL("../../../adapters/mcp-server/bin/vibecab-mcp.mjs", import.meta.url).pathname;
+const developmentHostEntry = resolve(app.getAppPath(), "../../host/bin/vibecab-host.mjs");
+const developmentMcpRelay = resolve(app.getAppPath(), "../../adapters/mcp-server/bin/vibecab-mcp.mjs");
 const execFileAsync = promisify(execFile);
 type Preferences = {
   theme?: "system" | "light" | "dark";
@@ -436,8 +436,10 @@ else {
       importMarkdown: () => windowRef?.webContents.send("app:import"),
       quit: () => app.quit(),
     });
-    if (!app.getLoginItemSettings().wasOpenedAtLogin) await createWindow();
-    else app.dock?.hide();
+    if (!app.getLoginItemSettings().wasOpenedAtLogin) {
+      await createWindow();
+      if (process.env.VIBECAB_SMOKE === "1") process.stdout.write("VIBECAB_READY\n");
+    } else app.dock?.hide();
   });
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) void createWindow();
