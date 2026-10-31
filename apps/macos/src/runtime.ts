@@ -9,6 +9,10 @@ export function hostEntryPath(packaged: boolean, resourcesPath: string, developm
   return packaged ? join(resourcesPath, "engine", "bin", "vibecab-host.mjs") : developmentPath;
 }
 
+export function mcpRelayPath(packaged: boolean, resourcesPath: string, developmentPath: string): string {
+  return packaged ? join(resourcesPath, "engine", "bin", "vibecab-mcp") : developmentPath;
+}
+
 export function assertNode26(nodePath: string): void {
   let version = "";
   try {

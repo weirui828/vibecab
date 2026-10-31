@@ -15,12 +15,13 @@ import { isUnauthenticated, reconnectEvents, retryUnauthenticated } from "./brid
 import { switchWorkspaceFromBackup } from "./restore-workspace.js";
 import { createTrayManager } from "./tray.js";
 import { installApplicationMenu } from "./app-menu.js";
-import { assertNode26, engineNodePath, hostEntryPath } from "./runtime.js";
+import { assertNode26, engineNodePath, hostEntryPath, mcpRelayPath } from "./runtime.js";
 import { readAppToken } from "./app-token.js";
 
 const contract = new Contract(),
   workspace = resolve(workspacePath());
 const developmentHostEntry = new URL("../../../host/bin/vibecab-host.mjs", import.meta.url).pathname;
+const developmentMcpRelay = new URL("../../../adapters/mcp-server/bin/vibecab-mcp.mjs", import.meta.url).pathname;
 const execFileAsync = promisify(execFile);
 type Preferences = {
   theme?: "system" | "light" | "dark";
@@ -267,10 +268,7 @@ function installBridge(): void {
     ).trim(),
   );
   ipcMain.handle("app:workspace-path", () => workspace);
-  ipcMain.handle(
-    "app:mcp-relay-path",
-    () => new URL("../../../adapters/mcp-server/bin/vibecab-mcp.mjs", import.meta.url).pathname,
-  );
+  ipcMain.handle("app:mcp-relay-path", () => mcpRelayPath(app.isPackaged, process.resourcesPath, developmentMcpRelay));
   ipcMain.handle("app:open-mcp-config", async () => {
     const configPath = join(app.getPath("appData"), "Claude", "claude_desktop_config.json");
     await shell.showItemInFolder(configPath);

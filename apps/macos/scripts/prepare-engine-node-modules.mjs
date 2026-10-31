@@ -1,20 +1,6 @@
 import { createHash } from "node:crypto";
-import { cp, link, lstat, readFile, readdir, rm } from "node:fs/promises";
+import { cp, link, lstat, readFile, readdir, rm, stat } from "node:fs/promises";
 import { extname, join } from "node:path";
-
-async function prunePackage(packageDirectory, name) {
-  if (name === "better-sqlite3") {
-    await Promise.all(
-      ["deps", "src", "README.md", "binding.gyp"].map((item) =>
-        rm(join(packageDirectory, item), { recursive: true, force: true }),
-      ),
-    );
-    const prebuilds = join(packageDirectory, "prebuilds");
-    for (const entry of await readdir(prebuilds).catch(() => []))
-      if (entry !== "darwin-arm64.node") await rm(join(prebuilds, entry), { recursive: true, force: true });
-  }
-  if (name === "openai" || name === "zod") await rm(join(packageDirectory, "src"), { recursive: true, force: true });
-}
 
 export async function prepareEngineNodeModules(root) {
   const virtualRoot = join(root, ".pnpm/node_modules");
@@ -52,19 +38,49 @@ export async function prepareEngineNodeModules(root) {
     }
   }
 
+  async function prune(directory) {
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      const path = join(directory, entry.name);
+      if (entry.isDirectory()) {
+        if (["docs", "test", "tests", "example", "examples"].includes(entry.name)) {
+          await rm(path, { recursive: true, force: true });
+          continue;
+        }
+        if (entry.name === "src" && (await stat(join(directory, "dist")).catch(() => undefined))) {
+          await rm(path, { recursive: true, force: true });
+          continue;
+        }
+        if (entry.name === "better-sqlite3") await pruneSqlite(path);
+        await prune(path);
+      } else if (entry.isFile()) {
+        if (entry.name.endsWith(".map") || entry.name.endsWith(".d.ts") || entry.name.endsWith(".md")) {
+          await rm(path, { force: true });
+        }
+      }
+    }
+  }
+  async function pruneSqlite(packageDirectory) {
+    await Promise.all(
+      ["deps", "src", "README.md", "binding.gyp"].map((item) =>
+        rm(join(packageDirectory, item), { recursive: true, force: true }),
+      ),
+    );
+    const prebuilds = join(packageDirectory, "prebuilds");
+    for (const entry of await readdir(prebuilds).catch(() => []))
+      if (entry !== "darwin-arm64.node") await rm(join(prebuilds, entry), { recursive: true, force: true });
+    const release = join(packageDirectory, "build/Release");
+    for (const entry of await readdir(release, { withFileTypes: true }).catch(() => []))
+      if (!entry.isFile() || !entry.name.endsWith(".node"))
+        await rm(join(release, entry.name), { recursive: true, force: true });
+  }
+  await prune(root);
+
   const seen = new Map();
   async function visit(directory) {
     for (const entry of await readdir(directory, { withFileTypes: true })) {
       const path = join(directory, entry.name);
-      if (entry.isDirectory()) {
-        if (entry.name === "better-sqlite3" || entry.name === "openai" || entry.name === "zod")
-          await prunePackage(path, entry.name);
-        await visit(path);
-      } else if (entry.isFile()) {
-        if (entry.name.endsWith(".map")) {
-          await rm(path, { force: true });
-          continue;
-        }
+      if (entry.isDirectory()) await visit(path);
+      else if (entry.isFile()) {
         if (
           ![".js", ".mjs", ".cjs", ".json", ".md", ".txt", ".html", ".css", ".yaml", ".yml"].includes(
             extname(entry.name),
@@ -85,4 +101,5 @@ export async function prepareEngineNodeModules(root) {
     }
   }
   await visit(root);
+  await rm(join(root, ".pnpm"), { recursive: true, force: true });
 }

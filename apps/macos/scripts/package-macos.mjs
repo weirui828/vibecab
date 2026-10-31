@@ -6,8 +6,8 @@ import { fileURLToPath } from "node:url";
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const root = resolve(appRoot, "../..");
-function run(command, args, cwd = root) {
-  const result = spawnSync(command, args, { cwd, stdio: "inherit", env: process.env });
+function run(command, args, cwd = root, env = process.env) {
+  const result = spawnSync(command, args, { cwd, stdio: "inherit", env });
   if (result.status !== 0) throw new Error(`${command} ${args.join(" ")} failed with ${result.status}`);
 }
 await rm(resolve(root, "dist"), { recursive: true, force: true });
@@ -31,3 +31,7 @@ run(
   ],
   appRoot,
 );
+run("pnpm", ["--filter", "@vibecab/macos", "exec", "vitest", "run", "test/packaging.test.ts"], appRoot, {
+  ...process.env,
+  VIBECAB_PACKAGED_APP: resolve(root, "release/mac-arm64/VibeCab.app"),
+});

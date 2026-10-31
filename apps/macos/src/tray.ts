@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { Contract } from "../../../contract/src/index.js";
 import type { CommandEnvelope, EventEnvelope, Subscription } from "../../../contract/src/index.js";
 import type { httpClient } from "../../../adapters/http/src/index.js";
-import { status } from "../../../host/src/index.js";
+import { status } from "../../../host/src/control.js";
 import { menuStatus, recentSessionItems } from "./tray-state.js";
 
 type Client = ReturnType<typeof httpClient>;

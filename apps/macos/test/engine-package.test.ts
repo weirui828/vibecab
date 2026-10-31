@@ -13,11 +13,13 @@ it("keeps only arm64 SQLite runtime files and hardlinks duplicate package assets
   await mkdir(join(sqlite, "src"), { recursive: true });
   await mkdir(join(sqlite, "lib"), { recursive: true });
   await mkdir(join(openai, "src"), { recursive: true });
+  await mkdir(join(openai, "dist"), { recursive: true });
   await writeFile(join(prebuilds, "darwin-arm64.node"), "native");
   await writeFile(join(prebuilds, "win32-x64.node"), "other platform");
   await writeFile(join(sqlite, "src/source.cc"), "compile time only");
   await writeFile(join(sqlite, "lib/index.js"), "runtime");
   await writeFile(join(openai, "src/index.ts"), "compile time only");
+  await writeFile(join(openai, "dist/index.js"), "runtime");
   await writeFile(join(openai, "client.js"), "same package asset");
   await writeFile(join(root, "node_modules/openai/client-copy.js"), "same package asset");
 
@@ -55,6 +57,60 @@ it("exposes the contract workspace package runtime dependency closure", async ()
 
     expect(await readFile(join(root, "node_modules/ajv/lib/index.js"), "utf8")).toBe("ajv runtime");
     expect(await readFile(join(root, "node_modules/fast-uri/lib/index.js"), "utf8")).toBe("uri runtime");
+    await expect(readFile(join(root, "node_modules/.pnpm/node_modules/ajv/package.json"))).rejects.toThrow();
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+it("prunes package documentation and tests while preserving only SQLite native runtime files", async () => {
+  const root = await mkdtemp(join(tmpdir(), "vibecab-engine-prune-")),
+    modules = join(root, "node_modules"),
+    sample = join(modules, "sample"),
+    sqlite = join(modules, "better-sqlite3");
+  for (const directory of ["dist", "src", "docs", "test", "tests", "example", "examples"])
+    await mkdir(join(sample, directory), { recursive: true });
+  await mkdir(join(sqlite, "build/Release/obj.target"), { recursive: true });
+  await mkdir(join(sqlite, "deps", "sqlite3"), { recursive: true });
+  await mkdir(join(sqlite, "src"), { recursive: true });
+  await mkdir(join(sqlite, "prebuilds"), { recursive: true });
+  await writeFile(join(sample, "package.json"), JSON.stringify({ name: "sample", dependencies: {} }));
+  await writeFile(join(sample, "dist/index.js"), "runtime");
+  for (const directory of ["src", "docs", "test", "tests", "example", "examples"])
+    await writeFile(join(sample, directory, "fixture.js"), "not runtime");
+  await writeFile(join(sample, "index.d.ts"), "type-only");
+  await writeFile(join(sample, "README.md"), "documentation");
+  await writeFile(join(sample, "dist/index.js.map"), "map");
+  await writeFile(join(sqlite, "package.json"), JSON.stringify({ name: "better-sqlite3", dependencies: {} }));
+  await writeFile(join(sqlite, "build/Release/better_sqlite3.node"), "native runtime");
+  await writeFile(join(sqlite, "build/Release/addon.o"), "object file");
+  await writeFile(join(sqlite, "build/Release/obj.target/addon.node"), "build intermediate");
+  await writeFile(join(sqlite, "deps/sqlite3/source.cc"), "compile source");
+  await writeFile(join(sqlite, "src/index.js"), "source");
+  await writeFile(join(sqlite, "prebuilds/darwin-arm64.node"), "arm64 runtime");
+
+  try {
+    await prepareEngineNodeModules(modules);
+
+    expect(await readFile(join(sample, "dist/index.js"), "utf8")).toBe("runtime");
+    for (const path of [
+      "src/fixture.js",
+      "docs/fixture.js",
+      "test/fixture.js",
+      "tests/fixture.js",
+      "example/fixture.js",
+      "examples/fixture.js",
+      "index.d.ts",
+      "README.md",
+      "dist/index.js.map",
+      "better-sqlite3/deps/sqlite3/source.cc",
+      "better-sqlite3/src/index.js",
+      "better-sqlite3/build/Release/addon.o",
+      "better-sqlite3/build/Release/obj.target/addon.node",
+    ])
+      await expect(readFile(join(modules, path))).rejects.toThrow();
+    expect(await readFile(join(sqlite, "build/Release/better_sqlite3.node"), "utf8")).toBe("native runtime");
+    expect(await readFile(join(sqlite, "prebuilds/darwin-arm64.node"), "utf8")).toBe("arm64 runtime");
   } finally {
     await rm(root, { recursive: true, force: true });
   }
