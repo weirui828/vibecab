@@ -129,12 +129,18 @@ export function SettingsView({ onBack }: { onBack: () => void }) {
     void window.vibecab.query<typeof tokens>("sys.AccessTokens", {}).then(setTokens);
   };
   return (
-    <section className="settings-view">
-      <div className="row">
-        <h2>Settings</h2>
-        <button onClick={onBack}>Back</button>
-      </div>
-      <nav aria-label="Settings tabs">
+    <section className="settings-view page">
+      <header className="page-header">
+        <div>
+          <p className="eyebrow">Workspace</p>
+          <h2 className="page-title">Settings</h2>
+          <p className="meta">Everything here stays on this Mac.</p>
+        </div>
+        <div className="page-actions">
+          <button onClick={onBack}>Back</button>
+        </div>
+      </header>
+      <nav aria-label="Settings tabs" className="settings-tabs">
         {tabs.map((item) => (
           <button key={item} aria-current={tab === item} onClick={() => setTab(item)}>
             {item}

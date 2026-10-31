@@ -60,7 +60,10 @@ export function ResumeCard({
   if (!entries.length) return null;
   return (
     <section className="resume-card" aria-label="Since you were here">
-      <h3>Since you were here</h3>
+      <div className="card-head">
+        <h3>Since you were here</h3>
+        <button onClick={onGotIt}>Got it</button>
+      </div>
       <ul>
         {entries.map((entry) => (
           <li key={entry.id} data-resume-item>
@@ -69,7 +72,6 @@ export function ResumeCard({
           </li>
         ))}
       </ul>
-      <button onClick={onGotIt}>Got it</button>
       {digest ? (
         <div className="session-digest">
           <h4>Session digest</h4>

@@ -29,12 +29,22 @@ export function CommentComposer({
           onSubmit();
         }}
       >
+        {selected?.locator ? (
+          <p className="composer-quote">
+            <q>{selected.locator.quote}</q>
+          </p>
+        ) : null}
         <label>
-          Comment
-          <textarea aria-label="Comment" value={body} onChange={(event) => setBody(event.target.value)} />
+          <span className="visually-hidden">Comment</span>
+          <textarea
+            aria-label="Comment"
+            placeholder={selected ? "What should change here?" : "Comment on the whole session…"}
+            value={body}
+            onChange={(event) => setBody(event.target.value)}
+          />
         </label>
         {selected ? (
-          <label>
+          <label className="suggest">
             Suggest replacement
             <input
               value={suggestion}
@@ -43,7 +53,12 @@ export function CommentComposer({
             />
           </label>
         ) : null}
-        <button type="submit">Post comment</button>
+        <div className="composer-actions">
+          <span className="meta">⌘↩ to post</span>
+          <button type="submit" className="primary">
+            Post comment
+          </button>
+        </div>
       </form>
     </>
   );

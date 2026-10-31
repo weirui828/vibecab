@@ -91,12 +91,17 @@ export function TrashView({ onBack, onChanged }: { onBack: () => void; onChanged
     return action ? [{ runId, action }] : [];
   });
   return (
-    <section aria-label="Trash view">
-      <div className="row">
-        <h2>Trash</h2>
-        <button onClick={onBack}>Back</button>
-      </div>
-      <p>Items are automatically purged after {retentionDays} days.</p>
+    <section aria-label="Trash view" className="trash-view page">
+      <header className="page-header">
+        <div>
+          <p className="eyebrow">Workspace</p>
+          <h2 className="page-title">Trash</h2>
+          <p className="meta">Items are automatically purged after {retentionDays} days.</p>
+        </div>
+        <div className="page-actions">
+          <button onClick={onBack}>Back</button>
+        </div>
+      </header>
       {targets.length ? <button onClick={() => void startEmptyTrash()}>Empty trash</button> : null}
       {targets.map((item) => (
         <article key={`${item.kind}:${item.id}`}>

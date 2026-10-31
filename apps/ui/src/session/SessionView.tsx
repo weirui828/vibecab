@@ -21,6 +21,8 @@ import { ThreadPanel } from "./ThreadPanel.js";
 import { SessionWorkflow } from "./SessionWorkflow.js";
 import { SessionHeader, SessionSidebar } from "./SessionChrome.js";
 import { useAnchorHighlights } from "./useAnchorHighlights.js";
+import { coalesce } from "../coalesce.js";
+import { useExportSaver } from "./useExportSaver.js";
 import { CommentComposer } from "./CommentComposer.js";
 import { DecisionRecordPanel } from "./DecisionRecordPanel.js";
 import type { Selected } from "./types.js";
@@ -81,20 +83,29 @@ export function SessionView({
     [updatedToast, setUpdatedToast] = useState(""),
     [message, setMessage] = useState("");
   const onRefreshRef = useRef(onRefresh);
-  const savedExports = useRef(new Set<string>());
   const [decisionRecord, setDecisionRecord] = useState<unknown[]>();
   useEffect(() => void (onRefreshRef.current = onRefresh), [onRefresh]);
   const refresh = useCallback(async () => {
     if (!artifact) return;
-    const [latestArtifacts, outline] = await Promise.all([
+    const versionArgs = viewingVersion ? { version: viewingVersion } : {};
+    // Load the Document first so it paints immediately; everything else follows in parallel.
+    const [outline, list] = await Promise.all([
+      window.vibecab.query<Outline>("vc.Outline", { artifactId: artifact.artifactId, ...versionArgs }),
+      window.vibecab.query<Element[]>("vc.Elements", { artifactId: artifact.artifactId, ...versionArgs }),
+    ]);
+    setElements(list);
+    const [latestArtifacts, nextThreads, updates, agreements, conflicts] = await Promise.all([
       window.vibecab.query<import("../../../../contract/generated/index.js").VcArtifactsOperation["result"]>(
         "vc.Artifacts",
         {},
       ),
-      window.vibecab.query<Outline>("vc.Outline", {
+      window.vibecab.query<VcThreadsOperation["result"]>("vc.Threads", {
+        sessionId,
         artifactId: artifact.artifactId,
-        ...(viewingVersion ? { version: viewingVersion } : {}),
       }),
+      window.vibecab.query<VcUpdatesOperation["result"]>("vc.Updates", { artifactId: artifact.artifactId }),
+      window.vibecab.query<Agreement[]>("vc.DecisionRecord", { artifactId: artifact.artifactId }),
+      window.vibecab.query<FeedbackConflict[]>("vc.Conflicts", { sessionId, artifactId: artifact.artifactId }),
     ]);
     const latestVersion = latestArtifacts.find((item) => item.artifactId === artifact.artifactId)?.headVersion;
     if (latestVersion && latestVersion > artifact.headVersion) {
@@ -105,19 +116,6 @@ export function SessionView({
       );
       setUpdatedToast(`Updated to v${latestVersion}`);
     }
-    const list = await window.vibecab.query<Element[]>("vc.Elements", {
-      artifactId: artifact.artifactId,
-      ...(viewingVersion ? { version: viewingVersion } : {}),
-    });
-    const nextThreads = await window.vibecab.query<VcThreadsOperation["result"]>("vc.Threads", {
-      sessionId,
-      artifactId: artifact.artifactId,
-    });
-    const [updates, agreements, conflicts] = await Promise.all([
-      window.vibecab.query<VcUpdatesOperation["result"]>("vc.Updates", { artifactId: artifact.artifactId }),
-      window.vibecab.query<Agreement[]>("vc.DecisionRecord", { artifactId: artifact.artifactId }),
-      window.vibecab.query<FeedbackConflict[]>("vc.Conflicts", { sessionId, artifactId: artifact.artifactId }),
-    ]);
     const activeUpdate = updates.updates.find((item) =>
         ["queued", "planning", "awaiting_plan_review", "writing", "checking"].includes(item.status),
       ),
@@ -163,18 +161,21 @@ export function SessionView({
         right = position(b);
       return left[0] - right[0] || left[1] - right[1];
     });
-    setElements(list);
-    if (!viewingVersion) {
-      const outputSets = await window.vibecab.query<import("../../../../contract/generated/index.js").OutputSet[]>(
-        "vc.OutputSets",
-        { sessionId },
-      );
-      setSnapshots(outputSets);
-    }
+    const [outputSets, nextTurns, nextResume, nextDigest] = await Promise.all([
+      viewingVersion
+        ? Promise.resolve(undefined)
+        : window.vibecab.query<import("../../../../contract/generated/index.js").OutputSet[]>("vc.OutputSets", {
+            sessionId,
+          }),
+      window.vibecab.query<AgentTurn[]>("vc.AgentTurns", { sessionId }),
+      window.vibecab.query<VcResumeViewOperation["result"]>("vc.ResumeView", { sessionId }),
+      window.vibecab.query<VcDigestOperation["result"]>("vc.Digest", { sessionId }),
+    ]);
+    if (outputSets) setSnapshots(outputSets);
     setThreads(nextThreads);
-    setTurns(await window.vibecab.query<AgentTurn[]>("vc.AgentTurns", { sessionId }));
-    setResume(await window.vibecab.query<VcResumeViewOperation["result"]>("vc.ResumeView", { sessionId }));
-    setDigest(await window.vibecab.query<VcDigestOperation["result"]>("vc.Digest", { sessionId }));
+    setTurns(nextTurns);
+    setResume(nextResume);
+    setDigest(nextDigest);
   }, [artifact, sessionId, viewingVersion]);
   useEffect(() => {
     let active = true;
@@ -185,39 +186,13 @@ export function SessionView({
       active = false;
     };
   }, [refresh]);
+  useExportSaver(pendingExportId, setPendingExportId, artifact?.title, setMessage);
   useEffect(() => {
-    if (!pendingExportId || savedExports.current.has(pendingExportId)) return;
-    let cancelled = false;
-    const waitForExport = async () => {
-      for (let attempt = 0; attempt < 60 && !cancelled; attempt++) {
-        const exports = await window.vibecab.query<
-            Array<{ exportId: string; status: string; blobHash?: string; format: string }>
-          >("vc.Exports", {}),
-          item = exports.find((candidate) => candidate.exportId === pendingExportId);
-        if (item?.status === "failed") throw new Error("Export failed.");
-        if (item?.status === "completed" && item.blobHash) {
-          savedExports.current.add(pendingExportId);
-          const bytes = await window.vibecab.getBlob(item.blobHash),
-            ext = item.format === "markdown" ? "md" : item.format;
-          if (!cancelled) {
-            await window.vibecab.app.saveFiles([{ name: `${artifact?.title ?? "VibeCab"}.${ext}`, bytes }]);
-            setMessage("Export saved");
-            setPendingExportId(undefined);
-          }
-          return;
-        }
-        await new Promise((resolve) => window.setTimeout(resolve, 250));
-      }
-    };
-    void waitForExport().catch((error: unknown) => {
-      if (!cancelled) setMessage(error instanceof Error ? error.message : "Could not save export.");
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [pendingExportId, artifact?.title]);
-  useEffect(() => {
+    const refresher = coalesce(refresh),
+      mountedAt = Date.now();
     const unsub = window.vibecab.subscribe(0, {}, (event) => {
+      // Subscriptions replay history from seq 0; only events newer than this view may toast or move the reader.
+      const live = Date.parse(event.ts) >= mountedAt - 1_000;
       if (
         event.type === "vc.VersionCommitted" &&
         artifact &&
@@ -226,18 +201,26 @@ export function SessionView({
         Reflect.get(event.payload, "artifactId") === artifact.artifactId
       ) {
         const version = Reflect.get(event.payload, "version");
-        setUpdatedToast(typeof version === "number" ? `Updated to v${version}` : "Document updated");
+        // Replayed history still advances the head; only live commits toast and move the reader.
         if (typeof version === "number")
           setArtifacts((current) =>
-            current.map((item) => (item.artifactId === artifact.artifactId ? { ...item, headVersion: version } : item)),
+            current.map((item) =>
+              item.artifactId === artifact.artifactId
+                ? { ...item, headVersion: Math.max(item.headVersion, version) }
+                : item,
+            ),
           );
-        setViewingVersion(undefined);
-        const topId = document.elementFromPoint(220, 100)?.closest<HTMLElement>("[data-element-id]")?.dataset.elementId;
-        onRefreshRef.current();
-        window.requestAnimationFrame(() => {
-          if (topId)
-            document.querySelector(`[data-element-id="${CSS.escape(topId)}"]`)?.scrollIntoView({ block: "start" });
-        });
+        if (live) {
+          setUpdatedToast(typeof version === "number" ? `Updated to v${version}` : "Document updated");
+          setViewingVersion(undefined);
+          const topId = document.elementFromPoint(220, 100)?.closest<HTMLElement>("[data-element-id]")
+            ?.dataset.elementId;
+          onRefreshRef.current();
+          window.requestAnimationFrame(() => {
+            if (topId)
+              document.querySelector(`[data-element-id="${CSS.escape(topId)}"]`)?.scrollIntoView({ block: "start" });
+          });
+        }
       }
       if (
         [
@@ -249,7 +232,7 @@ export function SessionView({
           "vc.AgentTurnChanged",
         ].includes(event.type)
       )
-        void refresh().catch(() => undefined);
+        refresher.schedule();
       if (
         event.type === "vc.LifecycleChanged" &&
         typeof event.payload === "object" &&
@@ -261,8 +244,9 @@ export function SessionView({
         if (typeof exportId === "string") setPendingExportId(exportId);
       }
     });
-    const fallback = window.setInterval(() => void refresh().catch(() => undefined), 1_500);
+    const fallback = window.setInterval(() => refresher.schedule(), 1_500);
     return () => {
+      refresher.stop();
       unsub();
       window.clearInterval(fallback);
     };
@@ -344,9 +328,21 @@ export function SessionView({
       setMessage(error instanceof Error ? error.message : "Could not post comment.");
     }
   };
+  const openThreads = threads.filter((thread) =>
+      thread.comments.some((comment) => ["open", "discussing", "agreed", "scheduled"].includes(comment.state)),
+    ).length,
+    waitingOnAgent = Object.values(delivery).filter((state) => state === "queued" || state === "delivered").length,
+    replyMode = { realtime: "live replies", batch: "batched replies", manual: "manual replies" }[session.replyTrigger],
+    headerMeta = [
+      `${elements.filter((element) => element.parentId === null).length} blocks`,
+      `${openThreads} open ${openThreads === 1 ? "thread" : "threads"}`,
+      ...(waitingOnAgent ? [`${waitingOnAgent} waiting on the agent`] : []),
+      replyMode,
+    ].join(" · ");
   return (
     <section className="session-view">
       <SessionHeader
+        meta={headerMeta}
         title={title}
         artifact={artifact}
         artifacts={artifacts}
@@ -391,7 +387,7 @@ export function SessionView({
           }}
         >
           {viewingVersion ? (
-            <p role="status">
+            <p role="status" className="viewing-banner">
               Viewing v{viewingVersion} — read only{" "}
               <button
                 onClick={() => {
@@ -446,6 +442,7 @@ export function SessionView({
           )}
           {artifact && !viewingVersion ? (
             <button
+              className="quiet-link why-here"
               onClick={() =>
                 void window.vibecab
                   .query<unknown[]>("vc.DecisionRecord", { artifactId: artifact.artifactId })
@@ -467,7 +464,9 @@ export function SessionView({
               onChooseRange={chooseRange}
             />
           ) : null}
-          <p role="status">{message}</p>
+          <p role="status" className="composer-status">
+            {message}
+          </p>
           {updatedToast ? (
             <p className="update-toast" role="status">
               {updatedToast}

@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
-import { Button, Card, CardBody } from "@wei/design-system";
+import { Button } from "@wei/design-system";
+import { Hills, Mound } from "./Brand.js";
+import { Sidebar } from "./Sidebar.js";
 import type { Settings, VcArtifactsOperation, VcSessionsOperation } from "../../../../contract/generated/index.js";
 import { createBlank, importMarkdown as importMarkdownContent, listArtifacts } from "../api/artifacts.js";
 import { attachArtifact, listSessions, startSession } from "../api/sessions.js";
 import { terms } from "../copy/terms.js";
 import { connectionTransition } from "../connection.js";
+import { coalesce } from "../coalesce.js";
 import type { ConnectionEvent, ConnectionState } from "../connection.js";
 import type { AttentionItem } from "../../../../contract/generated/index.js";
 import { SessionView } from "../session/SessionView.js";
@@ -24,7 +27,8 @@ export function App() {
     [onboarding, setOnboarding] = useState(false),
     [selected, setSelected] = useState(""),
     [route, setRoute] = useState(window.location.hash.slice(1) || "/"),
-    [showNewDraft, setShowNewDraft] = useState(false);
+    [showNewDraft, setShowNewDraft] = useState(false),
+    [theme, setTheme] = useState<"system" | "light" | "dark">("system");
   const setConnection = (event: ConnectionEvent) => setState((current) => connectionTransition(current, event));
   const refresh = async () => {
     try {
@@ -53,9 +57,8 @@ export function App() {
           setOnboarding(true);
       },
     );
-    const unlisten = window.vibecab.subscribe(0, {}, () => {
-      void refresh();
-    });
+    const refresher = coalesce(refresh);
+    const unlisten = window.vibecab.subscribe(0, {}, () => refresher.schedule());
     const newDraft = window.vibecab.app.onNewDraft(() => setShowNewDraft(true)),
       importFile = window.vibecab.app.onImport(() => void importMarkdown());
     const theme = window.vibecab.app.onTheme((dark) => document.documentElement.classList.toggle("dark", dark));
@@ -69,6 +72,7 @@ export function App() {
       });
     window.addEventListener("hashchange", onHash);
     return () => {
+      refresher.stop();
       unlisten();
       newDraft();
       importFile();
@@ -106,103 +110,39 @@ export function App() {
     const group = item.sessionId ?? "workspace";
     groupedAttention.set(group, [...(groupedAttention.get(group) ?? []), item]);
   }
+  const needsYou = (sessionId: string) => attention.filter((item) => item.sessionId === sessionId).length;
+  const filteredArtifacts = artifacts.filter((artifact) => artifact.title.toLowerCase().includes(filter.toLowerCase()));
+  const sessionsFor = (artifactId: string) =>
+    sessions.filter((session) => session.artifactIds.includes(artifactId)).map((session) => session.title);
+  const openArtifact = (artifactId: string) => {
+    const owner = sessions.find((session) => session.artifactIds.includes(artifactId));
+    if (owner) {
+      setSelected("");
+      window.location.hash = "/s/" + encodeURIComponent(owner.sessionId);
+    } else setSelected(artifactId);
+  };
+  const homeMeta = [
+    `${artifacts.length} ${artifacts.length === 1 ? terms.draft.toLowerCase() : terms.draft.toLowerCase() + "s"}`,
+    `${sessions.length} ${sessions.length === 1 ? terms.session.toLowerCase() : terms.session.toLowerCase() + "s"}`,
+    attention.length ? `${attention.length} need${attention.length === 1 ? "s" : ""} you` : "nothing waiting",
+  ].join(" · ");
   return (
     <div className="shell">
-      <aside className="sidebar">
-        <h1 className="brand">VibeCab</h1>
-        <p className="eyebrow">Workspace</p>
-        <p>
-          <button
-            onClick={() => {
-              setSelected("");
-              window.location.hash = "/";
-            }}
-          >
-            {terms.draft}s <span>{artifacts.length}</span>
-          </button>
-        </p>
-        <div>
-          {sessions.map((session) => (
-            <div key={session.sessionId} className="session-nav-item">
-              <button
-                className="draft"
-                onClick={() => {
-                  setSelected("");
-                  window.location.hash = "/s/" + encodeURIComponent(session.sessionId);
-                }}
-              >
-                {session.title}{" "}
-                <small>
-                  {session.state} · {attention.filter((item) => item.sessionId === session.sessionId).length} needs you
-                </small>
-              </button>
-              <button
-                aria-label={`Rename ${session.title}`}
-                onClick={() => {
-                  const title = window.prompt("Rename Session", session.title);
-                  if (title)
-                    void window.vibecab
-                      .command("vc.RenameSession", { sessionId: session.sessionId, title })
-                      .then(refresh);
-                }}
-              >
-                Rename
-              </button>
-              <button
-                aria-label={`Move ${session.title} to trash`}
-                onClick={() => {
-                  void window.vibecab
-                    .command("vc.Trash", { target: { kind: "session", id: session.sessionId } })
-                    .then(() => {
-                      setUndoTarget({ kind: "session", id: session.sessionId });
-                      return refresh();
-                    });
-                }}
-              >
-                Trash
-              </button>
-            </div>
-          ))}
-        </div>
-        <p>
-          <button
-            onClick={() => {
-              window.location.hash = "/settings";
-            }}
-          >
-            Settings
-          </button>
-        </p>
-        <p>
-          <button
-            onClick={() => {
-              window.location.hash = "/trash";
-            }}
-          >
-            Trash
-          </button>
-        </p>
-        <p className="notice">{state}</p>
-        {state === "Engine stopped" || state === "Engine unreachable" ? (
-          <Button onClick={() => void window.vibecab.app.startEngine().then(() => setConnection("connected"))}>
-            Start engine
-          </Button>
-        ) : null}
-        <label>
-          Theme{" "}
-          <select
-            defaultValue="system"
-            onChange={(event) => {
-              const value = event.target.value;
-              if (value === "system" || value === "light" || value === "dark") void window.vibecab.app.setTheme(value);
-            }}
-          >
-            <option value="system">System</option>
-            <option value="light">Light</option>
-            <option value="dark">Dark</option>
-          </select>
-        </label>
-      </aside>
+      <Sidebar
+        artifactsCount={artifacts.length}
+        sessions={sessions}
+        activeSessionId={activeSession?.sessionId}
+        onHome={!activeSession && route === "/"}
+        state={state}
+        theme={theme}
+        setTheme={setTheme}
+        needsYou={needsYou}
+        onSelectNone={() => setSelected("")}
+        onConnected={() => setConnection("connected")}
+        onRefresh={refresh}
+        onError={setError}
+        onTrashed={setUndoTarget}
+      />
       <main className="main">
         {onboarding ? (
           <Onboarding
@@ -230,212 +170,268 @@ export function App() {
             onChanged={() => void refresh()}
           />
         ) : selectedArtifact ? (
-          <>
-            <div className="row">
+          <div className="page">
+            <header className="page-header">
               <div>
                 <p className="eyebrow">{terms.draft}</p>
-                <h2>{selectedArtifact.title}</h2>
-              </div>
-              <Button variant="secondary" onClick={() => setSelected("")}>
-                Back
-              </Button>
-            </div>
-            <Card>
-              <CardBody>
-                <p>
-                  {terms.document} · Version {selectedArtifact.headVersion}
+                <h2 className="page-title">{selectedArtifact.title}</h2>
+                <p className="meta">
+                  {terms.document} · v{selectedArtifact.headVersion} · not in a {terms.session.toLowerCase()} yet
                 </p>
-              </CardBody>
-            </Card>
-          </>
+              </div>
+              <div className="page-actions">
+                <Button variant="secondary" onClick={() => setSelected("")}>
+                  Back
+                </Button>
+                <Button
+                  variant="primary"
+                  onClick={() =>
+                    void startSession(selectedArtifact.title)
+                      .then(async ({ sessionId }) => {
+                        await attachArtifact(sessionId, selectedArtifact.artifactId);
+                        await refresh();
+                        setSelected("");
+                        window.location.hash = "/s/" + encodeURIComponent(sessionId);
+                      })
+                      .catch((failure) => setError(String(failure)))
+                  }
+                >
+                  Open in a new {terms.session.toLowerCase()}
+                </Button>
+              </div>
+            </header>
+          </div>
+        ) : activeSession ? (
+          <SessionView
+            key={activeSession.sessionId}
+            sessionId={activeSession.sessionId}
+            session={activeSession}
+            title={activeSession.title}
+            artifacts={artifacts.filter((artifact) => activeSession.artifactIds.includes(artifact.artifactId))}
+            availableArtifacts={artifacts}
+            onAddDraft={async () => {
+              const draft = await createBlank("Untitled");
+              await attachArtifact(activeSession.sessionId, draft.artifactId);
+              await refresh();
+            }}
+            onBack={() => {
+              window.location.hash = "/";
+              void refresh();
+            }}
+            onRefresh={() => void refresh()}
+          />
         ) : (
-          <>
-            {activeSession ? (
-              <SessionView
-                key={activeSession.sessionId}
-                sessionId={activeSession.sessionId}
-                session={activeSession}
-                title={activeSession.title}
-                artifacts={artifacts.filter((artifact) => activeSession.artifactIds.includes(artifact.artifactId))}
-                availableArtifacts={artifacts}
-                onAddDraft={async () => {
-                  const draft = await createBlank("Untitled");
-                  await attachArtifact(activeSession.sessionId, draft.artifactId);
-                  await refresh();
-                }}
-                onBack={() => {
-                  window.location.hash = "/";
-                  void refresh();
-                }}
-                onRefresh={() => void refresh()}
-              />
-            ) : (
-              <>
-                <div className="row">
-                  <div>
-                    <p className="eyebrow">Workspace</p>
-                    <h2>Your {terms.draft}s</h2>
-                  </div>
-                  <Button onClick={() => setShowNewDraft((shown) => !shown)}>New {terms.draft.toLowerCase()}</Button>
+          <div className="page">
+            <header className="page-header">
+              <div>
+                <p className="eyebrow">Workspace</p>
+                <h2 className="page-title">Your {terms.draft}s</h2>
+                <p className="meta">{homeMeta}</p>
+              </div>
+              <div className="page-actions">
+                <Button
+                  variant="secondary"
+                  onClick={() =>
+                    void startSession("New session")
+                      .then(refresh)
+                      .catch((failure) => setError(String(failure)))
+                  }
+                >
+                  New {terms.session.toLowerCase()}
+                </Button>
+                <Button variant="primary" onClick={() => setShowNewDraft((shown) => !shown)}>
+                  New {terms.draft.toLowerCase()}
+                </Button>
+              </div>
+            </header>
+            {showNewDraft ? (
+              <section className="panel new-draft" aria-label={`New ${terms.draft.toLowerCase()}`}>
+                <p className="eyebrow">New {terms.draft.toLowerCase()}</p>
+                <div className="new-draft-row">
+                  <label className="field">
+                    <span>Add to session</span>
+                    <select
+                      aria-label="Add to session"
+                      value={draftSessionId}
+                      onChange={(event) => setDraftSessionId(event.target.value)}
+                    >
+                      <option value="new">New session</option>
+                      {sessions.map((session) => (
+                        <option key={session.sessionId} value={session.sessionId}>
+                          {session.title}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      setShowNewDraft(false);
+                      void createDraft();
+                    }}
+                  >
+                    Blank {terms.document}
+                  </Button>
                   <Button
                     variant="secondary"
-                    onClick={() =>
-                      void startSession("New session")
-                        .then(refresh)
-                        .catch((failure) => setError(String(failure)))
-                    }
+                    onClick={() => {
+                      setShowNewDraft(false);
+                      void importMarkdown();
+                    }}
                   >
-                    New {terms.session.toLowerCase()}
+                    Import Markdown
                   </Button>
                 </div>
-                {showNewDraft ? (
-                  <Card>
-                    <CardBody>
-                      <label className="draft-session-select">
-                        Add to session
-                        <select
-                          aria-label="Add to session"
-                          value={draftSessionId}
-                          onChange={(event) => setDraftSessionId(event.target.value)}
-                        >
-                          <option value="new">New session</option>
-                          {sessions.map((session) => (
-                            <option key={session.sessionId} value={session.sessionId}>
-                              {session.title}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <div className="row">
-                        <Button
-                          onClick={() => {
-                            setShowNewDraft(false);
-                            void createDraft();
-                          }}
-                        >
-                          Blank {terms.document}
-                        </Button>
-                        <Button
-                          variant="secondary"
-                          onClick={() => {
-                            setShowNewDraft(false);
-                            void importMarkdown();
-                          }}
-                        >
-                          Import Markdown
-                        </Button>
-                      </div>
-                    </CardBody>
-                  </Card>
-                ) : null}
-                {error ? (
-                  <p role="alert" className="notice">
-                    {error}
-                  </p>
-                ) : null}
-                <label className="home-filter">
-                  Filter Drafts{" "}
-                  <input
-                    aria-label="Filter Drafts"
-                    value={filter}
-                    onChange={(event) => setFilter(event.target.value)}
-                  />
-                </label>
-                <section aria-label="Needs you">
-                  <h3>Needs you</h3>
+              </section>
+            ) : null}
+            {error ? (
+              <p role="alert" className="notice">
+                {error}
+              </p>
+            ) : null}
+            {artifacts.length === 0 ? (
+              <section className="empty-state" aria-label="Empty workspace">
+                <Hills />
+                <h3 className="empty-title">Nothing drafted yet.</h3>
+                <p>
+                  Start a {terms.document.toLowerCase()}, leave comments where it feels off, and let the agent do the
+                  rewriting you agree to.
+                </p>
+                <Button variant="primary" onClick={() => setShowNewDraft(true)}>
+                  New {terms.draft.toLowerCase()}
+                </Button>
+                <ol className="steps">
+                  <li>Start a {terms.draft.toLowerCase()}</li>
+                  <li>Comment where it feels off</li>
+                  <li>Agree, and the agent updates it</li>
+                </ol>
+              </section>
+            ) : (
+              <>
+                <section aria-label="Needs you" className="home-section">
+                  <h3 className="section-label">Needs you</h3>
                   {groupedAttention.size ? (
-                    Array.from(groupedAttention, ([group, items]) => (
-                      <div key={group}>
-                        <h4>{sessions.find((session) => session.sessionId === group)?.title ?? "Workspace"}</h4>
-                        {items.map((item) => (
-                          <button
-                            className="draft"
-                            key={item.kind + item.id}
-                            onClick={() => {
-                              if (item.sessionId) window.location.hash = "/s/" + encodeURIComponent(item.sessionId);
-                            }}
-                          >
-                            {item.kind.replaceAll("_", " ")}
-                          </button>
-                        ))}
-                      </div>
-                    ))
+                    <div className="attention-grid">
+                      {Array.from(groupedAttention, ([group, items]) => (
+                        <div key={group} className="attention-card">
+                          <h4>
+                            <Mound tone="attention" />
+                            {sessions.find((session) => session.sessionId === group)?.title ?? "Workspace"}
+                          </h4>
+                          <div className="chips">
+                            {items.map((item) => (
+                              <button
+                                className="chip"
+                                key={item.kind + item.id}
+                                onClick={() => {
+                                  if (item.sessionId) window.location.hash = "/s/" + encodeURIComponent(item.sessionId);
+                                }}
+                              >
+                                {attentionLabel(item.kind)}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   ) : (
-                    <p>No items need your attention.</p>
+                    <p className="quiet">No items need your attention.</p>
                   )}
                 </section>
-                {undoTarget ? (
-                  <p role="status">
-                    Moved to trash.{" "}
-                    <button
-                      onClick={() => {
-                        void window.vibecab.command("vc.Restore", { target: undoTarget }).then(refresh);
-                        setUndoTarget(undefined);
-                      }}
-                    >
-                      Undo
-                    </button>
-                  </p>
-                ) : null}
-                {artifacts.length === 0 ? (
-                  <Card>
-                    <CardBody>
-                      <p>Start with a blank document or bring in a Markdown file.</p>
-                      <Button onClick={() => setShowNewDraft(true)}>New {terms.draft.toLowerCase()}</Button>
-                    </CardBody>
-                  </Card>
-                ) : (
-                  <div className="list">
-                    {artifacts
-                      .filter((artifact) => artifact.title.toLowerCase().includes(filter.toLowerCase()))
-                      .map((artifact) => (
-                        <article className="draft" key={artifact.artifactId}>
-                          <button className="draft-open" onClick={() => setSelected(artifact.artifactId)}>
-                            <strong>{artifact.title}</strong>
-                            <span> · {terms.document}</span>
-                            <small>
-                              {" "}
-                              · Updated {new Date(artifact.updatedAt).toLocaleDateString()} · Sessions:{" "}
-                              {sessions
-                                .filter((session) => session.artifactIds.includes(artifact.artifactId))
-                                .map((session) => session.title)
-                                .join(", ") || "None"}
-                            </small>
-                          </button>
-                          <div className="draft-actions">
-                            <button
-                              onClick={() => {
-                                const title = window.prompt("Rename Draft", artifact.title);
-                                if (title)
-                                  void window.vibecab
-                                    .command("vc.RenameArtifact", { artifactId: artifact.artifactId, title })
-                                    .then(refresh);
-                              }}
-                            >
-                              Rename
-                            </button>
-                            <button
-                              onClick={() => {
-                                void window.vibecab
-                                  .command("vc.Trash", { target: { kind: "artifact", id: artifact.artifactId } })
-                                  .then(() => {
-                                    setUndoTarget({ kind: "artifact", id: artifact.artifactId });
-                                    return refresh();
-                                  });
-                              }}
-                            >
-                              Move to trash
-                            </button>
-                          </div>
-                        </article>
-                      ))}
+                <section className="home-section" aria-label={`${terms.draft}s`}>
+                  <div className="row">
+                    <h3 className="section-label">All {terms.draft.toLowerCase()}s</h3>
+                    <label className="search">
+                      <span className="visually-hidden">Filter Drafts</span>
+                      <input
+                        aria-label="Filter Drafts"
+                        placeholder={`Filter ${terms.draft.toLowerCase()}s`}
+                        value={filter}
+                        onChange={(event) => setFilter(event.target.value)}
+                      />
+                    </label>
                   </div>
-                )}
+                  <div className="draft-list">
+                    {filteredArtifacts.map((artifact) => (
+                      <article className="draft-row" key={artifact.artifactId}>
+                        <button className="draft-open" onClick={() => openArtifact(artifact.artifactId)}>
+                          <strong>{artifact.title}</strong>
+                          <span className="meta">
+                            {terms.document} · v{artifact.headVersion} · updated {relativeDay(artifact.updatedAt)}
+                            {sessionsFor(artifact.artifactId).length
+                              ? ` · in ${sessionsFor(artifact.artifactId).join(", ")}`
+                              : ""}
+                          </span>
+                        </button>
+                        <div className="draft-actions">
+                          <button
+                            className="quiet-action"
+                            onClick={() => {
+                              const title = window.prompt("Rename Draft", artifact.title);
+                              if (title)
+                                void window.vibecab
+                                  .command("vc.RenameArtifact", { artifactId: artifact.artifactId, title })
+                                  .then(refresh);
+                            }}
+                          >
+                            Rename
+                          </button>
+                          <button
+                            className="quiet-action"
+                            onClick={() => {
+                              void window.vibecab
+                                .command("vc.Trash", { target: { kind: "artifact", id: artifact.artifactId } })
+                                .then(() => {
+                                  setUndoTarget({ kind: "artifact", id: artifact.artifactId });
+                                  return refresh();
+                                });
+                            }}
+                          >
+                            Move to trash
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </section>
               </>
             )}
-          </>
+            {undoTarget ? (
+              <p role="status" className="toast">
+                Moved to trash.{" "}
+                <button
+                  onClick={() => {
+                    void window.vibecab.command("vc.Restore", { target: undoTarget }).then(refresh);
+                    setUndoTarget(undefined);
+                  }}
+                >
+                  Undo
+                </button>
+              </p>
+            ) : null}
+          </div>
         )}
       </main>
     </div>
   );
+}
+
+function attentionLabel(kind: AttentionItem["kind"]): string {
+  const labels: Record<AttentionItem["kind"], string> = {
+    conflict: "Conflict to resolve",
+    agreed_item: "Agreed, waiting for an Update",
+    unread_reply: "Unread reply",
+    proposal: "Proposal to review",
+    new_version: "New version",
+    running_update: "Update running",
+    failed_update: "Update failed",
+    output_set: "New Snapshot",
+  };
+  return labels[kind];
+}
+
+function relativeDay(timestamp: string): string {
+  const days = Math.round((Date.parse(timestamp) - Date.now()) / 86_400_000);
+  if (days === 0) return "today";
+  return new Intl.RelativeTimeFormat(undefined, { numeric: "auto" }).format(days, "day");
 }

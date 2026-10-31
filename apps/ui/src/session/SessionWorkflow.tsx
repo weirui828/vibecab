@@ -15,6 +15,7 @@ import type { DiffResult } from "../../../../contract/generated/index.js";
 import type { VcThreadsOperation } from "../../../../contract/generated/index.js";
 import { DocumentView } from "../document/DocumentView.js";
 import { UpdateDiff } from "./UpdateDiff.js";
+import { coalesce } from "../coalesce.js";
 
 type Session = VcSessionsOperation["result"][number];
 type PlanItem = UpdatePlan["items"][number];
@@ -95,8 +96,12 @@ export function SessionWorkflow({
   }, [artifact.artifactId, sessionId]);
   useEffect(() => {
     void refresh().catch(() => setMessage("Could not load Update status."));
-    const timer = window.setInterval(() => void refresh().catch(() => undefined), 1_500);
-    return () => window.clearInterval(timer);
+    const refresher = coalesce(refresh);
+    const timer = window.setInterval(() => refresher.schedule(), 1_500);
+    return () => {
+      refresher.stop();
+      window.clearInterval(timer);
+    };
   }, [refresh]);
   const latestUpdate = detail ?? queryResult.updates.toSorted((a, b) => b.createdAt.localeCompare(a.createdAt))[0],
     active =
@@ -161,8 +166,8 @@ export function SessionWorkflow({
   return (
     <section className="session-workflow" aria-label="Session workflow">
       <header className="workflow-controls">
-        <label>
-          Reply trigger
+        <label className="toolbar-field">
+          <span className="eyebrow">Replies</span>
           <select
             aria-label="Reply trigger"
             value={session.replyTrigger}
@@ -197,13 +202,14 @@ export function SessionWorkflow({
         ) : null}
         <button
           type="button"
+          className="toolbar-button"
           disabled={noModel}
           onClick={() => void command("vc.AskAgent", { sessionId })}
           title={noModel ? "Add a model in Settings" : undefined}
         >
           Ask agent
         </button>
-        <details>
+        <details className="toolbar-menu">
           <summary>Session menu</summary>
           <label>
             <input
@@ -224,10 +230,14 @@ export function SessionWorkflow({
           Agent proposals count as agreed · <a href="#/settings">Settings → Grants</a>
         </p>
       ) : null}
-      {noModel ? <p role="status">Add a model in Settings to use agent replies and Updates.</p> : null}
+      {noModel ? (
+        <p role="status" className="inline-notice">
+          Add a model in Settings to use agent replies and Updates.
+        </p>
+      ) : null}
       {updatesRemaining > 0 ? (
         <section className="update-bar" aria-label="Agreed changes">
-          <p>
+          <p className="update-bar-title">
             {updatesRemaining} agreed {updatesRemaining === 1 ? "change" : "changes"}.
             {countdown === undefined ? "" : ` Update starts in ${formatCountdown(countdown)}.`}
           </p>
@@ -241,6 +251,7 @@ export function SessionWorkflow({
           </ul>
           <button
             type="button"
+            className="primary"
             disabled={!!active || noModel}
             onClick={() => void command("vc.StartUpdate", { artifactId: artifact.artifactId })}
           >
@@ -287,7 +298,21 @@ export function SessionWorkflow({
       ) : null}
       {active ? (
         <section aria-label="Update progress" className="update-progress">
-          <p>Update: {statusLabel(active.status)}</p>
+          <p className="progress-title">
+            <span className="pulse" aria-hidden="true" />
+            Update: {statusLabel(active.status)}
+          </p>
+          <ol className="stepper" aria-hidden="true">
+            {["queued", "planning", "awaiting_plan_review", "writing", "checking"].map((step) => (
+              <li
+                key={step}
+                data-done={stepIndex(active.status) > stepIndex(step) || undefined}
+                data-current={active.status === step || undefined}
+              >
+                {step === "awaiting_plan_review" ? "review" : step}
+              </li>
+            ))}
+          </ol>
           {plan.map((item) => (
             <article key={item.itemId}>
               <p>
@@ -327,17 +352,21 @@ export function SessionWorkflow({
       ) : null}
       {diff && completed?.resultVersion ? (
         <section aria-label="Update diff" className="update-result">
-          <h3>
-            v{completed.baseVersion} → v{completed.resultVersion}
-          </h3>
-          <p>{updateResultCounts(completed.itemResults)}</p>
+          <div className="card-head">
+            <h3>
+              v{completed.baseVersion} → v{completed.resultVersion}
+            </h3>
+            <p className="meta">{updateResultCounts(completed.itemResults)}</p>
+          </div>
           {completed.status === "partially_committed" ? <p>Some items were held back and are agreed again.</p> : null}
-          <button type="button" onClick={() => setShowChanges((shown) => !shown)}>
-            {showChanges ? "Clean view" : "Show changes"}
-          </button>
-          <button type="button" onClick={() => setDiff(undefined)}>
-            Dismiss changes
-          </button>
+          <div className="card-actions">
+            <button type="button" onClick={() => setShowChanges((shown) => !shown)}>
+              {showChanges ? "Clean view" : "Show changes"}
+            </button>
+            <button type="button" onClick={() => setDiff(undefined)}>
+              Dismiss changes
+            </button>
+          </div>
           <UpdateDiff
             diff={diff}
             baseElements={baseElements}
@@ -393,8 +422,8 @@ function UpdateResult({
   onRetry: () => void;
 }) {
   return (
-    <section aria-label="Update result" className="update-result">
-      <h3>Update result</h3>
+    <section aria-label="Update result" className="update-result receipt">
+      <h3 className="eyebrow">Update result</h3>
       {update.itemResults.map((result) => {
         const agreement = agreements.find((item) => item.agreementId === result.itemId),
           comment =
@@ -412,7 +441,7 @@ function UpdateResult({
           Update failed. Your agreements are ready to try again. <button onClick={onRetry}>Try again</button>
         </p>
       ) : null}
-      {writtenByAgent ? <p>Written by the agent for you.</p> : null}
+      {writtenByAgent ? <p className="meta">Written by the agent for you.</p> : null}
     </section>
   );
 }
@@ -430,6 +459,10 @@ function readPlan(value: Update["plan"]): PlanItem[] {
       typeof Reflect.get(item, "note") === "string"
     );
   });
+}
+
+function stepIndex(status: string): number {
+  return ["queued", "planning", "awaiting_plan_review", "writing", "checking", "committed"].indexOf(status);
 }
 
 function activeStatus(status: Update["status"]): boolean {
