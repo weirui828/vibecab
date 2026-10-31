@@ -21,6 +21,7 @@ export function Sidebar({
   onRefresh,
   onError,
   onTrashed,
+  onRename,
 }: {
   artifactsCount: number;
   sessions: VcSessionsOperation["result"];
@@ -35,6 +36,7 @@ export function Sidebar({
   onRefresh: () => Promise<void>;
   onError: (message: string) => void;
   onTrashed: (target: { kind: "artifact" | "session"; id: string }) => void;
+  onRename: (sessionId: string, title: string) => void;
 }) {
   return (
     <aside className="sidebar">
@@ -95,13 +97,7 @@ export function Sidebar({
                 <button
                   className="quiet-action"
                   aria-label={`Rename ${session.title}`}
-                  onClick={() => {
-                    const title = window.prompt("Rename Session", session.title);
-                    if (title)
-                      void window.vibecab
-                        .command("vc.RenameSession", { sessionId: session.sessionId, title })
-                        .then(onRefresh);
-                  }}
+                  onClick={() => onRename(session.sessionId, session.title)}
                 >
                   Rename
                 </button>

@@ -131,6 +131,24 @@ it("renders Drafts and Sessions from the host using the test HTTP ContractBridge
     fireEvent.click(await screen.findByRole("button", { name: "Skip for now" }));
     expect(await screen.findByText("Host draft")).toBeTruthy();
     expect(await screen.findByRole("button", { name: /^Host session/ })).toBeTruthy();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Rename" }));
+    const draftName = await screen.findByRole("textbox", { name: "Name" });
+    fireEvent.change(draftName, { target: { value: "Renamed draft" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save name" }));
+    expect(await screen.findByText("Renamed draft")).toBeTruthy();
+    expect(await bridge.query<Array<{ title: string }>>("vc.Artifacts", {})).toMatchObject([
+      { title: "Renamed draft" },
+    ]);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Rename Host session" }));
+    const sessionName = await screen.findByRole("textbox", { name: "Name" });
+    fireEvent.change(sessionName, { target: { value: "Renamed session" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save name" }));
+    expect(await screen.findByRole("button", { name: /^Renamed session/ })).toBeTruthy();
+    expect(await bridge.query<Array<{ title: string }>>("vc.Sessions", {})).toMatchObject([
+      { title: "Renamed session" },
+    ]);
   } finally {
     await server?.close();
     await f.close();

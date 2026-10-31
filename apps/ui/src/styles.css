@@ -1444,6 +1444,41 @@
   color: var(--color-fg-default);
   box-shadow: var(--shadow-xl);
 }
+.rename-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(12 18 24 / 45%);
+}
+.rename-dialog {
+  width: min(420px, 100%);
+  padding: 22px;
+  border: 1px solid var(--color-border-default);
+  border-radius: 14px;
+  background: var(--color-surface-overlay);
+  color: var(--color-fg-default);
+  box-shadow: var(--shadow-xl);
+}
+.rename-dialog h2 {
+  margin: 0 0 18px;
+}
+.rename-dialog input {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--vc-radius-sm);
+  background: var(--color-surface-base);
+  color: var(--color-fg-default);
+}
+.rename-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
 
 /* Onboarding */
 .onboarding {

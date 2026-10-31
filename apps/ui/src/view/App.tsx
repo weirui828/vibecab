@@ -15,6 +15,8 @@ import { SessionView } from "../session/SessionView.js";
 import { Onboarding } from "./Onboarding.js";
 import { SettingsView } from "./SettingsView.js";
 import { TrashView } from "./TrashView.js";
+import { RenameDialog } from "./RenameDialog.js";
+import type { RenameTarget } from "./RenameDialog.js";
 
 export function App() {
   const [state, setState] = useState<ConnectionState>("Starting"),
@@ -29,6 +31,7 @@ export function App() {
     [selected, setSelected] = useState(""),
     [route, setRoute] = useState(window.location.hash.slice(1) || "/"),
     [showNewDraft, setShowNewDraft] = useState(false),
+    [renameTarget, setRenameTarget] = useState<RenameTarget>(),
     [theme, setTheme] = useState<"system" | "light" | "dark">("system");
   const setConnection = (event: ConnectionEvent) => setState((current) => connectionTransition(current, event));
   const refresh = async () => {
@@ -103,6 +106,24 @@ export function App() {
     const file = await window.vibecab.app.openMarkdown();
     if (file) await createDraft(file.content, file.name.replace(/\.md$/i, ""));
   };
+  const saveRename = async (title: string) => {
+    if (!renameTarget) return;
+    try {
+      const result =
+        renameTarget.kind === "artifact"
+          ? await window.vibecab.command("vc.RenameArtifact", { artifactId: renameTarget.id, title })
+          : await window.vibecab.command("vc.RenameSession", { sessionId: renameTarget.id, title });
+      if (!result.ok) {
+        setError(result.error.message);
+        return;
+      }
+      setRenameTarget(undefined);
+      setError("");
+      await refresh();
+    } catch (failure) {
+      setError(failure instanceof Error ? failure.message : "Could not rename.");
+    }
+  };
   const selectedArtifact = artifacts.find((artifact) => artifact.artifactId === selected);
   const activeSessionId = route.match(/^\/s\/([^/]+)$/)?.[1],
     activeSession = sessions.find((session) => session.sessionId === decodeURIComponent(activeSessionId ?? ""));
@@ -144,6 +165,7 @@ export function App() {
         onRefresh={refresh}
         onError={setError}
         onTrashed={setUndoTarget}
+        onRename={(sessionId, title) => setRenameTarget({ kind: "session", id: sessionId, title })}
       />
       <main className="main">
         {onboarding ? (
@@ -368,13 +390,9 @@ export function App() {
                         <div className="draft-actions">
                           <button
                             className="quiet-action"
-                            onClick={() => {
-                              const title = window.prompt("Rename Draft", artifact.title);
-                              if (title)
-                                void window.vibecab
-                                  .command("vc.RenameArtifact", { artifactId: artifact.artifactId, title })
-                                  .then(refresh);
-                            }}
+                            onClick={() =>
+                              setRenameTarget({ kind: "artifact", id: artifact.artifactId, title: artifact.title })
+                            }
                           >
                             Rename
                           </button>
@@ -414,6 +432,9 @@ export function App() {
           </div>
         )}
       </main>
+      {renameTarget ? (
+        <RenameDialog title={renameTarget.title} onCancel={() => setRenameTarget(undefined)} onSave={saveRename} />
+      ) : null}
     </div>
   );
 }
