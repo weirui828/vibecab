@@ -20,6 +20,8 @@ export function lifecycleModule(host: EngineModuleHost) {
     { digest: "rerun", export: "rerun", backup: "rerun", purge: "rerun", "trash.sweep": "rerun" },
   );
   engineModule.onStart = (context) => {
+    // Completed sweep ticks are maintenance state, not history; discard old ticks to keep polling bounded.
+    context.repository.pruneCompletedJobs("trash.sweep");
     const activeSweep = context.repository
       .jobs()
       .some((job) => job.kind === "trash.sweep" && ["pending", "leased"].includes(job.state));

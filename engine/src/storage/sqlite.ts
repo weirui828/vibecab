@@ -240,6 +240,10 @@ export class SqliteStore implements Repository {
       .all()
       .map((row) => this.contract.read<Job>("job", json(row)));
   }
+  pruneCompletedJobs(kind: string): number {
+    this.writing();
+    return this.db.prepare("DELETE FROM sys_outbox WHERE kind=? AND state='completed'").run(kind).changes;
+  }
   lease(id: string, until: string) {
     this.writing();
     const job = this.jobs().find((j) => j.id === id);

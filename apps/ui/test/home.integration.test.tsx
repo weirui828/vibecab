@@ -150,6 +150,8 @@ it("renders Drafts and Sessions from the host using the test HTTP ContractBridge
       { title: "Renamed session" },
     ]);
   } finally {
+    cleanupRenderer();
+    cleanupRenderer = () => undefined;
     await server?.close();
     await f.close();
   }

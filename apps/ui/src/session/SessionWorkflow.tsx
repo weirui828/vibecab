@@ -352,12 +352,9 @@ export function SessionWorkflow({
       ) : null}
       {diff && completed?.resultVersion ? (
         <section aria-label="Update diff" className="update-result">
-          <div className="card-head">
-            <h3>
-              v{completed.baseVersion} → v{completed.resultVersion}
-            </h3>
-            <p className="meta">{updateResultCounts(completed.itemResults)}</p>
-          </div>
+          <h3>
+            v{completed.baseVersion} → v{completed.resultVersion}
+          </h3>
           {completed.status === "partially_committed" ? <p>Some items were held back and are agreed again.</p> : null}
           <div className="card-actions">
             <button type="button" onClick={() => setShowChanges((shown) => !shown)}>
@@ -424,6 +421,7 @@ function UpdateResult({
   return (
     <section aria-label="Update result" className="update-result receipt">
       <h3 className="eyebrow">Update result</h3>
+      <p className="meta">{updateResultCounts(update.itemResults)}</p>
       {update.itemResults.map((result) => {
         const agreement = agreements.find((item) => item.agreementId === result.itemId),
           comment =

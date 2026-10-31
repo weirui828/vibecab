@@ -274,8 +274,8 @@ export abstract class LifecycleJobsRuntime extends LifecycleHelpersRuntime {
         this.available().enqueue(
           "trash.sweep",
           id,
-          this.contract.read<Json>("json", {}),
-          new Date(now + 86_400_000).toISOString(),
+          this.contract.read<Json>("json", { notBefore: new Date(now + 86_400_000).toISOString() }),
+          this.deps.clock.now(),
         );
       }),
     );

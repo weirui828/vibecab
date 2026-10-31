@@ -559,12 +559,18 @@ it("labels agreements made during a running Update for the next Update", async (
     app.provider.enqueueDefaultSequence([plan(first.agreementId, app.elements[0]!.elementId)]);
     await (await app.screen.findByRole("button", { name: "Update now" }, { timeout: 4_000 })).click();
     await app.screen.findByRole("button", { name: "Approve plan" }, { timeout: 4_000 });
-    await app.comment("Second request", app.elements[0]!.elementId);
+    const secondComment = await app.comment("Second request", app.elements[1]!.elementId);
     await app.reloadSession();
     const refreshedThread = await app.screen.findByText("Second request", {}, { timeout: 4_000 });
     const article = refreshedThread.closest("article");
     if (!article) throw new Error("Second comment has no thread article");
-    await app.within(article).getByRole("button", { name: "Agree as written" }).click();
+    app.fireEvent.click(app.within(article).getByRole("button", { name: "Agree as written" }));
+    await app.waitFor(async () => {
+      const records = await app.query<Array<{ commentId: string; state: string }>>("vc.DecisionRecord", {
+        artifactId: app.artifactId,
+      });
+      expect(records.find((record) => record.commentId === secondComment.commentId)?.state).toBe("agreed");
+    });
     expect(await app.within(article).findByText("Will go into the next Update", {}, { timeout: 4_000 })).toBeTruthy();
   } finally {
     await app.close();

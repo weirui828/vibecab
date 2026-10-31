@@ -41,6 +41,7 @@ export interface Repository {
   saveCommand(id: string, result: CommandResult): void;
   enqueue(kind: string, id: string, payload: Json, ts: string): void;
   jobs(): Job[];
+  pruneCompletedJobs(kind: string): number;
   lease(id: string, until: string): void;
   jobState(id: string, state: Job["state"]): void;
   feedback(kind: string, id: string): Json | undefined;
