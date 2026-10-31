@@ -177,11 +177,20 @@
   min-height: 100vh;
   display: grid;
   grid-template-columns: 248px minmax(0, 1fr);
+  grid-template-rows: 32px minmax(0, 1fr);
+}
+.window-drag-region {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  -webkit-app-region: drag;
+  background: var(--color-surface-base);
 }
 .sidebar {
   position: sticky;
-  top: 0;
-  height: 100vh;
+  grid-column: 1;
+  grid-row: 2;
+  top: 32px;
+  height: calc(100vh - 32px);
   display: flex;
   flex-direction: column;
   gap: 28px;
@@ -360,6 +369,8 @@
 
 /* ---------- Pages ---------- */
 .main {
+  grid-column: 2;
+  grid-row: 2;
   min-width: 0;
 }
 .page {

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@wei/design-system";
 import { Hills, Mound } from "./Brand.js";
 import { Sidebar } from "./Sidebar.js";
+import { WindowDragRegion } from "./WindowDragRegion.js";
 import type { Settings, VcArtifactsOperation, VcSessionsOperation } from "../../../../contract/generated/index.js";
 import { createBlank, importMarkdown as importMarkdownContent, listArtifacts } from "../api/artifacts.js";
 import { attachArtifact, listSessions, startSession } from "../api/sessions.js";
@@ -128,6 +129,7 @@ export function App() {
   ].join(" · ");
   return (
     <div className="shell">
+      <WindowDragRegion />
       <Sidebar
         artifactsCount={artifacts.length}
         sessions={sessions}
