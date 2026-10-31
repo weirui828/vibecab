@@ -35,7 +35,12 @@ export interface FeedbackPort {
     hash?: string;
     content?: Json;
   };
-  purgeRunComments(ctx: ModuleContext, runId: string, action: "redact" | "delete"): void;
+  purgeRunComments(
+    ctx: ModuleContext,
+    runId: string,
+    action: "redact" | "delete",
+    affectedFindingIds?: readonly string[],
+  ): void;
 }
 
 export function feedbackPort(): FeedbackPort {
@@ -150,15 +155,16 @@ export function feedbackPort(): FeedbackPort {
         ...(content ? { content: ctx.contract.read<Json>("json", content) } : {}),
       };
     },
-    purgeRunComments(ctx, runId, action) {
+    purgeRunComments(ctx, runId, action, affectedFindingIds = []) {
       const comments = ctx.repository
         .feedbackList("comment")
         .map((value) => read(ctx, "feedback-comment", value))
-        .filter(
-          (comment) =>
-            field(field(comment, "source"), "runId") === runId ||
-            field(comment, "commentId") === `review-report:${runId}`,
-        );
+        .filter((comment) => {
+          const source = field(comment, "source");
+          if (action === "delete")
+            return field(source, "runId") === runId || field(comment, "commentId") === `review-report:${runId}`;
+          return field(source, "runId") === runId && affectedFindingIds.includes(String(field(source, "findingId")));
+        });
       const commentIds = new Set(comments.map((comment) => string(field(comment, "commentId"))));
       if (action === "delete") {
         const agreementIds = new Set(

@@ -22,8 +22,9 @@ export interface VcPurgePreviewOperation {
     reviewRuns: {
       reviewRequestId: string;
       runId: string;
-      redactRemoves: string[];
-      deleteRemoves: string[];
+      action: "redact" | "delete";
+      active: boolean;
+      removes: string[];
     }[];
   };
 }

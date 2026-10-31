@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import type { Settings, VcArtifactsOperation, VcSessionsOperation } from "../../../../contract/generated/index.js";
+import { terms } from "../copy/terms.js";
 
-type Target = { kind: "artifact" | "session" | "comment"; id: string; title: string };
+type Target = { kind: "artifact" | "session" | "comment"; id: string; title: string; reviewCount: number };
 type Preview = {
   recordIds: string[];
   revisionHashes: string[];
@@ -13,7 +14,7 @@ type Preview = {
   updateIds: string[];
   conflictIds: string[];
   outputSetIds: string[];
-  reviewRuns: Array<{ runId: string }>;
+  reviewRuns: Array<{ runId: string; action: "redact" | "delete"; active: boolean; removes: string[] }>;
 };
 
 export function TrashView({ onBack, onChanged }: { onBack: () => void; onChanged: () => void }) {
@@ -22,7 +23,6 @@ export function TrashView({ onBack, onChanged }: { onBack: () => void; onChanged
     [preview, setPreview] = useState<Preview>(),
     [emptyPreviews, setEmptyPreviews] = useState<Array<{ target: Target; preview: Preview }>>(),
     [confirmation, setConfirmation] = useState(""),
-    [reviewActions, setReviewActions] = useState<Record<string, "redact" | "delete">>({}),
     [retentionDays, setRetentionDays] = useState(30),
     [message, setMessage] = useState("");
   const load = async () => {
@@ -39,7 +39,7 @@ export function TrashView({ onBack, onChanged }: { onBack: () => void; onChanged
     const activeArtifactIds = new Set(activeArtifacts.map((item) => item.artifactId)),
       activeSessionIds = new Set(activeSessions.map((item) => item.sessionId)),
       activeCommentIds = new Set(activeComments.map((item) => item.commentId));
-    setTargets([
+    const nextTargets = [
       ...allArtifacts
         .filter((item) => !activeArtifactIds.has(item.artifactId))
         .map((item) => ({ kind: "artifact" as const, id: item.artifactId, title: item.title })),
@@ -49,7 +49,16 @@ export function TrashView({ onBack, onChanged }: { onBack: () => void; onChanged
       ...allComments
         .filter((item) => !activeCommentIds.has(item.commentId))
         .map((item) => ({ kind: "comment" as const, id: item.commentId, title: item.body.slice(0, 80) })),
-    ]);
+    ];
+    const withReviewCounts = await Promise.all(
+      nextTargets.map(async (target) => {
+        const preview = await window.vibecab.query<Preview>("vc.PurgePreview", {
+          target: { kind: target.kind, id: target.id },
+        });
+        return { ...target, reviewCount: preview.reviewRuns.length };
+      }),
+    );
+    setTargets(withReviewCounts);
     setRetentionDays(settings.trashRetentionDays ?? 30);
   };
   useEffect(() => {
@@ -58,7 +67,6 @@ export function TrashView({ onBack, onChanged }: { onBack: () => void; onChanged
   const inspect = async (target: Target) => {
     setSelected(target);
     setConfirmation("");
-    setReviewActions({});
     setPreview(
       await window.vibecab.query<Preview>("vc.PurgePreview", { target: { kind: target.kind, id: target.id } }),
     );
@@ -67,7 +75,6 @@ export function TrashView({ onBack, onChanged }: { onBack: () => void; onChanged
     setSelected(undefined);
     setPreview(undefined);
     setConfirmation("");
-    setReviewActions({});
     const items = await Promise.all(
       targets.map(async (target) => ({
         target,
@@ -78,18 +85,9 @@ export function TrashView({ onBack, onChanged }: { onBack: () => void; onChanged
     );
     setEmptyPreviews(items);
   };
-  const actions =
-    preview?.reviewRuns.flatMap((run) => {
-      const action = reviewActions[run.runId];
-      return action ? [{ runId: run.runId, action }] : [];
-    }) ?? [];
-  const purgeAllowed = preview && confirmation === selected?.title && actions.length === preview.reviewRuns.length;
+  const purgeAllowed = preview && confirmation === selected?.title;
   const emptyRuns =
     emptyPreviews?.flatMap(({ target, preview }) => preview.reviewRuns.map((run) => ({ ...run, target }))) ?? [];
-  const emptyReviewActions = emptyRuns.flatMap(({ runId }) => {
-    const action = reviewActions[runId];
-    return action ? [{ runId, action }] : [];
-  });
   return (
     <section aria-label="Trash view" className="trash-view page">
       <header className="page-header">
@@ -105,7 +103,16 @@ export function TrashView({ onBack, onChanged }: { onBack: () => void; onChanged
       {targets.length ? <button onClick={() => void startEmptyTrash()}>Empty trash</button> : null}
       {targets.map((item) => (
         <article key={`${item.kind}:${item.id}`}>
-          <span>{item.title}</span>
+          <span>
+            {item.title}
+            {item.reviewCount > 0 ? (
+              <small className="meta">
+                {item.reviewCount} {item.reviewCount === 1 ? "review quoted" : "reviews quoted"} this{" "}
+                {item.kind === "artifact" ? terms.draft : item.kind === "session" ? terms.session : "comment"}; quoted
+                content will be removed when purged.
+              </small>
+            ) : null}
+          </span>
           <button
             onClick={() =>
               void window.vibecab
@@ -136,22 +143,10 @@ export function TrashView({ onBack, onChanged }: { onBack: () => void; onChanged
             undone.
           </p>
           {emptyRuns.map((run) => (
-            <fieldset key={`${run.target.id}:${run.runId}`}>
-              <legend>
-                {run.target.title}: dependent review run {run.runId}
-              </legend>
-              {(["redact", "delete"] as const).map((action) => (
-                <label key={action}>
-                  <input
-                    type="radio"
-                    name={`empty-${run.target.id}-${run.runId}`}
-                    checked={reviewActions[run.runId] === action}
-                    onChange={() => setReviewActions((current) => ({ ...current, [run.runId]: action }))}
-                  />
-                  {action}
-                </label>
-              ))}
-            </fieldset>
+            <p key={`${run.target.id}:${run.runId}`}>
+              {run.target.title}: review {run.runId} will be{" "}
+              {run.action === "delete" ? "deleted" : "kept with the purged source redacted"}.
+            </p>
           ))}
           <label>
             Type EMPTY TRASH to confirm
@@ -162,15 +157,12 @@ export function TrashView({ onBack, onChanged }: { onBack: () => void; onChanged
             />
           </label>
           <button
-            disabled={confirmation !== "EMPTY TRASH" || emptyReviewActions.length !== emptyRuns.length}
+            disabled={confirmation !== "EMPTY TRASH"}
             onClick={() =>
               void (async () => {
                 for (const item of emptyPreviews) {
                   const result = await window.vibecab.command("vc.Purge", {
                     target: { kind: item.target.kind, id: item.target.id },
-                    reviewActions: emptyReviewActions.filter((action) =>
-                      item.preview.reviewRuns.some((run) => run.runId === action.runId),
-                    ),
                   });
                   if (!result.ok) {
                     setMessage(result.error.message);
@@ -197,20 +189,9 @@ export function TrashView({ onBack, onChanged }: { onBack: () => void; onChanged
             {preview.blobHashes.length} images and {preview.commentIds.length} comments. It cannot be undone.
           </p>
           {preview.reviewRuns.map((run) => (
-            <fieldset key={run.runId}>
-              <legend>Dependent review run {run.runId}</legend>
-              {(["redact", "delete"] as const).map((action) => (
-                <label key={action}>
-                  <input
-                    type="radio"
-                    name={`run-${run.runId}`}
-                    checked={reviewActions[run.runId] === action}
-                    onChange={() => setReviewActions((current) => ({ ...current, [run.runId]: action }))}
-                  />
-                  {action}
-                </label>
-              ))}
-            </fieldset>
+            <p key={run.runId}>
+              Review {run.runId} will be {run.action === "delete" ? "deleted" : "kept with the purged source redacted"}.
+            </p>
           ))}
           <label>
             Type “{selected.title}” to confirm
@@ -226,7 +207,6 @@ export function TrashView({ onBack, onChanged }: { onBack: () => void; onChanged
               void window.vibecab
                 .command("vc.Purge", {
                   target: { kind: selected.kind, id: selected.id },
-                  reviewActions: actions,
                 })
                 .then((result) => {
                   setMessage(result.ok ? "Permanent deletion queued" : result.error.message);

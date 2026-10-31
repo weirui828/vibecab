@@ -1,5 +1,6 @@
 import { expect, it } from "vitest";
 import Database from "better-sqlite3";
+import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { Contract, type Json, type ProviderModel } from "../../contract/src/index.js";
 import { ScriptedProvider } from "../src/gateway/fake.js";
@@ -281,7 +282,7 @@ it("resubmits a review request after restart without creating a second TMR run",
   }
 });
 
-it("requires a per-run purge action and redacts TMR snapshots and contribution text", async () => {
+it("automatically deletes a review whose every quoted source is purged", async () => {
   const f = await fixture();
   try {
     const { artifactId, elements } = await createDraft(f.engine),
@@ -304,20 +305,14 @@ it("requires a per-run purge action and redacts TMR snapshots and contribution t
       expect.objectContaining({
         reviewRequestId,
         runId,
-        redactRemoves: expect.any(Array),
-        deleteRemoves: expect.any(Array),
+        action: "delete",
+        removes: expect.any(Array),
       }),
     );
-    const missingAction = await f.engine.command(ctx, {
-      commandId: "review-purge-missing-action",
-      type: "vc.Purge",
-      payload: { target: { kind: "artifact", id: artifactId } },
-    });
-    expect(missingAction).toMatchObject({ ok: false, error: { code: "invalid" } });
     const purge = await f.engine.command(ctx, {
       commandId: "review-purge-redact",
       type: "vc.Purge",
-      payload: { target: { kind: "artifact", id: artifactId }, reviewActions: [{ runId, action: "redact" }] },
+      payload: { target: { kind: "artifact", id: artifactId } },
     });
     expect(purge.ok).toBe(true);
     if (!purge.ok) throw new Error(purge.error.message);
@@ -327,39 +322,91 @@ it("requires a per-run purge action and redacts TMR snapshots and contribution t
         .prepare("SELECT kind,json FROM vc_feedback WHERE kind IN ('tmr-snapshot','tmr-contribution','tmr-report')")
         .all() as Array<{ kind: string; json: string }>;
     expect(rows.some((row) => row.json.includes("First paragraph."))).toBe(false);
-    expect(rows.some((row) => row.kind === "tmr-report")).toBe(false);
-    expect(rows.some((row) => row.json.includes('"redacted":true'))).toBe(true);
+    expect(rows).toHaveLength(0);
     db.close();
     const runs = array(await f.engine.query(ctx, { name: "tmr.Runs", args: { limit: 20 } }));
-    expect(runs.some((run) => field(run, "runId") === runId)).toBe(true);
+    expect(runs.some((run) => field(run, "runId") === runId)).toBe(false);
+    const files = await workspaceFiles(f.dir),
+      retained = await Promise.all(files.map((file) => readFile(file).catch(() => Buffer.alloc(0))));
+    expect(files.filter((_, index) => retained[index]?.includes(Buffer.from("First paragraph.")))).toEqual([]);
   } finally {
     await f.close();
   }
 });
 
-it("deletes dependent TMR runs when the previewed purge action is delete", async () => {
+it("redacts only purged sources and keeps a review that also quotes surviving sources", async () => {
   const f = await fixture();
   try {
-    const { artifactId, elements } = await createDraft(f.engine),
-      sessionId = await createSession(f.engine, artifactId),
-      reviewRequestId = await requestReview(f.engine, sessionId, artifactId, elements, "delete review"),
+    const first = await createDraft(f.engine, "# First Draft\n\nSensitive first source phrase.", "First mixed draft"),
+      second = await createDraft(f.engine, "# Second Draft\n\nSurviving second source phrase.", "Second mixed draft"),
+      sessionId = await createSession(f.engine, first.artifactId);
+    const attach = await f.engine.command(ctx, {
+      commandId: "mixed-review-attach-second",
+      type: "vc.AttachArtifact",
+      payload: { sessionId, artifactId: second.artifactId, role: "reference" },
+    });
+    expect(attach.ok).toBe(true);
+    const request = await f.engine.command(ctx, {
+      commandId: "mixed-source-review",
+      type: "vc.RequestReview",
+      payload: {
+        sessionId,
+        question: "Compare both drafts",
+        elementRefs: [
+          { artifactId: first.artifactId, elementIds: first.elements },
+          { artifactId: second.artifactId, elementIds: second.elements },
+        ],
+        preset: "independent-review",
+        limits: { spendMicros: 1_000_000_000 },
+        mode: "live",
+      },
+    });
+    if (!request.ok) throw new Error(request.error.message);
+    const reviewRequestId = string(field(request.result, "reviewRequestId")),
       report = await waitForReport(f.engine, reviewRequestId),
       runId = string(field(report, "runId"));
     await f.engine.command(ctx, {
-      commandId: "delete-review-trash",
+      commandId: "mixed-review-trash-first",
       type: "vc.Trash",
-      payload: { target: { kind: "artifact", id: artifactId } },
+      payload: { target: { kind: "artifact", id: first.artifactId } },
     });
+    const preview = await f.engine.query(ctx, {
+      name: "vc.PurgePreview",
+      args: { target: { kind: "artifact", id: first.artifactId } },
+    });
+    expect(array(field(preview, "reviewRuns"))).toContainEqual(expect.objectContaining({ runId, action: "redact" }));
     const result = await f.engine.command(ctx, {
-      commandId: "delete-review-purge",
+      commandId: "mixed-review-purge-first",
       type: "vc.Purge",
-      payload: { target: { kind: "artifact", id: artifactId }, reviewActions: [{ runId, action: "delete" }] },
+      payload: { target: { kind: "artifact", id: first.artifactId } },
     });
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error(result.error.message);
     await waitForPurge(f.dir, string(field(result.result, "purgeId")));
     const runs = array(await f.engine.query(ctx, { name: "tmr.Runs", args: { limit: 20 } }));
-    expect(runs.some((run) => field(run, "runId") === runId)).toBe(false);
+    expect(runs.some((run) => field(run, "runId") === runId)).toBe(true);
+    const db = new Database(join(f.dir, "workspace.sqlite")),
+      snapshot = db
+        .prepare(
+          "SELECT json FROM vc_feedback WHERE kind='tmr-snapshot' AND id=(SELECT json_extract(json,'$.snapshotId') " +
+            "FROM vc_feedback WHERE kind='tmr-run' AND id=?)",
+        )
+        .get(runId) as { json: string },
+      items = array(field(JSON.parse(snapshot.json), "items"));
+    expect(items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ content: expect.objectContaining({ redacted: true }) }),
+        expect.objectContaining({ content: expect.objectContaining({ text: "Surviving second source phrase." }) }),
+      ]),
+    );
+    db.close();
+    const files = await workspaceFiles(f.dir),
+      retained = await Promise.all(files.map((file) => readFile(file).catch(() => Buffer.alloc(0)))),
+      purgedCopies = files.filter((_, index) =>
+        retained[index]?.includes(Buffer.from("Sensitive first source phrase.")),
+      );
+    expect(purgedCopies).toEqual([]);
+    expect(Buffer.concat(retained).includes(Buffer.from("Surviving second source phrase."))).toBe(true);
   } finally {
     await f.close();
   }
@@ -373,14 +420,26 @@ async function setModel(engine: Awaited<ReturnType<typeof fixture>>["engine"]): 
   });
   if (!result.ok) throw new Error(result.error.message);
 }
+async function workspaceFiles(directory: string): Promise<string[]> {
+  const entries = await readdir(directory, { withFileTypes: true }),
+    paths = await Promise.all(
+      entries.map((entry) => {
+        const path = join(directory, entry.name);
+        return entry.isDirectory() ? workspaceFiles(path) : Promise.resolve([path]);
+      }),
+    );
+  return paths.flat();
+}
 
 async function createDraft(
   engine: Awaited<ReturnType<typeof fixture>>["engine"],
+  content = "# Draft\n\nFirst paragraph.\n\nSecond paragraph.",
+  title = "Review draft",
 ): Promise<{ artifactId: string; elements: string[] }> {
   const imported = await engine.command(ctx, {
-    commandId: "review-import-draft",
+    commandId: `review-import-draft:${title}`,
     type: "vc.ImportContent",
-    payload: { content: "# Draft\n\nFirst paragraph.\n\nSecond paragraph.", format: "markdown", title: "Review draft" },
+    payload: { content, format: "markdown", title },
   });
   if (!imported.ok) throw new Error(imported.error.message);
   const artifactId = string(field(imported.result, "artifactId")),

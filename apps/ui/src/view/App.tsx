@@ -25,7 +25,9 @@ export function App() {
     [error, setError] = useState(""),
     [attention, setAttention] = useState<AttentionItem[]>([]),
     [filter, setFilter] = useState(""),
-    [undoTarget, setUndoTarget] = useState<{ kind: "artifact" | "session"; id: string } | undefined>(),
+    [undoTarget, setUndoTarget] = useState<
+      { kind: "artifact" | "session"; id: string; reviewCount: number } | undefined
+    >(),
     [draftSessionId, setDraftSessionId] = useState("new"),
     [onboarding, setOnboarding] = useState(false),
     [selected, setSelected] = useState(""),
@@ -164,7 +166,7 @@ export function App() {
         onConnected={() => setConnection("connected")}
         onRefresh={refresh}
         onError={setError}
-        onTrashed={setUndoTarget}
+        onTrashed={(target, reviewCount) => setUndoTarget({ ...target, reviewCount })}
         onRename={(sessionId, title) => setRenameTarget({ kind: "session", id: sessionId, title })}
       />
       <main className="main">
@@ -399,10 +401,17 @@ export function App() {
                           <button
                             className="quiet-action"
                             onClick={() => {
+                              const target = { kind: "artifact" as const, id: artifact.artifactId };
                               void window.vibecab
-                                .command("vc.Trash", { target: { kind: "artifact", id: artifact.artifactId } })
-                                .then(() => {
-                                  setUndoTarget({ kind: "artifact", id: artifact.artifactId });
+                                .query<{ reviewRuns: unknown[] }>("vc.PurgePreview", { target })
+                                .then((preview) =>
+                                  window.vibecab
+                                    .command("vc.Trash", { target })
+                                    .then((result) => ({ preview, result })),
+                                )
+                                .then(({ preview, result }) => {
+                                  if (!result.ok) return;
+                                  setUndoTarget({ ...target, reviewCount: preview.reviewRuns.length });
                                   return refresh();
                                 });
                             }}
@@ -418,10 +427,17 @@ export function App() {
             )}
             {undoTarget ? (
               <p role="status" className="toast">
-                Moved to trash.{" "}
+                Moved to Trash.{" "}
+                {undoTarget.reviewCount > 0
+                  ? `${undoTarget.reviewCount} ${undoTarget.reviewCount === 1 ? "review quoted" : "reviews quoted"} this ${undoTarget.kind === "artifact" ? terms.draft : terms.session}; ${
+                      undoTarget.reviewCount === 1 ? "its" : "their"
+                    } quoted content will be removed when purged. `
+                  : null}
                 <button
                   onClick={() => {
-                    void window.vibecab.command("vc.Restore", { target: undoTarget }).then(refresh);
+                    void window.vibecab
+                      .command("vc.Restore", { target: { kind: undoTarget.kind, id: undoTarget.id } })
+                      .then(refresh);
                     setUndoTarget(undefined);
                   }}
                 >

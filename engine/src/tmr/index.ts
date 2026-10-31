@@ -2,7 +2,7 @@ import { fail, type Json } from "../../../contract/src/index.js";
 import type { ModuleContext } from "../kernel/module-registry.js";
 import { reviewRun, submitReview } from "./module.js";
 export { tmrModule } from "./module.js";
-import { dependentRuns, purgeRun } from "./purge.js";
+import { dependentRuns, purgeRun, purgeSources } from "./purge.js";
 import type { Run } from "./types.js";
 
 export interface TmrPort {
@@ -13,6 +13,7 @@ export interface TmrPort {
   events(ctx: ModuleContext, runId: string, cursor: number): { events: Json[]; cursor: number };
   dependentRuns(ctx: ModuleContext, source: string): string[];
   purgeRun(ctx: ModuleContext, runId: string, action: "redact" | "delete"): void;
+  purgeSources(ctx: ModuleContext, runId: string, sources: readonly string[], deleteRun: boolean): string[];
 }
 
 export function tmrPort(): TmrPort {
@@ -39,6 +40,7 @@ export function tmrPort(): TmrPort {
     },
     dependentRuns,
     purgeRun,
+    purgeSources,
   };
 }
 

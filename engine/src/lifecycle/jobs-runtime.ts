@@ -23,6 +23,7 @@ import { LifecycleHelpersRuntime } from "./helpers-runtime.js";
 import { escapeHtml } from "./helpers-runtime.js";
 import { sessionPreferences } from "../session-preferences.js";
 import { renderHtmlDocument, renderHtmlFragment, renderMarkdown } from "./render.js";
+import { isQuiet, nextSweepDeferral, shouldForceSweep } from "./sweep-policy.js";
 
 const runFile = promisify(execFile);
 type TrashTarget = { kind: TrashRecord["kind"]; id: string };
@@ -143,24 +144,16 @@ export abstract class LifecycleJobsRuntime extends LifecycleHelpersRuntime {
 
   protected async runPurge(job: Job): Promise<void> {
     const purgeId = this.jobId(job, "purgeId"),
-      request = this.feedbackRecord<{
-        target: TrashTarget;
-        reviewActions: Array<{ runId: string; action: "redact" | "delete" }>;
-      }>("purge-request", "json", purgeId),
+      request = this.feedbackRecord<{ target: TrashTarget }>("purge-request", "json", purgeId),
       preview = this.purgePreview(request.target),
       commentIds = new Set(preview.commentIds),
       artifactId = request.target.kind === "artifact" ? request.target.id : undefined,
       discardedBlobs = new Set<string>();
     await this.queue.run(() =>
       this.available().transaction(() => {
-        const expectedRuns = preview.reviewRuns.map((review) => review.runId).sort(),
-          suppliedRuns = request.reviewActions.map((action) => action.runId).sort();
-        if (
-          expectedRuns.length !== suppliedRuns.length ||
-          expectedRuns.some((runId, index) => runId !== suppliedRuns[index])
-        )
-          fail("invalid", "Dependent review runs changed after the purge preview");
-        this.applyReviewPurge(request.target, request.reviewActions);
+        if (preview.reviewRuns.some((review) => review.active))
+          fail("conflict", "An active review still refers to this content");
+        this.applyReviewPurge(request.target);
         for (const commentId of commentIds) {
           this.available().deleteFeedback("comment", commentId);
           for (const agreement of this.available()
@@ -241,44 +234,145 @@ export abstract class LifecycleJobsRuntime extends LifecycleHelpersRuntime {
     }
   }
 
-  protected async runTrashSweep(): Promise<void> {
-    const now = Date.parse(this.deps.clock.now());
-    await this.queue.run(() =>
-      this.available().transaction(() => {
-        for (const value of this.available().feedbackList("trash")) {
-          const record = this.contract.read<TrashRecord>("trash-record", value);
-          if (Date.parse(record.purgeAt) > now) continue;
-          const target: TrashTarget = { kind: record.kind, id: record.id };
-          if (this.purgePreview(target).reviewRuns.length > 0) continue;
+  protected async runTrashSweep(job: Job): Promise<void> {
+    if (!this.accepting) return;
+    const now = this.deps.clock.now(),
+      deferredSince =
+        typeof field(job.payload, "deferredSince") === "string"
+          ? String(field(job.payload, "deferredSince"))
+          : undefined,
+      rawDeferrals = field(job.payload, "deferrals"),
+      deferrals = typeof rawDeferrals === "number" ? rawDeferrals : 0,
+      force = deferredSince !== undefined && shouldForceSweep(now, deferredSince);
+    if (!force && !isQuiet(this.kernelActivity.snapshot(), now, job.id)) {
+      const firstDeferral = deferredSince ?? now;
+      await this.deferTrashSweep(now, firstDeferral, deferrals);
+      return;
+    }
+
+    const expired = await this.queue.run(() =>
+      this.available()
+        .feedbackList("trash")
+        .map((value) => this.contract.read<TrashRecord>("trash-record", value))
+        .filter((record) => Date.parse(record.purgeAt) <= Date.parse(now))
+        .map((record) => ({ kind: record.kind, id: record.id }) satisfies TrashTarget),
+    );
+    for (const target of expired) {
+      if (!this.accepting) break;
+      const itemNow = this.deps.clock.now();
+      if (!force && !isQuiet(this.kernelActivity.snapshot(), itemNow, job.id)) {
+        await this.deferTrashSweep(itemNow, deferredSince ?? itemNow, deferrals);
+        return;
+      }
+      const purgeId = await this.queue.run(() =>
+        this.available().transaction(() => {
+          if (!this.accepting) return undefined;
+          const trash = this.available().feedback("trash", this.trashKey(target));
+          if (!trash) return undefined;
+          const record = this.contract.read<TrashRecord>("trash-record", trash);
+          if (Date.parse(record.purgeAt) > Date.parse(this.deps.clock.now())) return undefined;
+          const preview = this.purgePreview(target);
+          if (this.targetHasActiveWork(target) || preview.reviewRuns.some((run) => run.active)) return undefined;
           const alreadyQueued = this.available()
             .feedbackList("purge-request")
             .some((request) => {
               const requestTarget = field(request, "target");
               return field(requestTarget, "id") === target.id && field(requestTarget, "kind") === target.kind;
             });
-          if (alreadyQueued) continue;
-          const purgeId = this.deps.ids.next("purge_");
-          this.available().saveFeedback(
-            "purge-request",
-            purgeId,
-            this.contract.read<Json>("json", { target, reviewActions: [] }),
-          );
-          this.available().enqueue(
-            "purge",
-            purgeId,
-            this.contract.read<Json>("json", { purgeId }),
-            this.deps.clock.now(),
-          );
-        }
-        const id = this.deps.ids.next("trash_sweep_");
-        this.available().enqueue(
-          "trash.sweep",
-          id,
-          this.contract.read<Json>("json", { notBefore: new Date(now + 86_400_000).toISOString() }),
-          this.deps.clock.now(),
-        );
+          if (alreadyQueued) return undefined;
+          const id = this.deps.ids.next("purge_");
+          this.available().saveFeedback("purge-request", id, this.contract.read<Json>("json", { target }));
+          return id;
+        }),
+      );
+      if (!purgeId) continue;
+      await this.runPurge({
+        id: `trash-sweep:${purgeId}`,
+        kind: "purge",
+        payload: { purgeId },
+        state: "pending",
+        leaseUntil: null,
+        attempts: 0,
+        createdAt: this.deps.clock.now(),
+      });
+    }
+
+    if (!this.accepting) return;
+    const next = new Date(Date.parse(this.deps.clock.now()) + 86_400_000).toISOString();
+    await this.queue.run(() =>
+      this.available().transaction(() => {
+        this.available().pruneCompletedJobs("trash.sweep");
+        this.scheduleTrashSweep(next);
       }),
     );
+  }
+
+  private scheduleTrashSweep(notBefore: string, extra: Record<string, Json> = {}): void {
+    const id = this.deps.ids.next("trash_sweep_");
+    this.available().enqueue(
+      "trash.sweep",
+      id,
+      this.contract.read<Json>("json", { notBefore, ...extra }),
+      this.deps.clock.now(),
+    );
+  }
+
+  private async deferTrashSweep(now: string, deferredSince: string, deferrals: number): Promise<void> {
+    await this.queue.run(() =>
+      this.available().transaction(() => {
+        this.available().pruneCompletedJobs("trash.sweep");
+        this.scheduleTrashSweep(nextSweepDeferral(now, deferrals), {
+          deferredSince,
+          deferrals: deferrals + 1,
+        });
+      }),
+    );
+  }
+
+  private targetHasActiveWork(target: TrashTarget): boolean {
+    const store = this.available(),
+      activeUpdates = store
+        .feedbackList("update")
+        .map((value) => this.contract.read<import("../../../contract/src/index.js").Update>("update", value))
+        .filter((update) =>
+          ["queued", "planning", "awaiting_plan_review", "writing", "checking"].includes(update.status),
+        );
+    if (target.kind === "artifact" && activeUpdates.some((update) => update.artifactId === target.id)) return true;
+    if (target.kind === "session") {
+      const artifacts = new Set(
+        store
+          .feedbackList("attachment")
+          .map((value) => this.contract.read<{ sessionId: string; artifactId: string }>("session-artifact", value))
+          .filter((attachment) => attachment.sessionId === target.id)
+          .map((attachment) => attachment.artifactId),
+      );
+      if (activeUpdates.some((update) => artifacts.has(update.artifactId))) return true;
+    }
+    if (target.kind === "comment") {
+      const agreementIds = new Set(
+        store
+          .feedbackList("agreement")
+          .map((value) => this.contract.read<Agreement>("agreement", value))
+          .filter((agreement) => agreement.commentId === target.id)
+          .map((agreement) => agreement.agreementId),
+      );
+      if (activeUpdates.some((update) => update.itemIds.some((id) => agreementIds.has(id)))) return true;
+    }
+    return store.feedbackList("agent-turn").some((value) => {
+      const turn = this.contract.read<{ sessionId: string; status: string; trigger: { commentIds: string[] } }>(
+        "agent-turn",
+        value,
+      );
+      if (!["queued", "running"].includes(turn.status)) return false;
+      if (target.kind === "session") return turn.sessionId === target.id;
+      if (target.kind === "comment") return turn.trigger.commentIds.includes(target.id);
+      if (target.kind === "artifact")
+        return store.feedbackList("attachment").some((raw) => {
+          const attachment = this.contract.read<{ sessionId: string; artifactId: string }>("session-artifact", raw);
+          return attachment.sessionId === turn.sessionId && attachment.artifactId === target.id;
+        });
+      return false;
+    });
   }
 
   protected async runDigest(job: Job): Promise<void> {

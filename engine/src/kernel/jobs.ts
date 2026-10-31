@@ -13,7 +13,7 @@ const idempotent = Object.freeze([
   "agent.update.trigger",
 ]);
 export class JobRunner {
-  private readonly running = new Set<Promise<void>>();
+  private readonly running = new Map<Promise<void>, Job>();
   private stopped = false;
   private finishingAllowed = true;
   constructor(
@@ -80,15 +80,15 @@ export class JobRunner {
           }) satisfies Job,
       );
     });
-    const tasks = leased.map((job) => this.execute(job));
-    for (const task of tasks) {
-      this.running.add(task);
+    const tasks = leased.map((job) => ({ job, task: this.execute(job) }));
+    for (const { job, task } of tasks) {
+      this.running.set(task, job);
       void task.then(
         () => this.running.delete(task),
         () => this.running.delete(task),
       );
     }
-    await Promise.all(tasks);
+    await Promise.all(tasks.map(({ task }) => task));
   }
   private async execute(job: Job) {
     let state: Job["state"] = "completed";
@@ -110,11 +110,12 @@ export class JobRunner {
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
       await Promise.race([
-        Promise.all([...this.running]),
+        Promise.all([...this.running.keys()]),
         new Promise<void>((resolve) => {
           timer = setTimeout(resolve, Math.max(0, graceMs));
         }),
       ]);
+      await Promise.all([...this.running].filter(([, job]) => job.kind === "trash.sweep").map(([task]) => task));
     } finally {
       if (timer) clearTimeout(timer);
     }

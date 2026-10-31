@@ -35,7 +35,7 @@ export function Sidebar({
   onConnected: () => void;
   onRefresh: () => Promise<void>;
   onError: (message: string) => void;
-  onTrashed: (target: { kind: "artifact" | "session"; id: string }) => void;
+  onTrashed: (target: { kind: "artifact" | "session"; id: string }, reviewCount: number) => void;
   onRename: (sessionId: string, title: string) => void;
 }) {
   return (
@@ -105,11 +105,16 @@ export function Sidebar({
                   className="quiet-action"
                   aria-label={`Move ${session.title} to trash`}
                   onClick={() => {
+                    const target = { kind: "session" as const, id: session.sessionId };
                     void window.vibecab
-                      .command("vc.Trash", { target: { kind: "session", id: session.sessionId } })
-                      .then(() => {
-                        onTrashed({ kind: "session", id: session.sessionId });
-                        return onRefresh();
+                      .query<{ reviewRuns: unknown[] }>("vc.PurgePreview", { target })
+                      .then((preview) =>
+                        window.vibecab.command("vc.Trash", { target }).then((result) => ({ preview, result })),
+                      )
+                      .then(async ({ preview, result }) => {
+                        if (!result.ok) return;
+                        onTrashed(target, preview.reviewRuns.length);
+                        await onRefresh();
                       });
                   }}
                 >

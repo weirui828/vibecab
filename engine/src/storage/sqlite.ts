@@ -234,6 +234,25 @@ export class SqliteStore implements Repository {
     this.contract.read("job", job);
     this.db.prepare("INSERT INTO sys_outbox VALUES(?,?,?,?,?)").run(id, kind, job.state, null, canonical(job));
   }
+  rescheduleJob(id: string, payload: Json, ts: string) {
+    this.writing();
+    const job = this.jobs().find((candidate) => candidate.id === id);
+    if (!job) fail("not_found", "Job not found");
+    this.writeJob(
+      this.contract.read<Job>("job", {
+        ...job,
+        payload,
+        state: "pending",
+        leaseUntil: null,
+        attempts: 0,
+        createdAt: ts,
+      }),
+    );
+  }
+  deleteJob(id: string) {
+    this.writing();
+    this.db.prepare("DELETE FROM sys_outbox WHERE id=?").run(id);
+  }
   jobs(): Job[] {
     return this.db
       .prepare("SELECT json FROM sys_outbox ORDER BY rowid")

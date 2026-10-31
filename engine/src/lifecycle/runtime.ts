@@ -38,7 +38,7 @@ export class LifecycleRuntime extends LifecycleJobsRuntime {
       export: (current) => this.runExport(current),
       backup: (current) => this.runBackup(current),
       purge: (current) => this.runPurge(current),
-      "trash.sweep": () => this.runTrashSweep(),
+      "trash.sweep": (current) => this.runTrashSweep(current),
     };
     const handler = handlers[kind];
     if (!handler) fail("unsupported", `No job handler for ${kind}`);
@@ -291,25 +291,13 @@ export class LifecycleRuntime extends LifecycleJobsRuntime {
         return { restored: true };
       }
       case "vc.Purge": {
-        const p = this.contract.read<{
-          target: TrashTarget;
-          reviewActions?: Array<{ runId: string; action: "redact" | "delete" }>;
-        }>("operations/vc.Purge", raw, "#/properties/payload");
+        const p = this.contract.read<{ target: TrashTarget }>("operations/vc.Purge", raw, "#/properties/payload");
         if (!store.feedback("trash", this.trashKey(p.target)))
           fail("conflict", "Target must be in the trash before purge");
-        const dependent = this.purgePreview(p.target)
-            .reviewRuns.map((review) => review.runId)
-            .sort(),
-          actions = p.reviewActions ?? [],
-          supplied = actions.map((action) => action.runId).sort();
-        if (dependent.length !== supplied.length || dependent.some((runId, index) => runId !== supplied[index]))
-          fail("invalid", "Purge requires exactly one action for every dependent review run");
+        if (this.purgePreview(p.target).reviewRuns.some((review) => review.active))
+          fail("conflict", "An active review still refers to this content");
         const purgeId = this.deps.ids.next("purge_");
-        store.saveFeedback(
-          "purge-request",
-          purgeId,
-          this.contract.read<Json>("json", { target: p.target, reviewActions: actions }),
-        );
+        store.saveFeedback("purge-request", purgeId, this.contract.read<Json>("json", { target: p.target }));
         store.enqueue("purge", purgeId, this.contract.read<Json>("json", { purgeId }), this.deps.clock.now());
         this.event("purge", purgeId, "queued");
         return { purgeId, status: "queued" };

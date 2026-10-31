@@ -60,7 +60,7 @@ class LocalEngine extends LifecycleRuntime implements Engine {
       integrationPurge = integrationPurgePort({ feedback, tmr });
     this.setReviewPurgeHook({
       preview: (target) => integrationPurge.preview(this.moduleContext(), target),
-      apply: (target, actions) => integrationPurge.apply(this.moduleContext(), target, actions),
+      apply: (target) => integrationPurge.apply(this.moduleContext(), target),
     });
     this.configureModules([
       contentModule(host),

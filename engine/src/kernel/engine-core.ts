@@ -21,6 +21,7 @@ import { Authentication, randomAccessTokenKey } from "./authentication.js";
 import type { CallAuth, CallMetadata, TrustedHostCredential } from "../auth.js";
 import { SerialQueue } from "./queue.js";
 import { JobRunner } from "./jobs.js";
+import type { KernelActivityPort, KernelActivitySnapshot } from "./activity.js";
 import { ModuleRegistry } from "./module-registry.js";
 import type { BudgetPort, EngineModule, GatewayPort, GatewayRequestPort, ModuleContext } from "./module-registry.js";
 
@@ -38,6 +39,10 @@ export abstract class EngineCore {
   protected workspace = "";
 
   protected accepting = false;
+
+  protected lastWriteAt: string | null = null;
+
+  protected readonly kernelActivity: KernelActivityPort = { snapshot: () => this.activitySnapshot() };
 
   protected starting = false;
 
@@ -115,6 +120,15 @@ export abstract class EngineCore {
     for (const fn of [...this.listeners]) fn();
   }
 
+  protected activitySnapshot(): KernelActivitySnapshot {
+    return {
+      leasedJobs: (this.store?.jobs() ?? [])
+        .filter((job) => job.state === "leased")
+        .map((job) => ({ id: job.id, kind: job.kind })),
+      lastWriteAt: this.lastWriteAt,
+    };
+  }
+
   protected async serializeSession<T>(sessionId: string, action: () => Promise<T>): Promise<T> {
     const previous = this.sessionTails.get(sessionId) ?? Promise.resolve();
     let release!: () => void;
@@ -185,6 +199,7 @@ export abstract class EngineCore {
       await this.lock.writeFile(String(process.pid));
       await this.lock.sync();
       this.store = new SqliteStore(join(this.workspace, "workspace.sqlite"), this.contract);
+      this.lastWriteAt = null;
       this.authentication.configureKey(this.store.accessTokenKey(randomAccessTokenKey));
       await this.authentication.migrateLegacyFile(this.workspace, this.store);
       this.initializeServices();
@@ -254,6 +269,7 @@ export abstract class EngineCore {
     this.workerTimer = undefined;
     this.store?.close();
     this.store = undefined;
+    this.lastWriteAt = null;
     this.closeServices();
     this.jobs = undefined;
     this.lifecycleContext = undefined;
@@ -302,6 +318,8 @@ export abstract class EngineCore {
         });
         if (result.ok && ["sys.SetSettings", "sys.SetProviderKeyRef", "sys.SetProviderKey"].includes(cmd.type))
           this.settingsChanged();
+        if (result.ok && this.contract.operations.get(cmd.type)?.meta.effect !== "read")
+          this.lastWriteAt = this.deps.clock.now();
         this.wake();
         return result;
       });
@@ -397,7 +415,7 @@ export abstract class EngineCore {
   protected abstract runExport(job: Job): Promise<void>;
   protected abstract runBackup(job: Job): Promise<void>;
   protected abstract runPurge(job: Job): Promise<void>;
-  protected abstract runTrashSweep(): Promise<void>;
+  protected abstract runTrashSweep(job: Job): Promise<void>;
   protected abstract assertLifecycleVisible(
     kind: "artifact" | "session" | "comment" | "idea" | "project",
     id: string,

@@ -24,10 +24,25 @@ export function lifecycleModule(host: EngineModuleHost) {
     context.repository.pruneCompletedJobs("trash.sweep");
     const activeSweep = context.repository
       .jobs()
-      .some((job) => job.kind === "trash.sweep" && ["pending", "leased"].includes(job.state));
-    if (activeSweep) return;
+      .find((job) => job.kind === "trash.sweep" && ["pending", "leased", "interrupted"].includes(job.state));
+    const now = context.clock.now(),
+      startupDelay = new Date(Date.parse(now) + 5 * 60_000).toISOString();
+    if (activeSweep) {
+      const notBefore = field(activeSweep.payload, "notBefore");
+      if (activeSweep.state === "leased" || typeof notBefore !== "string" || Date.parse(notBefore) <= Date.parse(now))
+        context.repository.rescheduleJob(
+          activeSweep.id,
+          context.contract.read("json", { notBefore: startupDelay }),
+          now,
+        );
+      return;
+    }
     const id = context.ids.next("trash_sweep_");
-    context.enqueue("trash.sweep", id, context.contract.read("json", {}), context.clock.now());
+    context.enqueue("trash.sweep", id, context.contract.read("json", { notBefore: startupDelay }), now);
   };
   return engineModule;
+}
+
+function field(value: unknown, key: string): unknown {
+  return typeof value === "object" && value !== null ? Reflect.get(value, key) : undefined;
 }

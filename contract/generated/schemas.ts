@@ -8126,29 +8126,6 @@ export const schemasById: Record<string, AnySchema> = {
               "id"
             ],
             "additionalProperties": false
-          },
-          "reviewActions": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "runId": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "action": {
-                  "enum": [
-                    "redact",
-                    "delete"
-                  ]
-                }
-              },
-              "required": [
-                "runId",
-                "action"
-              ],
-              "additionalProperties": false
-            }
           }
         },
         "required": [
@@ -8307,13 +8284,16 @@ export const schemasById: Record<string, AnySchema> = {
                 "runId": {
                   "type": "string"
                 },
-                "redactRemoves": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
+                "action": {
+                  "enum": [
+                    "redact",
+                    "delete"
+                  ]
                 },
-                "deleteRemoves": {
+                "active": {
+                  "type": "boolean"
+                },
+                "removes": {
                   "type": "array",
                   "items": {
                     "type": "string"
@@ -8323,8 +8303,9 @@ export const schemasById: Record<string, AnySchema> = {
               "required": [
                 "reviewRequestId",
                 "runId",
-                "redactRemoves",
-                "deleteRemoves"
+                "action",
+                "active",
+                "removes"
               ],
               "additionalProperties": false
             }

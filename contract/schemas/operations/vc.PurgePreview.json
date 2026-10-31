@@ -41,10 +41,11 @@
             "properties": {
               "reviewRequestId": { "type": "string" },
               "runId": { "type": "string" },
-              "redactRemoves": { "type": "array", "items": { "type": "string" } },
-              "deleteRemoves": { "type": "array", "items": { "type": "string" } }
+              "action": { "enum": ["redact", "delete"] },
+              "active": { "type": "boolean" },
+              "removes": { "type": "array", "items": { "type": "string" } }
             },
-            "required": ["reviewRequestId", "runId", "redactRemoves", "deleteRemoves"],
+            "required": ["reviewRequestId", "runId", "action", "active", "removes"],
             "additionalProperties": false
           }
         }

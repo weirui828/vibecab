@@ -77,10 +77,106 @@ export function purgeRun(ctx: ModuleContext, runId: string, action: "redact" | "
   ctx.repository.deleteFeedback("tmr-report", runId);
 }
 
+export function purgeSources(
+  ctx: ModuleContext,
+  runId: string,
+  sources: readonly string[],
+  deleteRun: boolean,
+): string[] {
+  if (deleteRun) {
+    purgeRun(ctx, runId, "delete");
+    return [];
+  }
+  const rawRun = ctx.repository.feedback("tmr-run", runId);
+  if (!rawRun) return [];
+  const run = ctx.contract.read<Run>("tmr/run", rawRun),
+    rawSnapshot = ctx.repository.feedback("tmr-snapshot", run.snapshotId),
+    snapshot = rawSnapshot ? ctx.contract.read<Json>("tmr/snapshot", rawSnapshot) : undefined,
+    items = field(snapshot, "items"),
+    purgedText: string[] = [],
+    purgedItemIds = new Set<string>();
+  if (Array.isArray(items)) {
+    const redactedItems = items.map((item) => {
+      const source = field(item, "source");
+      if (typeof source !== "string" || !sources.includes(source)) return item;
+      const content = field(item, "content");
+      purgedText.push(...contentText(content));
+      const itemId = field(item, "itemId");
+      if (typeof itemId === "string") purgedItemIds.add(itemId);
+      return { ...asRecord(item), content: tombstone(content) };
+    });
+    ctx.repository.saveFeedback(
+      "tmr-snapshot",
+      run.snapshotId,
+      ctx.contract.read<Json>("tmr/snapshot", { ...asRecord(snapshot), items: redactedItems }),
+    );
+  }
+  if (!purgedText.length) return [];
+  const rawReport = ctx.repository.feedback("tmr-report", runId),
+    report = rawReport ? ctx.contract.read<Json>("tmr/report", rawReport) : undefined,
+    affectedFindingIds = field(report, "findings");
+  const redactedFindingIds = Array.isArray(affectedFindingIds)
+    ? affectedFindingIds
+        .filter((finding) =>
+          array(field(finding, "refs")).some((ref) => purgedItemIds.has(String(field(ref, "itemId")))),
+        )
+        .map((finding) => field(finding, "findingId"))
+        .filter((id): id is string => typeof id === "string")
+    : [];
+  const redactValue = (value: Json): Json => scrub(value, purgedText);
+  for (const value of ctx.repository.feedbackList("tmr-contribution")) {
+    const record = ctx.contract.read<Json>("tmr/contribution", value);
+    if (field(record, "runId") !== runId) continue;
+    const content = field(record, "content");
+    if (content !== undefined)
+      ctx.repository.saveFeedback(
+        "tmr-contribution",
+        string(field(record, "contributionId")),
+        ctx.contract.read<Json>("tmr/contribution", {
+          ...asRecord(record),
+          content: redactValue(ctx.contract.read<Json>("json", content)),
+        }),
+      );
+  }
+  if (rawReport)
+    ctx.repository.saveFeedback("tmr-report", runId, ctx.contract.read<Json>("tmr/report", redactValue(rawReport)));
+  for (const value of ctx.repository.feedbackList("tmr-event")) {
+    const record = ctx.contract.read<Json>("json", value);
+    if (field(record, "runId") !== runId) continue;
+    const id = field(record, "eventId");
+    if (typeof id === "string") ctx.repository.saveFeedback("tmr-event", id, redactValue(record));
+  }
+  return redactedFindingIds;
+}
+
 function tombstone(value: unknown): Json {
   const serialized = canonical(value),
     hash = createHash("sha256").update(serialized).digest("hex");
   return { redacted: true, hash, length: serialized.length };
+}
+function contentText(value: unknown): string[] {
+  if (typeof value === "string") return value ? [value] : [];
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return [];
+  return ["text", "body", "alt", "caption", "quote", "suggestion"]
+    .map((key) => field(value, key))
+    .filter((text): text is string => typeof text === "string" && text.length > 0);
+}
+function array(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
+}
+function scrub(value: Json, sourceText: readonly string[]): Json {
+  if (typeof value === "string") {
+    let result = value;
+    for (const text of sourceText) {
+      const marker = JSON.stringify(tombstone(text));
+      result = result.replaceAll(text, marker);
+    }
+    return result;
+  }
+  if (Array.isArray(value)) return value.map((item) => scrub(item, sourceText));
+  if (typeof value === "object" && value !== null)
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, scrub(item, sourceText)]));
+  return value;
 }
 function asRecord(value: unknown): Record<string, Json> {
   return isJsonRecord(value) ? value : {};
@@ -93,6 +189,9 @@ function isJson(value: unknown): value is Json {
     return true;
   if (Array.isArray(value)) return value.every(isJson);
   return isJsonRecord(value);
+}
+function string(value: unknown): string {
+  return typeof value === "string" ? value : "";
 }
 
 function deleteRunRecords(

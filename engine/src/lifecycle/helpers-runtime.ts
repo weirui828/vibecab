@@ -17,7 +17,7 @@ import type {
 } from "../../../contract/src/index.js";
 
 import { UpdateRuntime } from "../updates/runtime.js";
-import type { ReviewPurgeAction, ReviewPurgeHook, TrashTarget } from "./review-purge-hook.js";
+import type { ReviewPurgeHook, TrashTarget } from "./review-purge-hook.js";
 function field(value: unknown, key: string): unknown {
   return typeof value === "object" && value !== null ? Reflect.get(value, key) : undefined;
 }
@@ -29,8 +29,8 @@ export abstract class LifecycleHelpersRuntime extends UpdateRuntime {
     this.reviewPurgeHook = hook;
   }
 
-  protected applyReviewPurge(target: TrashTarget, actions: readonly ReviewPurgeAction[]): void {
-    this.reviewPurgeHook?.apply(target, actions);
+  protected applyReviewPurge(target: TrashTarget): void {
+    this.reviewPurgeHook?.apply(target);
   }
 
   protected resumeView(raw: Json): unknown {

@@ -95,3 +95,35 @@ it("lets handlers finish during the drain grace period", async () => {
     store.close();
   }
 });
+
+it("finishes the current trash sweep item before completing drain", async () => {
+  const store = new SqliteStore(":memory:", new Contract()),
+    gate = deferred(),
+    started = deferred(),
+    now = "2026-10-28T00:00:00.000Z";
+  const runner = new JobRunner(store, { now: () => now }, async (action) => store.transaction(action), {
+    leaseMs: 1000,
+    handlers: {
+      "trash.sweep": async () => {
+        started.resolve();
+        await gate.promise;
+      },
+    },
+  });
+  store.transaction(() => store.enqueue("trash.sweep", "sweep", {}, now));
+  const tick = runner.tick();
+  await started.promise;
+  let finished = false;
+  const drain = runner.drain(0).then(() => {
+    finished = true;
+  });
+  await Promise.resolve();
+  expect(finished).toBe(false);
+  gate.resolve();
+  try {
+    await Promise.all([drain, tick]);
+    expect(store.jobs()[0]).toMatchObject({ state: "completed" });
+  } finally {
+    store.close();
+  }
+});

@@ -40,6 +40,8 @@ export interface Repository {
   command(id: string): CommandResult | undefined;
   saveCommand(id: string, result: CommandResult): void;
   enqueue(kind: string, id: string, payload: Json, ts: string): void;
+  rescheduleJob(id: string, payload: Json, ts: string): void;
+  deleteJob(id: string): void;
   jobs(): Job[];
   pruneCompletedJobs(kind: string): number;
   lease(id: string, until: string): void;
