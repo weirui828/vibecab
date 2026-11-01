@@ -1114,16 +1114,68 @@
   margin: 28px auto 0 !important;
 }
 
-/* Composer */
-.comment-toolbar {
-  display: block;
-  margin: 32px auto 0 !important;
+/* Comment affordances */
+.doc-block-row,
+.document [data-element-id] {
+  position: relative;
+}
+.document [data-element-id][data-selected="true"] {
+  background: var(--color-accent-subtle);
+  box-shadow: -10px 0 0 var(--color-accent-subtle);
+}
+.block-comment {
+  position: absolute;
+  top: 0.15em;
+  left: -2.15rem;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 1.55rem;
+  height: 1.55rem;
+  padding: 0;
+  border: 1px solid var(--color-border-default);
+  border-radius: 999px;
+  background: var(--color-surface-overlay);
+  color: var(--color-fg-muted);
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+/* The glyph is drawn by the pseudo-element so the empty button adds no text to ranges used for
+   comment locators, quote highlighting or word diffs. */
+.block-comment::before {
+  content: "+";
+  font-family: var(--font-mono);
+  font-size: 15px;
+  line-height: 1;
+}
+.document li > .block-comment,
+.document td > .block-comment {
+  left: -1.6rem;
+}
+.document [data-element-id]:hover > .block-comment,
+.document [data-element-id]:focus-within > .block-comment,
+.block-comment:focus-visible {
+  opacity: 1;
+}
+.block-comment:hover {
+  border-color: var(--color-accent-default);
+  background: var(--color-surface-raised);
+  color: var(--color-fg-default);
+}
+.doc-comment-slot {
   max-width: 68ch;
+  margin: 8px auto 28px;
 }
-.document-region > .comment-toolbar {
-  width: fit-content;
-  margin-left: max(0px, calc((100% - 68ch) / 2)) !important;
+button.comment-float {
+  position: fixed;
+  z-index: 30;
+  padding: 5px 12px;
+  border-radius: 999px;
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-100%);
 }
+
+/* Composer */
 .comment-form {
   max-width: 68ch;
   margin: 24px auto 0;
@@ -1154,6 +1206,14 @@
   border-left: 3px solid var(--color-warning-border);
   color: var(--color-fg-muted);
   font-size: 14px;
+}
+.composer-target {
+  margin: 0;
+  color: var(--color-fg-muted);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 .suggest {
   display: grid;

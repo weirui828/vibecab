@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import type { Element } from "../../../../contract/generated/index.js";
 
 export function CommentComposer({
@@ -7,7 +8,9 @@ export function CommentComposer({
   suggestion,
   setSuggestion,
   onSubmit,
-  onChooseRange,
+  onCancel,
+  autoFocus,
+  replyingTo,
 }: {
   body: string;
   setBody: (value: string) => void;
@@ -15,51 +18,63 @@ export function CommentComposer({
   suggestion: string;
   setSuggestion: (value: string) => void;
   onSubmit: () => void;
-  onChooseRange: () => void;
+  onCancel?: () => void;
+  autoFocus?: boolean;
+  replyingTo?: boolean;
 }) {
+  const textarea = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    if (autoFocus) textarea.current?.focus();
+  }, [autoFocus]);
+  const target = selected?.element.type.replaceAll("_", " ");
   return (
-    <>
-      <button className="comment-toolbar" onClick={onChooseRange}>
-        Comment
-      </button>
-      <form
-        className="comment-form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          onSubmit();
-        }}
-      >
-        {selected?.locator ? (
-          <p className="composer-quote">
-            <q>{selected.locator.quote}</q>
-          </p>
-        ) : null}
-        <label>
-          <span className="visually-hidden">Comment</span>
-          <textarea
-            aria-label="Comment"
-            placeholder={selected ? "What should change here?" : "Comment on the whole session…"}
-            value={body}
-            onChange={(event) => setBody(event.target.value)}
+    <form
+      className="comment-form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSubmit();
+      }}
+    >
+      {selected?.locator ? (
+        <p className="composer-quote">
+          <q>{selected.locator.quote}</q>
+        </p>
+      ) : null}
+      {selected && !selected.locator ? <p className="composer-target">Commenting on this {target}</p> : null}
+      {replyingTo && !selected ? <p className="composer-target">Replying in this thread</p> : null}
+      <label>
+        <span className="visually-hidden">Comment</span>
+        <textarea
+          ref={textarea}
+          aria-label="Comment"
+          placeholder={
+            selected ? "What should change here?" : replyingTo ? "Write a reply…" : "Comment on the whole session…"
+          }
+          value={body}
+          onChange={(event) => setBody(event.target.value)}
+        />
+      </label>
+      {selected ? (
+        <label className="suggest">
+          Suggest replacement
+          <input
+            value={suggestion}
+            onChange={(event) => setSuggestion(event.target.value)}
+            placeholder={selected.locator?.quote ?? "Optional"}
           />
         </label>
-        {selected ? (
-          <label className="suggest">
-            Suggest replacement
-            <input
-              value={suggestion}
-              onChange={(event) => setSuggestion(event.target.value)}
-              placeholder={selected.locator?.quote ?? "Optional"}
-            />
-          </label>
-        ) : null}
-        <div className="composer-actions">
-          <span className="meta">⌘↩ to post</span>
-          <button type="submit" className="primary">
-            Post comment
+      ) : null}
+      <div className="composer-actions">
+        <span className="meta">⌘↩ to post</span>
+        {onCancel ? (
+          <button type="button" className="quiet-link" onClick={onCancel}>
+            Cancel
           </button>
-        </div>
-      </form>
-    </>
+        ) : null}
+        <button type="submit" className="primary">
+          Post comment
+        </button>
+      </div>
+    </form>
   );
 }

@@ -13,8 +13,6 @@ import type {
   Agreement,
   FeedbackConflict,
 } from "../../../../contract/generated/index.js";
-import { inlineMarkdownToPlainText } from "../../../../contract/src/inline-markdown.js";
-import { locatorForTextSelection } from "../document/anchors.js";
 import { DocumentView } from "../document/DocumentView.js";
 import { ResumeCard } from "./ResumeCard.js";
 import { ThreadPanel } from "./ThreadPanel.js";
@@ -24,8 +22,9 @@ import { useAnchorHighlights } from "./useAnchorHighlights.js";
 import { coalesce } from "../coalesce.js";
 import { useExportSaver } from "./useExportSaver.js";
 import { CommentComposer } from "./CommentComposer.js";
+import { CommentDock } from "./CommentDock.js";
 import { DecisionRecordPanel } from "./DecisionRecordPanel.js";
-import type { Selected } from "./types.js";
+import { useCommentSelection } from "./selection.js";
 
 export function SessionView({
   sessionId,
@@ -75,7 +74,6 @@ export function SessionView({
     [delivery, setDelivery] = useState<Record<string, DeliveryState["state"]>>({}),
     [resume, setResume] = useState<VcResumeViewOperation["result"]>(),
     [digest, setDigest] = useState<VcDigestOperation["result"]>([]),
-    [selected, setSelected] = useState<Selected>(),
     [body, setBody] = useState(""),
     [suggestion, setSuggestion] = useState(""),
     [replyTo, setReplyTo] = useState(""),
@@ -273,35 +271,10 @@ export function SessionView({
     };
   }, [sessionId]);
   useAnchorHighlights(threads);
-  const chooseRange = () => {
-    const selection = window.getSelection(),
-      selectionRange = selection?.rangeCount ? selection.getRangeAt(0) : undefined,
-      textNode = selectionRange?.startContainer,
-      el = textNode instanceof globalThis.Element ? textNode : textNode?.parentElement?.closest("[data-element-id]");
-    if (!selection || !selectionRange || !el) return;
-    const element = elements.find((candidate) => candidate.elementId === el.getAttribute("data-element-id"));
-    if (!element || !("text" in element)) return;
-    const contents = document.createRange();
-    contents.selectNodeContents(el);
-    const clipped = selectionRange.cloneRange();
-    if (clipped.compareBoundaryPoints(Range.END_TO_END, contents) > 0)
-      clipped.setEnd(contents.endContainer, contents.endOffset);
-    const startRange = document.createRange();
-    startRange.selectNodeContents(el);
-    startRange.setEnd(clipped.startContainer, clipped.startOffset);
-    const start = inlineMarkdownToPlainText(startRange.toString()).length,
-      quote = clipped.toString();
-    if (!quote) return;
-    const boundedStart = start;
-    setSelected({
-      element,
-      locator: locatorForTextSelection(
-        element.text,
-        boundedStart < 0 ? 0 : boundedStart,
-        (boundedStart < 0 ? 0 : boundedStart) + quote.length,
-      ),
-    });
-  };
+  const { selected, float, setSelected, chooseRange, clearSelection, dismissFloat } = useCommentSelection(
+    elements,
+    () => setSuggestion(""),
+  );
   const post = async () => {
     if (!body.trim()) return;
     const payload: Record<string, unknown> = { sessionId, body: body.trim() };
@@ -319,15 +292,29 @@ export function SessionView({
       const result = await window.vibecab.command("vc.Comment", payload);
       if (!result.ok) throw new Error(result.error.message);
       setBody("");
-      setSuggestion("");
       setReplyTo("");
-      setSelected(undefined);
+      clearSelection();
       setMessage("Comment posted");
       await refresh();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Could not post comment.");
     }
   };
+  // Inline composer: rendered by DocumentView directly under the piece being commented on.
+  const commentSlot = selected ? (
+    <div className="doc-comment-slot">
+      <CommentComposer
+        body={body}
+        setBody={setBody}
+        selected={selected}
+        suggestion={suggestion}
+        setSuggestion={setSuggestion}
+        onSubmit={() => void post()}
+        onCancel={clearSelection}
+        autoFocus={selected.source === "block"}
+      />
+    </div>
+  ) : undefined;
   const openThreads = threads.filter((thread) =>
       thread.comments.some((comment) => ["open", "discussing", "agreed", "scheduled"].includes(comment.state)),
     ).length,
@@ -377,7 +364,10 @@ export function SessionView({
               event.preventDefault();
               chooseRange();
               window.setTimeout(
-                () => document.querySelector<HTMLTextAreaElement>(".comment-form textarea")?.focus(),
+                () =>
+                  document
+                    .querySelector<HTMLTextAreaElement>(".doc-comment-slot textarea, .comment-form textarea")
+                    ?.focus(),
                 0,
               );
             } else if (event.metaKey && event.key === "Enter") {
@@ -418,6 +408,7 @@ export function SessionView({
                 onComment={() => undefined}
                 diff={comparison}
                 showChanges={Boolean(comparison)}
+                commentable={false}
               />
             ) : (
               <>
@@ -433,7 +424,12 @@ export function SessionView({
                       .querySelector(`[data-element-id="${CSS.escape(elementId)}"]`)
                       ?.scrollIntoView({ block: "center" })
                   }
-                  onComment={(element, locator) => setSelected({ element, ...(locator ? { locator } : {}) })}
+                  onComment={(element, locator) => {
+                    dismissFloat();
+                    setSelected({ element, ...(locator ? { locator } : {}), source: locator ? "range" : "block" });
+                  }}
+                  selectedElementId={selected?.element.elementId}
+                  commentSlot={commentSlot}
                 />
               </>
             )
@@ -454,14 +450,17 @@ export function SessionView({
           ) : null}
           {decisionRecord ? <DecisionRecordPanel items={decisionRecord} /> : null}
           {!viewingVersion ? (
-            <CommentComposer
+            <CommentDock
+              selected={selected}
+              float={float}
               body={body}
               setBody={setBody}
-              selected={selected}
               suggestion={suggestion}
               setSuggestion={setSuggestion}
+              replyingTo={Boolean(replyTo)}
               onSubmit={() => void post()}
-              onChooseRange={chooseRange}
+              onCancelReply={() => setReplyTo("")}
+              onFloatClick={dismissFloat}
             />
           ) : null}
           <p role="status" className="composer-status">
@@ -483,7 +482,7 @@ export function SessionView({
             onRefresh={refresh}
             onReply={(commentId) => {
               setReplyTo(commentId);
-              setSelected(undefined);
+              clearSelection();
             }}
             onAskAgent={(threadId) =>
               void window.vibecab.command("vc.AskAgent", { sessionId, threadIds: [threadId] }).then(refresh)

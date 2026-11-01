@@ -1,8 +1,23 @@
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import type { DiffResult, Element } from "../../../../contract/generated/index.js";
 import { Alert } from "@wei/design-system";
 import type { ReactNode } from "react";
 import { InlineText } from "./inline-markdown.js";
+
+const commentLabels: Record<Element["type"], string> = {
+  heading: "heading",
+  paragraph: "paragraph",
+  list: "list",
+  list_item: "list item",
+  quote: "quote",
+  code_block: "code block",
+  table: "table",
+  table_row: "table row",
+  table_cell: "table cell",
+  image: "image",
+  divider: "divider",
+  callout: "callout",
+};
 
 export function DocumentView({
   artifactId,
@@ -11,6 +26,9 @@ export function DocumentView({
   onComment,
   diff,
   showChanges,
+  selectedElementId,
+  commentSlot,
+  commentable = true,
 }: {
   artifactId: string;
   version: number;
@@ -18,13 +36,30 @@ export function DocumentView({
   onComment: (element: Element, locator?: { quote: string; prefix: string; suffix: string }) => void;
   diff?: DiffResult;
   showChanges?: boolean;
+  selectedElementId?: string;
+  commentSlot?: ReactNode;
+  commentable?: boolean;
 }) {
   const [visibleCount, setVisibleCount] = useState(400);
   const sorted = useMemo(() => [...elements].sort((a, b) => a.order.localeCompare(b.order)), [elements]);
-  const children = (parentId: string) => sorted.filter((el) => el.parentId === parentId).map(renderElement);
+  // The composer opens after the top-level block that contains the selection: a comment belongs
+  // next to the piece being discussed, not at the end of the Document.
+  const selectedTopId = useMemo(() => {
+    if (!selectedElementId) return undefined;
+    const byId = new Map(sorted.map((element) => [element.elementId, element]));
+    let current = byId.get(selectedElementId);
+    if (!current) return undefined;
+    while (current.parentId !== null) {
+      const parent = byId.get(current.parentId);
+      if (!parent) break;
+      current = parent;
+    }
+    return current.elementId;
+  }, [selectedElementId, sorted]);
+  const children = (parentId: string) => sorted.filter((element) => element.parentId === parentId).map(renderElement);
   const propsText = (element: Element, key: string) =>
     key in element.props ? String(Reflect.get(element.props, key)) : "";
-  const renderElement = (element: Element) => {
+  const renderElement = (element: Element): ReactNode => {
     const changeKind = diff?.added.includes(element.elementId)
       ? "added"
       : diff?.moved.includes(element.elementId)
@@ -32,12 +67,42 @@ export function DocumentView({
         : showChanges && diff?.changed.includes(element.elementId)
           ? "changed"
           : undefined;
+    const selected = selectedElementId === element.elementId;
     const common = {
-      key: element.elementId,
       "data-element-id": element.elementId,
       ...(changeKind ? { "data-change": changeKind } : {}),
-      onDoubleClick: () => onComment(element),
+      ...(selected ? { "data-selected": "true" } : {}),
     };
+    const interact = commentable
+      ? {
+          onDoubleClick: (event: { stopPropagation: () => void }) => {
+            // Nested blocks bubble. The innermost piece must win, or a list item or cell can
+            // never be commented on: the outer list/table would swallow the selection.
+            event.stopPropagation();
+            onComment(element);
+          },
+        }
+      : {};
+    const gutter = commentable ? (
+      <button
+        type="button"
+        className="block-comment"
+        aria-label={`Comment on this ${commentLabels[element.type]}`}
+        title={`Comment on this ${commentLabels[element.type]}`}
+        onClick={(event) => {
+          event.stopPropagation();
+          onComment(element);
+        }}
+      />
+    ) : null;
+    // Leaf and container blocks are wrapped so the affordance sits beside them without nesting a
+    // button inside <ul>, <table>, <tr> or <hr>, where it would be invalid markup.
+    const wrap = (node: ReactNode) => (
+      <div key={element.elementId} {...common} {...interact} className="doc-block doc-block-row">
+        {node}
+        {gutter}
+      </div>
+    );
     const parts = "text" in element ? diff?.textDiffs[element.elementId] : undefined,
       text =
         "text" in element && showChanges && parts ? (
@@ -62,97 +127,91 @@ export function DocumentView({
     switch (element.type) {
       case "heading": {
         const level = Math.max(1, Math.min(6, element.props.level));
-        return (
-          <div {...common} className="doc-block">
-            <Heading level={level}>{text}</Heading>
-          </div>
-        );
+        return wrap(<Heading level={level}>{text}</Heading>);
       }
       case "paragraph":
-        return (
-          <p {...common} className="doc-block">
-            {text}
-          </p>
-        );
+        return wrap(<p>{text}</p>);
       case "quote":
-        return (
-          <blockquote {...common} className="doc-block">
-            {text}
-          </blockquote>
-        );
+        return wrap(<blockquote>{text}</blockquote>);
       case "code_block":
-        return (
-          <figure {...common} className="doc-block">
+        return wrap(
+          <figure>
             <figcaption>{propsText(element, "language")}</figcaption>
             <pre>
               <code>{element.text}</code>
             </pre>
-          </figure>
+          </figure>,
         );
       case "list":
-        return element.props.ordered ? (
-          <ol {...common} className="doc-block">
-            {children(element.elementId)}
-          </ol>
-        ) : (
-          <ul {...common} className="doc-block">
-            {children(element.elementId)}
-          </ul>
+        return wrap(
+          element.props.ordered ? <ol>{children(element.elementId)}</ol> : <ul>{children(element.elementId)}</ul>,
         );
       case "list_item":
         return (
-          <li {...common} className="doc-block">
+          <li key={element.elementId} {...common} {...interact} className="doc-block">
+            {gutter}
             {text}
             {children(element.elementId)}
           </li>
         );
       case "table":
-        return (
-          <table {...common} className="doc-block">
+        return wrap(
+          <table>
             <tbody>{children(element.elementId)}</tbody>
-          </table>
+          </table>,
         );
       case "table_row":
+        // A <tr> may only contain cells, and each cell has its own comment affordance.
         return (
-          <tr {...common} className="doc-block">
+          <tr key={element.elementId} {...common} {...interact} className="doc-block">
             {children(element.elementId)}
           </tr>
         );
       case "table_cell":
         return (
-          <td {...common} className="doc-block">
+          <td key={element.elementId} {...common} {...interact} className="doc-block">
+            {gutter}
             {text}
           </td>
         );
       case "image":
-        return (
-          <figure {...common} className="doc-block">
+        return wrap(
+          <figure>
             <img
               src={window.vibecab?.blobUrl(element.blobHash) ?? `vc-blob://${element.blobHash}`}
               alt={element.props.alt ?? ""}
             />
             {element.props.caption ? <figcaption>{element.props.caption}</figcaption> : null}
-          </figure>
+          </figure>,
         );
       case "divider":
-        return <hr {...common} className="doc-block" />;
+        return wrap(<hr />);
       case "callout":
-        return (
-          <div {...common} className="doc-block">
-            <Alert
-              tone={element.props.tone === "warning" ? "warning" : element.props.tone === "note" ? "success" : "info"}
-            >
-              {text}
-            </Alert>
-          </div>
+        return wrap(
+          <Alert
+            tone={element.props.tone === "warning" ? "warning" : element.props.tone === "note" ? "success" : "info"}
+          >
+            {text}
+          </Alert>,
         );
     }
   };
-  const top = sorted.filter((el) => el.parentId === null),
-    visible = top.slice(0, visibleCount);
+  const top = sorted.filter((element) => element.parentId === null),
+    visible = top.slice(0, visibleCount),
+    slotIsVisible = selectedTopId !== undefined && visible.some((element) => element.elementId === selectedTopId);
   return (
     <article className="document" aria-label={`Document version ${version}`} data-artifact-id={artifactId}>
-      {visible.map(renderElement)}
+      {visible.map((element) =>
+        selectedTopId === element.elementId ? (
+          <Fragment key={element.elementId}>
+            {renderElement(element)}
+            {commentSlot}
+          </Fragment>
+        ) : (
+          <Fragment key={element.elementId}>{renderElement(element)}</Fragment>
+        ),
+      )}
+      {commentSlot && !slotIsVisible ? commentSlot : null}
       {top.length > visibleCount ? (
         <button onClick={() => setVisibleCount((count) => count + 100)}>
           Show next 100 blocks ({top.length - visibleCount} remaining)

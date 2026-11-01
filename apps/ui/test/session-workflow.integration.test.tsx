@@ -577,6 +577,35 @@ it("labels agreements made during a running Update for the next Update", async (
   }
 });
 
+it("comments on an individual piece from its comment affordance", async () => {
+  const app = await mountSession({ content: "First piece.\n\nSecond piece." });
+  try {
+    const second = app.elements[1]!;
+    const buttons = await app.screen.findAllByRole("button", { name: "Comment on this paragraph" });
+    expect(buttons).toHaveLength(2);
+    app.fireEvent.click(buttons[1]!);
+    expect(await app.screen.findByText("Commenting on this paragraph")).toBeTruthy();
+    // The composer opens beside the piece it comments on, not at the end of the Document.
+    const slot = app.dom.window.document.querySelector(".doc-comment-slot");
+    expect(slot?.previousElementSibling?.getAttribute("data-element-id")).toBe(second.elementId);
+    app.fireEvent.change(app.screen.getByRole("textbox", { name: "Comment" }), {
+      target: { value: "Tighten this piece." },
+    });
+    app.fireEvent.click(app.screen.getByRole("button", { name: "Post comment" }));
+    await app.waitFor(async () => {
+      const threads = await app.query<Array<{ comments: Array<{ anchor?: { elementId: string } }> }>>("vc.Threads", {
+        sessionId: app.sessionId,
+        artifactId: app.artifactId,
+      });
+      expect(threads).toHaveLength(1);
+      expect(threads[0]?.comments[0]?.anchor?.elementId).toBe(second.elementId);
+    });
+    expect(await app.screen.findByText("Tighten this piece.", {}, { timeout: 4_000 })).toBeTruthy();
+  } finally {
+    await app.close();
+  }
+});
+
 async function mountSession(options: {
   content: string;
   provider?: ScriptedProvider;

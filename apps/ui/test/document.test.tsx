@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { Element } from "../../../contract/generated/index.js";
 import { DocumentView } from "../src/document/DocumentView.js";
@@ -94,5 +94,48 @@ it("renders each document element type and preserves its element id", () => {
   expect(screen.getByText("Caption")).toBeTruthy();
   expect(screen.getByText("Notice")).toBeTruthy();
   expect(container.querySelectorAll("[data-element-id]")).toHaveLength(elements.length);
+});
+
+it("offers a comment affordance on every piece, including nested blocks", () => {
+  const onComment = vi.fn(),
+    { container } = render(
+      <DocumentView artifactId="artifact" version={1} elements={elements} onComment={onComment} />,
+    );
+  const buttons = screen.getAllByRole("button", { name: /^Comment on this / });
+  // A <tr> cannot contain a button; its cells carry the affordance instead.
+  expect(buttons).toHaveLength(elements.filter((element) => element.type !== "table_row").length);
+  const listItem = elements[3]!;
+  const itemButton = container.querySelector(`[data-element-id="${listItem.elementId}"] > .block-comment`);
+  expect(itemButton).toBeTruthy();
+  fireEvent.click(itemButton!);
+  expect(onComment).toHaveBeenCalledWith(listItem);
+});
+
+it("selects the innermost block on double-click instead of its container", () => {
+  const onComment = vi.fn();
+  render(<DocumentView artifactId="artifact" version={1} elements={elements} onComment={onComment} />);
+  fireEvent.doubleClick(screen.getByText("List item"));
+  expect(onComment).toHaveBeenCalledTimes(1);
+  expect(onComment).toHaveBeenCalledWith(elements[3]!);
+});
+
+it("opens the comment slot under the selected piece and marks it selected", () => {
+  const list = elements[2]!,
+    listItem = elements[3]!,
+    { container } = render(
+      <DocumentView
+        artifactId="artifact"
+        version={1}
+        elements={elements}
+        onComment={vi.fn()}
+        selectedElementId={listItem.elementId}
+        commentSlot={<div className="sentinel-slot" />}
+      />,
+    ),
+    slot = container.querySelector(".sentinel-slot");
+  expect(slot?.previousElementSibling?.getAttribute("data-element-id")).toBe(list.elementId);
+  expect(container.querySelector(`[data-element-id="${listItem.elementId}"]`)?.getAttribute("data-selected")).toBe(
+    "true",
+  );
 });
 // @vitest-environment jsdom

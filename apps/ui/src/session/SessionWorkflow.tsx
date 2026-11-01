@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import type {
   AgentTurn,
   Agreement,
@@ -29,6 +30,9 @@ export function SessionWorkflow({
   onRefresh,
   onFocusElement,
   onComment,
+  selectedElementId,
+  commentSlot,
+  commentable = true,
 }: {
   sessionId: string;
   session: Session;
@@ -38,6 +42,9 @@ export function SessionWorkflow({
   onRefresh: () => Promise<void>;
   onFocusElement: (elementId: string) => void;
   onComment: (element: Element, locator?: { quote: string; prefix: string; suffix: string }) => void;
+  selectedElementId?: string;
+  commentSlot?: ReactNode;
+  commentable?: boolean;
 }) {
   const [queryResult, setQueryResult] = useState<VcUpdatesOperation["result"]>({ updates: [] }),
     [conflicts, setConflicts] = useState<FeedbackConflict[]>([]),
@@ -266,6 +273,9 @@ export function SessionWorkflow({
         diff={diff}
         showChanges={showChanges}
         onComment={onComment}
+        selectedElementId={selectedElementId}
+        commentSlot={commentSlot}
+        commentable={commentable}
       />
       {conflicts.some((conflict) => conflict.state === "open") ? (
         <section className="conflict-list" aria-label="Conflicts">
