@@ -56,6 +56,7 @@ export abstract class FeedbackCoreRuntime {
     });
   }
   protected editable(c: FeedbackComment) {
+    if (this.session(c.sessionId).state === "ended") fail("conflict", "Ended sessions are read-only");
     if (c.deleted || !["open", "discussing"].includes(c.state))
       fail("conflict", "Feedback item can no longer be changed");
   }

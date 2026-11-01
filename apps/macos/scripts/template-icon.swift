@@ -17,35 +17,6 @@ func writePNG(_ image: CGImage, _ path: String) throws {
   guard CGImageDestinationFinalize(destination) else { throw NSError(domain: "VibeCabIcons", code: 3) }
 }
 
-func foregroundBounds(_ image: CGImage) throws -> CGRect {
-  let width = image.width, height = image.height
-  let buffer = UnsafeMutableRawPointer.allocate(byteCount: width * height * 4, alignment: 16)
-  defer { buffer.deallocate() }
-  memset(buffer, 0, width * height * 4)
-  guard let context = CGContext(data: buffer, width: width, height: height, bitsPerComponent: 8,
-                                bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(),
-                                bitmapInfo: CGBitmapInfo.byteOrder32Big.rawValue | CGImageAlphaInfo.premultipliedLast.rawValue) else {
-    throw NSError(domain: "VibeCabIcons", code: 4)
-  }
-  context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
-  let pixels = buffer.assumingMemoryBound(to: UInt8.self)
-  var minX = width, minY = height, maxX = 0, maxY = 0
-  for y in 0..<height {
-    for x in 0..<width {
-      let i = (y * width + x) * 4
-      let luminance = 0.2126 * Double(pixels[i]) + 0.7152 * Double(pixels[i + 1]) + 0.0722 * Double(pixels[i + 2])
-      if luminance < 204 {
-        minX = min(minX, x)
-        minY = min(minY, y)
-        maxX = max(maxX, x)
-        maxY = max(maxY, y)
-      }
-    }
-  }
-  guard minX <= maxX, minY <= maxY else { throw NSError(domain: "VibeCabIcons", code: 6) }
-  return CGRect(x: minX, y: minY, width: maxX - minX + 1, height: maxY - minY + 1)
-}
-
 func render(_ image: CGImage, size: Int, template: Bool = false) throws -> CGImage {
   let buffer = UnsafeMutableRawPointer.allocate(byteCount: size * size * 4, alignment: 16)
   defer { buffer.deallocate() }
@@ -56,18 +27,7 @@ func render(_ image: CGImage, size: Int, template: Bool = false) throws -> CGIma
     throw NSError(domain: "VibeCabIcons", code: 4)
   }
   context.interpolationQuality = .high
-  if template {
-    let mark = image.cropping(to: try foregroundBounds(image)) ?? image,
-      scale = min(CGFloat(size) * 0.90 / CGFloat(mark.width), CGFloat(size) * 0.90 / CGFloat(mark.height)),
-      width = CGFloat(mark.width) * scale,
-      height = CGFloat(mark.height) * scale
-    context.draw(
-      mark,
-      in: CGRect(x: (CGFloat(size) - width) / 2, y: (CGFloat(size) - height) / 2, width: width, height: height)
-    )
-  } else {
-    context.draw(image, in: CGRect(x: 0, y: 0, width: size, height: size))
-  }
+  context.draw(image, in: CGRect(x: 0, y: 0, width: size, height: size))
   if template {
     let pixels = buffer.assumingMemoryBound(to: UInt8.self)
     for pixel in 0..<(size * size) {

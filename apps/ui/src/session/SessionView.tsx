@@ -84,6 +84,8 @@ export function SessionView({
     [message, setMessage] = useState("");
   const [decisionRecord, setDecisionRecord] = useState<unknown[]>();
   const threadsVisible = showThreads && !viewingVersion;
+  const canComment = session.state === "active";
+  const readOnly = session.state === "ended";
   const refreshNow = useCallback(async () => {
     if (!artifact) return;
     const versionArgs = viewingVersion ? { version: viewingVersion } : {};
@@ -225,7 +227,7 @@ export function SessionView({
     () => setReplyTo(""),
   );
   const post = async () => {
-    if (!body.trim()) return;
+    if (!body.trim() || !canComment) return;
     const payload: Record<string, unknown> = { sessionId, body: body.trim() };
     if (replyTo) payload.replyTo = replyTo;
     else if (selected && artifact)
@@ -250,22 +252,23 @@ export function SessionView({
     }
   };
   // Inline composer: rendered by DocumentView directly under the piece being commented on.
-  const commentSlot = selected ? (
-    <div className="doc-comment-slot">
-      <CommentComposer
-        body={body}
-        setBody={setBody}
-        selected={selected}
-        suggestion={suggestion}
-        setSuggestion={setSuggestion}
-        onSubmit={() => void post()}
-        onCancel={clearSelection}
-        autoFocus={selected.source === "block"}
-      />
-    </div>
-  ) : undefined;
+  const commentSlot =
+    selected && canComment ? (
+      <div className="doc-comment-slot">
+        <CommentComposer
+          body={body}
+          setBody={setBody}
+          selected={selected}
+          suggestion={suggestion}
+          setSuggestion={setSuggestion}
+          onSubmit={() => void post()}
+          onCancel={clearSelection}
+          autoFocus={selected.source === "block"}
+        />
+      </div>
+    ) : undefined;
   const renderReply = (commentId: string) =>
-    replyTo === commentId ? (
+    canComment && replyTo === commentId ? (
       <div className="inline-reply">
         <CommentComposer
           body={body}
@@ -298,12 +301,14 @@ export function SessionView({
         void window.vibecab.command("vc.SetReplyTrigger", { sessionId, threadId, mode }).then(refresh)
       }
       renderReply={renderReply}
+      canReply={canComment}
+      readOnly={readOnly}
       inline={inline}
     />
   );
   const { annotations } = groupInlineThreads(threads, elements, (thread) => card(thread, true));
   const wholeSessionComposer =
-    !selected && !replyTo ? (
+    canComment && !selected && !replyTo ? (
       <CommentComposer
         body={body}
         setBody={setBody}
@@ -345,6 +350,7 @@ export function SessionView({
       <SessionPanelLayout threadsVisible={threadsVisible}>
         <SessionSidebar
           artifacts={artifacts}
+          sessionState={session.state}
           activeArtifactId={activeArtifactId}
           setActiveArtifactId={setActiveArtifactId}
           availableArtifacts={availableArtifacts}
@@ -428,6 +434,7 @@ export function SessionView({
                   selectedElementId={selected?.element.elementId}
                   commentSlot={commentSlot}
                   annotations={annotations}
+                  commentable={canComment}
                 />
               </>
             )
@@ -483,6 +490,8 @@ export function SessionView({
               void window.vibecab.command("vc.SetReplyTrigger", { sessionId, threadId, mode }).then(refresh)
             }
             renderReply={renderReply}
+            canReply={canComment}
+            readOnly={readOnly}
           />
         ) : null}
       </SessionPanelLayout>

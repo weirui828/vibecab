@@ -229,6 +229,7 @@ export abstract class FeedbackCommandRuntime extends FeedbackCoreRuntime {
             "#/properties/payload",
           ),
           session = this.session(p.sessionId);
+        if (session.state === "ended") fail("conflict", "Ended sessions are read-only");
         if (p.threadId) {
           const thread = this.list<FeedbackComment>("comment", "feedback-comment").find(
             (c) => c.sessionId === p.sessionId && c.threadId === p.threadId,

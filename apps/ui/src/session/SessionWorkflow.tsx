@@ -213,9 +213,15 @@ export function SessionWorkflow({
         <button
           type="button"
           className="toolbar-button"
-          disabled={noModel}
+          disabled={noModel || session.state !== "active"}
           onClick={() => void command("vc.AskAgent", { sessionId })}
-          title={noModel ? "Add a model in Settings" : undefined}
+          title={
+            noModel
+              ? "Add a model in Settings"
+              : session.state !== "active"
+                ? "Resume the Session to ask the agent"
+                : undefined
+          }
         >
           Ask agent
         </button>

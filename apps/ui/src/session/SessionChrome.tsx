@@ -89,6 +89,7 @@ export function SessionHeader(props: {
 
 export function SessionSidebar(props: {
   artifacts: ArtifactItem[];
+  sessionState: "active" | "paused" | "ended";
   activeArtifactId: string;
   setActiveArtifactId: Dispatch<SetStateAction<string>>;
   availableArtifacts: ArtifactItem[];
@@ -148,27 +149,33 @@ export function SessionSidebar(props: {
       ) : null}
       <div className="session-controls">
         <h2 className="eyebrow">Session</h2>
-        <button
-          onClick={() =>
-            void window.vibecab.command("vc.PauseSession", { sessionId: props.sessionId }).then(props.onRefresh)
-          }
-        >
-          Pause
-        </button>
-        <button
-          onClick={() =>
-            void window.vibecab.command("vc.ResumeSession", { sessionId: props.sessionId }).then(props.onRefresh)
-          }
-        >
-          Resume
-        </button>
-        <button
-          onClick={() =>
-            void window.vibecab.command("vc.EndSession", { sessionId: props.sessionId }).then(props.onRefresh)
-          }
-        >
-          End
-        </button>
+        {props.sessionState === "active" ? (
+          <button
+            onClick={() =>
+              void window.vibecab.command("vc.PauseSession", { sessionId: props.sessionId }).then(props.onRefresh)
+            }
+          >
+            Pause
+          </button>
+        ) : null}
+        {props.sessionState === "paused" ? (
+          <button
+            onClick={() =>
+              void window.vibecab.command("vc.ResumeSession", { sessionId: props.sessionId }).then(props.onRefresh)
+            }
+          >
+            Resume
+          </button>
+        ) : null}
+        {props.sessionState !== "ended" ? (
+          <button
+            onClick={() =>
+              void window.vibecab.command("vc.EndSession", { sessionId: props.sessionId }).then(props.onRefresh)
+            }
+          >
+            End
+          </button>
+        ) : null}
       </div>
     </nav>
   );

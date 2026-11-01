@@ -21,6 +21,8 @@ export function ThreadPanel({
   onAskAgent,
   onSetThreadTrigger,
   renderReply,
+  canReply = true,
+  readOnly = false,
 }: {
   threads: VcThreadsOperation["result"];
   turns: AgentTurn[];
@@ -32,6 +34,8 @@ export function ThreadPanel({
   onAskAgent: (threadId: string) => void;
   onSetThreadTrigger: (threadId: string, mode: "realtime" | "batch" | "manual") => void;
   renderReply?: (commentId: string) => ReactNode;
+  canReply?: boolean;
+  readOnly?: boolean;
 }) {
   const [filter, setFilter] = useState("all");
   const filtered = useMemo(
@@ -78,6 +82,8 @@ export function ThreadPanel({
           onAskAgent={onAskAgent}
           onSetThreadTrigger={onSetThreadTrigger}
           renderReply={renderReply}
+          canReply={canReply}
+          readOnly={readOnly}
         />
       ))}
     </aside>
@@ -97,6 +103,8 @@ export function ThreadCard({
   onAskAgent,
   onSetThreadTrigger,
   renderReply,
+  canReply = true,
+  readOnly = false,
   inline = false,
 }: {
   thread: Thread;
@@ -109,6 +117,8 @@ export function ThreadCard({
   onAskAgent: (threadId: string) => void;
   onSetThreadTrigger: (threadId: string, mode: "realtime" | "batch" | "manual") => void;
   renderReply?: (commentId: string) => ReactNode;
+  canReply?: boolean;
+  readOnly?: boolean;
   inline?: boolean;
 }) {
   const [message, setMessage] = useState(""),
@@ -166,31 +176,33 @@ export function ThreadCard({
             {thread.comments[0]?.anchor ? "Open thread" : "On the whole session"}
           </button>
         )}
-        <details className="thread-menu">
-          <summary aria-label="Thread reply setting">⋯</summary>
-          <div className="menu">
-            <label>
-              Reply trigger
-              <select
-                aria-label={`Reply trigger for thread ${thread.threadId}`}
-                value={thread.replyTrigger?.mode ?? "session"}
-                onChange={(event) => {
-                  const mode = event.target.value;
-                  if (mode === "realtime" || mode === "batch" || mode === "manual")
-                    onSetThreadTrigger(thread.threadId, mode);
-                }}
-              >
-                <option value="session">Use session setting</option>
-                <option value="realtime">Realtime</option>
-                <option value="batch">Batch</option>
-                <option value="manual">Manual</option>
-              </select>
-            </label>
-            <button type="button" onClick={() => onAskAgent(thread.threadId)}>
-              Ask agent about this thread
-            </button>
-          </div>
-        </details>
+        {!readOnly && canReply ? (
+          <details className="thread-menu">
+            <summary aria-label="Thread reply setting">⋯</summary>
+            <div className="menu">
+              <label>
+                Reply trigger
+                <select
+                  aria-label={`Reply trigger for thread ${thread.threadId}`}
+                  value={thread.replyTrigger?.mode ?? "session"}
+                  onChange={(event) => {
+                    const mode = event.target.value;
+                    if (mode === "realtime" || mode === "batch" || mode === "manual")
+                      onSetThreadTrigger(thread.threadId, mode);
+                  }}
+                >
+                  <option value="session">Use session setting</option>
+                  <option value="realtime">Realtime</option>
+                  <option value="batch">Batch</option>
+                  <option value="manual">Manual</option>
+                </select>
+              </label>
+              <button type="button" onClick={() => onAskAgent(thread.threadId)}>
+                Ask agent about this thread
+              </button>
+            </div>
+          </details>
+        ) : null}
       </header>
       {removed ? <p className="anchor-note">This part was removed in v{currentVersion}.</p> : null}
       {revised ? <p className="anchor-note">Text changed since this comment.</p> : null}
@@ -213,7 +225,7 @@ export function ThreadCard({
                     : "",
           options = Array.isArray(comment.proposal) ? comment.proposal : undefined,
           single = comment.proposal && !Array.isArray(comment.proposal) ? comment.proposal : undefined,
-          canAgree = ["open", "discussing"].includes(comment.state);
+          canAgree = !readOnly && ["open", "discussing"].includes(comment.state);
         return (
           <div
             key={comment.commentId}
@@ -324,33 +336,20 @@ export function ThreadCard({
                   </button>
                 </>
               ) : null}
-              <button type="button" onClick={() => onReply(comment.commentId)}>
-                Reply
-              </button>
-              {comment.author.kind === "human" ? (
-                <>
-                  <button
-                    onClick={() => {
-                      const updated = window.prompt("Edit comment", comment.body);
-                      if (updated?.trim())
-                        void window.vibecab
-                          .command("vc.EditComment", { commentId: comment.commentId, body: updated })
-                          .then(onRefresh);
-                    }}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (window.confirm("Delete this comment?"))
-                        void window.vibecab
-                          .command("vc.DeleteComment", { commentId: comment.commentId })
-                          .then(onRefresh);
-                    }}
-                  >
-                    Delete
-                  </button>
-                </>
+              {canReply ? (
+                <button type="button" onClick={() => onReply(comment.commentId)}>
+                  Reply
+                </button>
+              ) : null}
+              {comment.author.kind === "human" && !readOnly ? (
+                <button
+                  onClick={() => {
+                    if (window.confirm("Delete this comment?"))
+                      void window.vibecab.command("vc.DeleteComment", { commentId: comment.commentId }).then(onRefresh);
+                  }}
+                >
+                  Delete
+                </button>
               ) : null}
               {turnId ? (
                 <button
