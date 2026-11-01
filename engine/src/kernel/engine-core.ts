@@ -376,6 +376,7 @@ export abstract class EngineCore {
   protected abstract judgeUpdateConflicts(
     update: Update,
     agreements: Agreement[],
+    comments: FeedbackComment[],
   ): Promise<{ agreements: Agreement[]; blocked: Update["itemResults"] }>;
   protected abstract modelJson(
     alias: string,

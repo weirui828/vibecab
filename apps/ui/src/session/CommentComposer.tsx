@@ -65,7 +65,6 @@ export function CommentComposer({
         </label>
       ) : null}
       <div className="composer-actions">
-        <span className="meta">⌘↩ to post</span>
         {onCancel ? (
           <button type="button" className="quiet-link" onClick={onCancel}>
             Cancel

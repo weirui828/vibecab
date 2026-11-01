@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { CSSProperties } from "react";
 import { Button } from "@wei/design-system";
 import { Hills, Mound } from "./Brand.js";
 import { Sidebar } from "./Sidebar.js";
@@ -17,6 +18,8 @@ import { SettingsView } from "./SettingsView.js";
 import { TrashView } from "./TrashView.js";
 import { RenameDialog } from "./RenameDialog.js";
 import type { RenameTarget } from "./RenameDialog.js";
+import { PanelResizeHandle } from "./PanelResizeHandle.js";
+import { useWorkspaceSidebar } from "./usePanelWidth.js";
 
 export function App() {
   const [state, setState] = useState<ConnectionState>("Starting"),
@@ -35,6 +38,7 @@ export function App() {
     [showNewDraft, setShowNewDraft] = useState(false),
     [renameTarget, setRenameTarget] = useState<RenameTarget>(),
     [theme, setTheme] = useState<"system" | "light" | "dark">("system");
+  const sidebar = useWorkspaceSidebar();
   const setConnection = (event: ConnectionEvent) => setState((current) => connectionTransition(current, event));
   const refresh = async () => {
     try {
@@ -151,7 +155,10 @@ export function App() {
     attention.length ? `${attention.length} need${attention.length === 1 ? "s" : ""} you` : "nothing waiting",
   ].join(" · ");
   return (
-    <div className="shell">
+    <div
+      className="shell"
+      style={{ "--workspace-sidebar-width": `${sidebar.collapsed ? 64 : sidebar.width}px` } as CSSProperties}
+    >
       <WindowDragRegion />
       <Sidebar
         artifactsCount={artifacts.length}
@@ -168,7 +175,20 @@ export function App() {
         onError={setError}
         onTrashed={(target, reviewCount) => setUndoTarget({ ...target, reviewCount })}
         onRename={(sessionId, title) => setRenameTarget({ kind: "session", id: sessionId, title })}
+        collapsed={sidebar.collapsed}
+        onToggleCollapsed={sidebar.toggle}
       />
+      {!sidebar.collapsed ? (
+        <PanelResizeHandle
+          label="workspace sidebar"
+          value={sidebar.width}
+          min={200}
+          max={360}
+          onChange={sidebar.setWidth}
+        />
+      ) : (
+        <div className="sidebar-resize-placeholder" />
+      )}
       <main className="main">
         {onboarding ? (
           <Onboarding

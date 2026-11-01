@@ -20,6 +20,7 @@ import { groupInlineThreads } from "./inlineThreads.js";
 import { SessionWorkflow } from "./SessionWorkflow.js";
 import { SessionHeader, SessionSidebar } from "./SessionChrome.js";
 import { useAnchorHighlights } from "./useAnchorHighlights.js";
+import { SessionPanelLayout } from "./SessionPanelLayout.js";
 import { useExportSaver } from "./useExportSaver.js";
 import { CommentComposer } from "./CommentComposer.js";
 import { CommentDock } from "./CommentDock.js";
@@ -82,6 +83,7 @@ export function SessionView({
     [updatedToast, setUpdatedToast] = useState(""),
     [message, setMessage] = useState("");
   const [decisionRecord, setDecisionRecord] = useState<unknown[]>();
+  const threadsVisible = showThreads && !viewingVersion;
   const refreshNow = useCallback(async () => {
     if (!artifact) return;
     const versionArgs = viewingVersion ? { version: viewingVersion } : {};
@@ -340,7 +342,7 @@ export function SessionView({
         setShowThreads={setShowThreads}
         onBack={onBack}
       />
-      <div className="session-grid">
+      <SessionPanelLayout threadsVisible={threadsVisible}>
         <SessionSidebar
           artifacts={artifacts}
           activeArtifactId={activeArtifactId}
@@ -462,7 +464,7 @@ export function SessionView({
             </p>
           ) : null}
         </main>
-        {showThreads && !viewingVersion ? (
+        {threadsVisible ? (
           <ThreadPanel
             threads={threads}
             turns={turns}
@@ -483,7 +485,7 @@ export function SessionView({
             renderReply={renderReply}
           />
         ) : null}
-      </div>
+      </SessionPanelLayout>
     </section>
   );
 }

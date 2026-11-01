@@ -1,7 +1,7 @@
 import { errorOf, fail } from "../../../contract/src/index.js";
 import type { Json, FeedbackComment, Agreement, Update, Job } from "../../../contract/src/index.js";
 import { AgentRuntime } from "../agent/runtime.js";
-import { findVerbatimQuote } from "./helpers.js";
+import { discussionFor, findVerbatimQuote } from "./helpers.js";
 import { inlineMarkdownToPlainText, replaceInlineMarkdownText } from "../../../contract/src/inline-markdown.js";
 import { sessionPreferences } from "../session-preferences.js";
 
@@ -9,6 +9,7 @@ export abstract class UpdatePreparationRuntime extends AgentRuntime {
   protected abstract judgeUpdateConflicts(
     update: Update,
     agreements: Agreement[],
+    comments: FeedbackComment[],
   ): Promise<{ agreements: Agreement[]; blocked: Update["itemResults"] }>;
   protected abstract planUpdate(
     update: Update,
@@ -229,16 +230,21 @@ export abstract class UpdatePreparationRuntime extends AgentRuntime {
       .map((id) => store.feedback("agreement", id))
       .filter((x): x is Json => x !== undefined)
       .map((x) => this.contract.read<Agreement>("agreement", x));
-    const { agreements, blocked } = await this.judgeUpdateConflicts(update, allAgreements);
-    const comments = allAgreements.map((a) =>
-      this.contract.read<FeedbackComment>("feedback-comment", store.feedback("comment", a.commentId)),
+    const rootComments = allAgreements.map((agreement) =>
+      this.contract.read<FeedbackComment>("feedback-comment", store.feedback("comment", agreement.commentId)),
     );
+    const threadIds = new Set(rootComments.map((comment) => comment.threadId));
+    const comments = store
+      .feedbackList("comment")
+      .map((value) => this.contract.read<FeedbackComment>("feedback-comment", value))
+      .filter((comment) => threadIds.has(comment.threadId));
+    const { agreements, blocked } = await this.judgeUpdateConflicts(update, allAgreements, comments);
     const elements = store.elements(update.artifactId, update.baseVersion),
       direct: import("../../../contract/src/index.js").CommitInput["changes"] = [],
       results: Update["itemResults"] = [...blocked],
       remaining: Agreement[] = [];
     for (const agreement of agreements) {
-      if (agreement.explicitInstruction) {
+      if (agreement.explicitInstruction || discussionFor(comments, agreement.commentId).length > 1) {
         remaining.push(agreement);
         continue;
       }

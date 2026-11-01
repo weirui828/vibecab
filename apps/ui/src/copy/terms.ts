@@ -5,6 +5,7 @@ export const terms = {
   session: "Session",
   update: "Update",
   agree: "Agree",
+  acknowledge: "Acknowledge",
   decline: "Decline",
   open: "Open",
   discussing: "Discussing",

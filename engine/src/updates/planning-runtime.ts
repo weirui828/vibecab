@@ -12,7 +12,7 @@ import type {
 import { estimateInputTokens, estimateReservationMicros } from "../gateway/ledger.js";
 import type { ModelEvent as GatewayEvent, ModelRequest as GatewayRequest } from "../gateway/types.js";
 import { UpdatePreparationRuntime } from "./preparation-runtime.js";
-import { storeRequestIndex } from "./helpers.js";
+import { discussionFor, storeRequestIndex } from "./helpers.js";
 import { untrustedMcpResult } from "../agent/tools/external.js";
 import { sessionPreferences } from "../session-preferences.js";
 
@@ -20,6 +20,7 @@ export abstract class UpdatePlanningRuntime extends UpdatePreparationRuntime {
   protected async judgeUpdateConflicts(
     update: Update,
     agreements: Agreement[],
+    comments: FeedbackComment[],
   ): Promise<{ agreements: Agreement[]; blocked: Update["itemResults"] }> {
     const store = this.available(),
       conflicts = store
@@ -49,6 +50,7 @@ export abstract class UpdatePlanningRuntime extends UpdatePreparationRuntime {
               pair.map((a) => ({
                 instruction: a.instruction,
                 comment: store.feedback("comment", a.commentId),
+                discussion: discussionFor(comments, a.commentId),
               })),
             ),
           },
@@ -308,6 +310,7 @@ export abstract class UpdatePlanningRuntime extends UpdatePreparationRuntime {
             itemId: a.agreementId,
             instruction: a.instruction,
             comment: comments.find((c) => c.commentId === a.commentId),
+            discussion: discussionFor(comments, a.commentId),
           })),
           elements,
         }),

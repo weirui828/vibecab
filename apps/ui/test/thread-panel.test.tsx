@@ -71,22 +71,21 @@ function renderPanel(command: ReturnType<typeof vi.fn>) {
   );
 }
 
-it("submits an explicit as-written instruction with the human agreement", async () => {
+it("acknowledges the comment without a separate instruction field", async () => {
   const command = vi.fn(async () => ({ ok: true as const, result: {} }));
   renderPanel(command);
-  fireEvent.change(screen.getByLabelText("How to apply this"), { target: { value: "Keep the first sentence." } });
-  fireEvent.click(screen.getByRole("button", { name: "Agree as written" }));
+  expect(screen.queryByLabelText("How to apply this")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Acknowledge" }));
   expect(command).toHaveBeenCalledWith("vc.Agree", {
     commentId: "comment",
     kind: "as_written",
-    instruction: "Keep the first sentence.",
   });
 });
 
 it("omits the optional instruction when the person agrees without one", () => {
   const command = vi.fn(async () => ({ ok: true as const, result: {} }));
   renderPanel(command);
-  fireEvent.click(screen.getByRole("button", { name: "Agree as written" }));
+  fireEvent.click(screen.getByRole("button", { name: "Acknowledge" }));
   expect(command).toHaveBeenCalledWith("vc.Agree", { commentId: "comment", kind: "as_written" });
 });
 

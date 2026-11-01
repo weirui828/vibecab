@@ -2,6 +2,7 @@ import { errorOf, fail } from "../../../contract/src/index.js";
 import type { Json, FeedbackComment, Agreement, Update } from "../../../contract/src/index.js";
 import type { ModelRequest as GatewayRequest } from "../gateway/types.js";
 import { UpdatePlanningRuntime } from "./planning-runtime.js";
+import { discussionFor } from "./helpers.js";
 
 export abstract class UpdateWritingRuntime extends UpdatePlanningRuntime {
   protected async runUpdateWriter(
@@ -47,6 +48,7 @@ export abstract class UpdateWritingRuntime extends UpdatePlanningRuntime {
             itemId: a.agreementId,
             instruction: a.instruction,
             comment: comments.find((c) => c.commentId === a.commentId),
+            discussion: discussionFor(comments, a.commentId),
           })),
           plan,
           elements,

@@ -111,8 +111,7 @@ export function ThreadCard({
   renderReply?: (commentId: string) => ReactNode;
   inline?: boolean;
 }) {
-  const [instructions, setInstructions] = useState<Record<string, string>>({}),
-    [message, setMessage] = useState(""),
+  const [message, setMessage] = useState(""),
     [manifest, setManifest] = useState<ContextManifest[]>();
   const submit = async (type: string, payload: unknown) => {
     const result = await window.vibecab.command(type, payload);
@@ -296,22 +295,6 @@ export function ThreadCard({
                 </button>
               </p>
             ) : null}
-            {comment.author.kind === "human" && canAgree ? (
-              <details className="apply-how">
-                <summary>Add how to apply</summary>
-                <label>
-                  <span className="visually-hidden">How to apply this</span>
-                  <textarea
-                    aria-label="How to apply this"
-                    placeholder="How to apply this (optional)"
-                    value={instructions[comment.commentId] ?? ""}
-                    onChange={(event) =>
-                      setInstructions((current) => ({ ...current, [comment.commentId]: event.target.value }))
-                    }
-                  />
-                </label>
-              </details>
-            ) : null}
             <div className="comment-actions">
               {comment.author.kind === "human" && canAgree ? (
                 <>
@@ -322,13 +305,10 @@ export function ThreadCard({
                       void submit("vc.Agree", {
                         commentId: comment.commentId,
                         kind: "as_written",
-                        ...(instructions[comment.commentId]?.trim()
-                          ? { instruction: instructions[comment.commentId]!.trim() }
-                          : {}),
                       })
                     }
                   >
-                    Agree as written
+                    {terms.acknowledge}
                   </button>
                   <button
                     type="button"

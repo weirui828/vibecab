@@ -575,7 +575,7 @@ it("labels agreements made during a running Update for the next Update", async (
     );
     const article = railCards().find((card) => card.textContent?.includes("Second request"));
     if (!article) throw new Error("Second comment has no thread article");
-    app.fireEvent.click(app.within(article).getByRole("button", { name: "Agree as written" }));
+    app.fireEvent.click(app.within(article).getByRole("button", { name: "Acknowledge" }));
     await app.waitFor(
       async () => {
         const records = await app.query<Array<{ commentId: string; state: string }>>("vc.DecisionRecord", {

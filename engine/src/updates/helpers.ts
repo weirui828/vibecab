@@ -1,3 +1,15 @@
+import type { FeedbackComment } from "../../../contract/src/index.js";
+
+export function discussionFor(comments: FeedbackComment[], commentId: string): FeedbackComment[] {
+  const root = comments.find((comment) => comment.commentId === commentId);
+  if (!root) return [];
+  return comments
+    .filter((comment) => comment.threadId === root.threadId)
+    .sort(
+      (left, right) => left.createdAt.localeCompare(right.createdAt) || left.commentId.localeCompare(right.commentId),
+    );
+}
+
 export function findVerbatimQuote(text: string, quote: string, prefix?: string, suffix?: string): number | undefined {
   const positions: number[] = [];
   for (let at = text.indexOf(quote); at >= 0; at = text.indexOf(quote, at + 1)) positions.push(at);

@@ -3,7 +3,7 @@ import { Button } from "@wei/design-system";
 import { terms } from "../copy/terms.js";
 import { startSession } from "../api/sessions.js";
 import type { ConnectionState } from "../connection.js";
-import { Mound, Wordmark } from "./Brand.js";
+import { Mark, Mound, Wordmark } from "./Brand.js";
 
 type Theme = "system" | "light" | "dark";
 
@@ -22,6 +22,8 @@ export function Sidebar({
   onError,
   onTrashed,
   onRename,
+  collapsed,
+  onToggleCollapsed,
 }: {
   artifactsCount: number;
   sessions: VcSessionsOperation["result"];
@@ -37,12 +39,36 @@ export function Sidebar({
   onError: (message: string) => void;
   onTrashed: (target: { kind: "artifact" | "session"; id: string }, reviewCount: number) => void;
   onRename: (sessionId: string, title: string) => void;
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
 }) {
+  if (collapsed)
+    return (
+      <aside className="sidebar is-collapsed" aria-label="Workspace sidebar">
+        <button
+          className="collapsed-brand"
+          aria-label="Expand workspace sidebar"
+          title="Expand sidebar"
+          onClick={onToggleCollapsed}
+        >
+          <Mark width={30} />
+          <span aria-hidden="true">›</span>
+        </button>
+      </aside>
+    );
   return (
-    <aside className="sidebar">
+    <aside className="sidebar" aria-label="Workspace sidebar">
       <div className="sidebar-brand">
         <Wordmark width={168} />
         <p className="tagline">Thinking. Vibing. Building.</p>
+        <button
+          className="sidebar-toggle"
+          aria-label="Collapse workspace sidebar"
+          title="Collapse sidebar"
+          onClick={onToggleCollapsed}
+        >
+          ‹
+        </button>
       </div>
       <nav className="sidebar-nav" aria-label="Workspace">
         <p className="eyebrow">Workspace</p>
