@@ -20,6 +20,7 @@ export function SessionHeader(props: {
   setPendingExportId: Dispatch<SetStateAction<string | undefined>>;
   setShowThreads: Dispatch<SetStateAction<boolean>>;
   onBack: () => void;
+  onCreateProject?: () => void;
   meta?: string;
 }) {
   const { artifact, artifacts } = props;
@@ -40,6 +41,9 @@ export function SessionHeader(props: {
         </p>
       </div>
       <div className="session-actions">
+        {props.onCreateProject ? (
+          <button onClick={props.onCreateProject}>Create a Project from this Session</button>
+        ) : null}
         {artifact ? (
           <HistoryPanel
             artifactId={artifact.artifactId}

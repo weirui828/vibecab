@@ -71,13 +71,23 @@ export abstract class QueryOperations extends CommandOperations {
           ids = p.sessionId
             ? links.filter((link) => link.sessionId === p.sessionId).map((link) => link.artifactId)
             : store.artifactIds();
+        const projects = store
+          .feedbackList("project")
+          .map((raw) => this.contract.read<{ projectId: string; artifactIds?: string[] }>("project", raw));
         return [...new Set(ids)]
           .filter((artifactId) => p.includeTrashed === true || !this.isLifecycleTrashed("artifact", artifactId))
           .map((artifactId) => {
             const artifact = store.artifact(artifactId),
               related = links.filter((link) => link.artifactId === artifactId);
             const role = related.find((link) => link.sessionId === p.sessionId)?.role;
-            return { ...artifact, sessionIds: related.map((link) => link.sessionId), ...(role ? { role } : {}) };
+            return {
+              ...artifact,
+              sessionIds: related.map((link) => link.sessionId),
+              projectIds: projects
+                .filter((project) => project.artifactIds?.includes(artifactId))
+                .map((p) => p.projectId),
+              ...(role ? { role } : {}),
+            };
           })
           .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
       }

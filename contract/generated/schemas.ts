@@ -2940,6 +2940,64 @@ export const schemasById: Record<string, AnySchema> = {
     ],
     "additionalProperties": false
   },
+  "https://vibecab.local/schemas/events/vc.ProjectItemAttached.json": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://vibecab.local/schemas/events/vc.ProjectItemAttached.json",
+    "title": "vcProjectItemAttachedEvent",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "kind": {
+        "enum": [
+          "idea",
+          "artifact",
+          "session"
+        ]
+      },
+      "id": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId",
+      "kind",
+      "id"
+    ],
+    "additionalProperties": false
+  },
+  "https://vibecab.local/schemas/events/vc.ProjectItemDetached.json": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://vibecab.local/schemas/events/vc.ProjectItemDetached.json",
+    "title": "vcProjectItemDetachedEvent",
+    "type": "object",
+    "properties": {
+      "projectId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "kind": {
+        "enum": [
+          "idea",
+          "artifact",
+          "session"
+        ]
+      },
+      "id": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "projectId",
+      "kind",
+      "id"
+    ],
+    "additionalProperties": false
+  },
   "https://vibecab.local/schemas/events/vc.ReplyTriggerChanged.json": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://vibecab.local/schemas/events/vc.ReplyTriggerChanged.json",
@@ -3677,6 +3735,20 @@ export const schemasById: Record<string, AnySchema> = {
         "type": "array",
         "items": {
           "type": "string"
+        }
+      },
+      "sessionIds": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "projectIds": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
         }
       }
     },
@@ -5527,6 +5599,13 @@ export const schemasById: Record<string, AnySchema> = {
                 "minLength": 1
               }
             },
+            "projectIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
             "role": {
               "enum": [
                 "primary",
@@ -5689,6 +5768,78 @@ export const schemasById: Record<string, AnySchema> = {
           "http",
           "cli",
           "mcp"
+        ]
+      }
+    }
+  },
+  "https://vibecab.local/schemas/operations/vc.AttachProjectItem.json": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://vibecab.local/schemas/operations/vc.AttachProjectItem.json",
+    "title": "vcAttachProjectItemOperation",
+    "type": "object",
+    "properties": {
+      "payload": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "item": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "idea",
+                  "artifact",
+                  "session"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "kind",
+              "id"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "projectId",
+          "item"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "projectId"
+        ]
+      }
+    },
+    "required": [
+      "payload",
+      "result"
+    ],
+    "additionalProperties": false,
+    "operation": {
+      "name": "vc.AttachProjectItem",
+      "kind": "command",
+      "meta": {
+        "effect": "collaborate",
+        "irreversible": false,
+        "channels": [
+          "in_process",
+          "http",
+          "cli"
         ]
       }
     }
@@ -6480,6 +6631,38 @@ export const schemasById: Record<string, AnySchema> = {
           },
           "background": {
             "type": "string"
+          },
+          "ideaIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "artifactIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "sessionIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "sourceSessionIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
           }
         },
         "required": [
@@ -6764,6 +6947,78 @@ export const schemasById: Record<string, AnySchema> = {
           "http",
           "cli",
           "mcp"
+        ]
+      }
+    }
+  },
+  "https://vibecab.local/schemas/operations/vc.DetachProjectItem.json": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://vibecab.local/schemas/operations/vc.DetachProjectItem.json",
+    "title": "vcDetachProjectItemOperation",
+    "type": "object",
+    "properties": {
+      "payload": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "item": {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "enum": [
+                  "idea",
+                  "artifact",
+                  "session"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "kind",
+              "id"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "projectId",
+          "item"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "projectId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "projectId"
+        ]
+      }
+    },
+    "required": [
+      "payload",
+      "result"
+    ],
+    "additionalProperties": false,
+    "operation": {
+      "name": "vc.DetachProjectItem",
+      "kind": "command",
+      "meta": {
+        "effect": "collaborate",
+        "irreversible": false,
+        "channels": [
+          "in_process",
+          "http",
+          "cli"
         ]
       }
     }
@@ -9572,6 +9827,14 @@ export const schemasById: Record<string, AnySchema> = {
               "batch",
               "manual"
             ]
+          },
+          "ideaIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
           }
         },
         "required": [
@@ -10226,6 +10489,38 @@ export const schemasById: Record<string, AnySchema> = {
       "createdAt": {
         "type": "string",
         "format": "date-time"
+      },
+      "ideaIds": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        },
+        "uniqueItems": true
+      },
+      "artifactIds": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        },
+        "uniqueItems": true
+      },
+      "sessionIds": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        },
+        "uniqueItems": true
+      },
+      "sourceSessionIds": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        },
+        "uniqueItems": true
       }
     },
     "required": [
@@ -10652,6 +10947,22 @@ export const schemasById: Record<string, AnySchema> = {
           "type": "string",
           "minLength": 1
         }
+      },
+      "ideaIds": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        },
+        "uniqueItems": true
+      },
+      "projectIds": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        },
+        "uniqueItems": true
       }
     },
     "required": [
@@ -12181,6 +12492,8 @@ export const schemasByPath: Record<string, string> = {
   "events/vc.IdeaCaptured.json": "https://vibecab.local/schemas/events/vc.IdeaCaptured.json",
   "events/vc.LifecycleChanged.json": "https://vibecab.local/schemas/events/vc.LifecycleChanged.json",
   "events/vc.ProjectCreated.json": "https://vibecab.local/schemas/events/vc.ProjectCreated.json",
+  "events/vc.ProjectItemAttached.json": "https://vibecab.local/schemas/events/vc.ProjectItemAttached.json",
+  "events/vc.ProjectItemDetached.json": "https://vibecab.local/schemas/events/vc.ProjectItemDetached.json",
   "events/vc.ReplyTriggerChanged.json": "https://vibecab.local/schemas/events/vc.ReplyTriggerChanged.json",
   "events/vc.ReportArrived.json": "https://vibecab.local/schemas/events/vc.ReportArrived.json",
   "events/vc.ReviewProgress.json": "https://vibecab.local/schemas/events/vc.ReviewProgress.json",
@@ -12233,6 +12546,7 @@ export const schemasByPath: Record<string, string> = {
   "operations/vc.Artifacts.json": "https://vibecab.local/schemas/operations/vc.Artifacts.json",
   "operations/vc.AskAgent.json": "https://vibecab.local/schemas/operations/vc.AskAgent.json",
   "operations/vc.AttachArtifact.json": "https://vibecab.local/schemas/operations/vc.AttachArtifact.json",
+  "operations/vc.AttachProjectItem.json": "https://vibecab.local/schemas/operations/vc.AttachProjectItem.json",
   "operations/vc.AttentionInbox.json": "https://vibecab.local/schemas/operations/vc.AttentionInbox.json",
   "operations/vc.CancelUpdate.json": "https://vibecab.local/schemas/operations/vc.CancelUpdate.json",
   "operations/vc.CaptureIdea.json": "https://vibecab.local/schemas/operations/vc.CaptureIdea.json",
@@ -12248,6 +12562,7 @@ export const schemasByPath: Record<string, string> = {
   "operations/vc.Decline.json": "https://vibecab.local/schemas/operations/vc.Decline.json",
   "operations/vc.DeleteComment.json": "https://vibecab.local/schemas/operations/vc.DeleteComment.json",
   "operations/vc.DeliveryState.json": "https://vibecab.local/schemas/operations/vc.DeliveryState.json",
+  "operations/vc.DetachProjectItem.json": "https://vibecab.local/schemas/operations/vc.DetachProjectItem.json",
   "operations/vc.Diff.json": "https://vibecab.local/schemas/operations/vc.Diff.json",
   "operations/vc.Digest.json": "https://vibecab.local/schemas/operations/vc.Digest.json",
   "operations/vc.DisconnectToolServer.json": "https://vibecab.local/schemas/operations/vc.DisconnectToolServer.json",

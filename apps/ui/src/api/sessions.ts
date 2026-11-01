@@ -9,8 +9,11 @@ export async function listSessions(): Promise<VcSessionsOperation["result"]> {
   const payload: VcSessionsOperation["payload"] = {};
   return window.vibecab.query<VcSessionsOperation["result"]>("vc.Sessions", payload);
 }
-export async function startSession(title: string): Promise<VcStartSessionOperation["result"]> {
-  const payload: VcStartSessionOperation["payload"] = { title, replyTrigger: "manual" },
+export async function startSession(
+  title: string,
+  options: Pick<VcStartSessionOperation["payload"], "ideaIds" | "primaryProjectId"> = {},
+): Promise<VcStartSessionOperation["result"]> {
+  const payload: VcStartSessionOperation["payload"] = { title, replyTrigger: "manual", ...options },
     result = await window.vibecab.command("vc.StartSession", payload);
   if (!result.ok) throw Error(errorMessage(result.error.code));
   return result.result as VcStartSessionOperation["result"];

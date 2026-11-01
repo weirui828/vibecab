@@ -5,6 +5,7 @@ export interface VcStartSessionOperation {
     title: string;
     primaryProjectId?: string;
     replyTrigger?: "realtime" | "batch" | "manual";
+    ideaIds?: string[];
   };
   result: {
     sessionId: string;

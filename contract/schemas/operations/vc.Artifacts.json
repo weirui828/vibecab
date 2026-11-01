@@ -24,6 +24,7 @@
           "createdAt": { "type": "string", "format": "date-time" },
           "updatedAt": { "type": "string", "format": "date-time" },
           "sessionIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "projectIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
           "role": { "enum": ["primary", "supporting"] }
         },
         "required": ["artifactId", "title", "mediaKind", "headVersion", "createdAt", "updatedAt", "sessionIds"],

@@ -8,4 +8,6 @@ export interface Session {
   replyTrigger: "realtime" | "batch" | "manual";
   createdAt: string;
   artifactIds?: string[];
+  ideaIds?: string[];
+  projectIds?: string[];
 }

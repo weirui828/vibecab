@@ -11,4 +11,6 @@ export interface Idea {
   text: string;
   createdAt: string;
   links?: string[];
+  sessionIds?: string[];
+  projectIds?: string[];
 }

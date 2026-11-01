@@ -13,7 +13,11 @@
         },
         "background": {
           "type": "string"
-        }
+        },
+        "ideaIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "artifactIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "sessionIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "sourceSessionIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
       },
       "required": ["title"],
       "additionalProperties": false

@@ -5,4 +5,8 @@ export interface Project {
   title: string;
   background?: string;
   createdAt: string;
+  ideaIds?: string[];
+  artifactIds?: string[];
+  sessionIds?: string[];
+  sourceSessionIds?: string[];
 }

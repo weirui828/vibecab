@@ -1,0 +1,710 @@
+<div class="viz-carousel" aria-label="VibeCab home design options">
+  <section data-variant="Two clear paths" aria-label="Home with two starting paths">
+    <style>
+      #vc-flow-home,
+      #vc-flow-home * {
+        box-sizing: border-box;
+      }
+      #vc-flow-home {
+        --vc-bg: light-dark(#f5f4ee, #171b18);
+        --vc-panel: light-dark(#fbfaf6, #202521);
+        --vc-text: light-dark(#282d27, #e8e9e2);
+        --vc-muted: light-dark(#697066, #a7afa3);
+        --vc-line: light-dark(#dedfd6, #3a423a);
+        --vc-moss: light-dark(#4e6045, #9aac8d);
+        --vc-moss-soft: light-dark(#e8ede4, #2d382d);
+        --vc-sedge: light-dark(#8a691e, #d2b35f);
+        --vc-surface: light-dark(#efefe8, #292f29);
+        color-scheme: light dark;
+        color: var(--vc-text);
+        background: var(--vc-bg);
+        font:
+          14px/1.45 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        border: 1px solid var(--vc-line);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      #vc-flow-home .windowbar {
+        height: 34px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 0 13px;
+        border-bottom: 1px solid var(--vc-line);
+        background: var(--vc-bg);
+      }
+      #vc-flow-home .windowbar i {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--vc-line);
+      }
+      #vc-flow-home .windowbar span {
+        margin: 0 auto;
+        padding-right: 34px;
+        color: var(--vc-muted);
+        font-size: 12px;
+      }
+      #vc-flow-home .layout {
+        display: grid;
+        grid-template-columns: 218px minmax(0, 1fr);
+        min-height: 570px;
+      }
+      #vc-flow-home .sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 22px;
+        padding: 22px 13px 16px;
+        border-right: 1px solid var(--vc-line);
+        background: var(--vc-panel);
+      }
+      #vc-flow-home .brand {
+        padding: 0 9px;
+        font-size: 17px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+      #vc-flow-home .brand small {
+        display: block;
+        margin-top: 4px;
+        color: var(--vc-muted);
+        font-size: 11px;
+        font-weight: 400;
+        letter-spacing: 0;
+      }
+      #vc-flow-home .nav {
+        display: grid;
+        gap: 3px;
+      }
+      #vc-flow-home .nav-label {
+        margin: 0 9px 5px;
+        color: var(--vc-muted);
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      #vc-flow-home .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 34px;
+        padding: 0 9px;
+        border-radius: 6px;
+        color: var(--vc-muted);
+      }
+      #vc-flow-home .nav-item.active {
+        background: var(--vc-moss-soft);
+        color: var(--vc-text);
+        font-weight: 500;
+      }
+      #vc-flow-home .nav-count {
+        margin-left: auto;
+        font-size: 11px;
+        color: var(--vc-muted);
+      }
+      #vc-flow-home .recent {
+        display: grid;
+        gap: 8px;
+      }
+      #vc-flow-home .session-link {
+        padding: 7px 9px;
+        border-radius: 6px;
+      }
+      #vc-flow-home .session-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+      }
+      #vc-flow-home .dot {
+        width: 8px;
+        height: 8px;
+        flex: none;
+        border-radius: 50%;
+        background: var(--vc-moss);
+      }
+      #vc-flow-home .dot.paused {
+        background: var(--vc-sedge);
+      }
+      #vc-flow-home .session-meta {
+        margin: 4px 0 0 16px;
+        color: var(--vc-muted);
+        font-size: 11px;
+      }
+      #vc-flow-home .sidebar-bottom {
+        display: flex;
+        gap: 10px;
+        margin-top: auto;
+        padding: 12px 9px 0;
+        border-top: 1px solid var(--vc-line);
+        color: var(--vc-muted);
+        font-size: 12px;
+      }
+      #vc-flow-home .main {
+        min-width: 0;
+        padding: 46px clamp(28px, 5vw, 62px) 42px;
+      }
+      #vc-flow-home .eyebrow {
+        margin: 0 0 8px;
+        color: var(--vc-muted);
+        font-size: 12px;
+      }
+      #vc-flow-home h1 {
+        max-width: 620px;
+        margin: 0;
+        font-size: clamp(27px, 4vw, 36px);
+        font-weight: 500;
+        letter-spacing: -0.035em;
+        line-height: 1.14;
+      }
+      #vc-flow-home .intro {
+        margin: 12px 0 28px;
+        color: var(--vc-muted);
+      }
+      #vc-flow-home .paths {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+      }
+      #vc-flow-home .path {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        min-height: 185px;
+        padding: 20px;
+        border: 1px solid var(--vc-line);
+        border-radius: 9px;
+        background: var(--vc-panel);
+      }
+      #vc-flow-home .path-mark {
+        display: grid;
+        width: 31px;
+        height: 31px;
+        place-items: center;
+        margin-bottom: 18px;
+        border-radius: 50%;
+        background: var(--vc-moss-soft);
+        color: var(--vc-moss);
+        font-size: 17px;
+      }
+      #vc-flow-home .path h2 {
+        margin: 0;
+        font-size: 17px;
+        font-weight: 500;
+      }
+      #vc-flow-home .path p {
+        margin: 7px 0 17px;
+        color: var(--vc-muted);
+        font-size: 12px;
+      }
+      #vc-flow-home .action {
+        margin-top: auto;
+        color: var(--vc-moss);
+        font-size: 12px;
+        font-weight: 600;
+      }
+      #vc-flow-home .section-heading {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin: 34px 0 8px;
+      }
+      #vc-flow-home .section-heading h2 {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 500;
+      }
+      #vc-flow-home .section-heading span {
+        color: var(--vc-muted);
+        font-size: 11px;
+      }
+      #vc-flow-home .continue-list {
+        border-top: 1px solid var(--vc-line);
+      }
+      #vc-flow-home .continue-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+        padding: 13px 3px;
+        border-bottom: 1px solid var(--vc-line);
+      }
+      #vc-flow-home .continue-row strong {
+        display: block;
+        font-size: 13px;
+        font-weight: 500;
+      }
+      #vc-flow-home .continue-row small {
+        display: block;
+        margin-top: 3px;
+        color: var(--vc-muted);
+        font-size: 11px;
+      }
+      #vc-flow-home .status {
+        color: var(--vc-muted);
+        font-size: 11px;
+      }
+      #vc-flow-home .status.active {
+        color: var(--vc-moss);
+      }
+      #vc-flow-home .status.paused {
+        color: var(--vc-sedge);
+      }
+      @media (max-width: 700px) {
+        #vc-flow-home .layout {
+          grid-template-columns: 172px minmax(0, 1fr);
+        }
+        #vc-flow-home .paths {
+          grid-template-columns: 1fr;
+        }
+      }
+      @media (max-width: 540px) {
+        #vc-flow-home .layout {
+          grid-template-columns: 1fr;
+        }
+        #vc-flow-home .sidebar {
+          gap: 12px;
+          border-right: 0;
+          border-bottom: 1px solid var(--vc-line);
+        }
+        #vc-flow-home .nav {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        #vc-flow-home .recent,
+        #vc-flow-home .sidebar-bottom {
+          display: none;
+        }
+        #vc-flow-home .main {
+          padding: 30px 20px;
+        }
+      }
+    </style>
+    <div id="vc-flow-home">
+      <div class="windowbar" aria-hidden="true"><i></i><i></i><i></i><span>VibeCab</span></div>
+      <div class="layout">
+        <aside class="sidebar" aria-label="Main navigation">
+          <div class="brand">VibeCab<small>Think together. Make something.</small></div>
+          <nav class="nav" aria-label="Library">
+            <p class="nav-label">Your work</p>
+            <div class="nav-item active">Home</div>
+            <div class="nav-item">Ideas <span class="nav-count">12</span></div>
+            <div class="nav-item">Projects <span class="nav-count">3</span></div>
+            <div class="nav-item">Drafts <span class="nav-count">8</span></div>
+          </nav>
+          <div class="recent" aria-label="Recent Sessions">
+            <p class="nav-label">Recent Sessions</p>
+            <div class="session-link">
+              <div class="session-title"><span class="dot"></span>Polish the opening</div>
+              <p class="session-meta">Draft: North Shore · Active</p>
+            </div>
+            <div class="session-link">
+              <div class="session-title"><span class="dot paused"></span>Explore the idea pile</div>
+              <p class="session-meta">4 Ideas · Paused</p>
+            </div>
+          </div>
+          <div class="sidebar-bottom"><span>Settings</span><span>Trash</span></div>
+        </aside>
+        <main class="main">
+          <p class="eyebrow">Home</p>
+          <h1>What would you like to work on?</h1>
+          <p class="intro">Pick a starting point. You can pause and return whenever you like.</p>
+          <div class="paths">
+            <section class="path" aria-label="Improve a Draft">
+              <span class="path-mark" aria-hidden="true">↗</span>
+              <h2>Improve a Draft</h2>
+              <p>Open a Draft and work through changes together in a Session.</p>
+              <span class="action">Choose a Draft&nbsp; →</span>
+            </section>
+            <section class="path" aria-label="Explore Ideas">
+              <span class="path-mark" aria-hidden="true">✳</span>
+              <h2>Explore Ideas</h2>
+              <p>Bring scattered Ideas into a Session. Shape the promising ones into Projects.</p>
+              <span class="action">Choose Ideas&nbsp; →</span>
+            </section>
+          </div>
+          <div class="section-heading">
+            <h2>Continue a Session</h2>
+            <span>See all Sessions&nbsp; →</span>
+          </div>
+          <div class="continue-list">
+            <div class="continue-row">
+              <div><strong>Polish the opening</strong><small>North Shore · Draft updated today</small></div>
+              <span class="status active">● Active</span>
+            </div>
+            <div class="continue-row">
+              <div><strong>Explore the idea pile</strong><small>4 Ideas · Last opened yesterday</small></div>
+              <span class="status paused">● Paused</span>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </section>
+  <section data-variant="Choose your materials" aria-label="Home organized around Ideas and Drafts" hidden>
+    <style>
+      #vc-flow-library,
+      #vc-flow-library * {
+        box-sizing: border-box;
+      }
+      #vc-flow-library {
+        --vc-bg: light-dark(#f5f4ee, #171b18);
+        --vc-panel: light-dark(#fbfaf6, #202521);
+        --vc-text: light-dark(#282d27, #e8e9e2);
+        --vc-muted: light-dark(#697066, #a7afa3);
+        --vc-line: light-dark(#dedfd6, #3a423a);
+        --vc-moss: light-dark(#4e6045, #9aac8d);
+        --vc-moss-soft: light-dark(#e8ede4, #2d382d);
+        --vc-sedge: light-dark(#8a691e, #d2b35f);
+        color-scheme: light dark;
+        color: var(--vc-text);
+        background: var(--vc-bg);
+        font:
+          14px/1.45 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        border: 1px solid var(--vc-line);
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      #vc-flow-library .windowbar {
+        height: 34px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 0 13px;
+        border-bottom: 1px solid var(--vc-line);
+      }
+      #vc-flow-library .windowbar i {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--vc-line);
+      }
+      #vc-flow-library .windowbar span {
+        margin: 0 auto;
+        padding-right: 34px;
+        color: var(--vc-muted);
+        font-size: 12px;
+      }
+      #vc-flow-library .layout {
+        display: grid;
+        grid-template-columns: 218px minmax(0, 1fr);
+        min-height: 570px;
+      }
+      #vc-flow-library .sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        padding: 22px 13px 16px;
+        border-right: 1px solid var(--vc-line);
+        background: var(--vc-panel);
+      }
+      #vc-flow-library .brand {
+        padding: 0 9px;
+        font-size: 17px;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+      #vc-flow-library .brand small {
+        display: block;
+        margin-top: 4px;
+        color: var(--vc-muted);
+        font-size: 11px;
+        font-weight: 400;
+        letter-spacing: 0;
+      }
+      #vc-flow-library .nav {
+        display: grid;
+        gap: 3px;
+      }
+      #vc-flow-library .nav-label {
+        margin: 0 9px 5px;
+        color: var(--vc-muted);
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      #vc-flow-library .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 34px;
+        padding: 0 9px;
+        border-radius: 6px;
+        color: var(--vc-muted);
+      }
+      #vc-flow-library .nav-item.active {
+        background: var(--vc-moss-soft);
+        color: var(--vc-text);
+        font-weight: 500;
+      }
+      #vc-flow-library .nav-count {
+        margin-left: auto;
+        font-size: 11px;
+        color: var(--vc-muted);
+      }
+      #vc-flow-library .nav-divider {
+        height: 1px;
+        margin: 3px 9px;
+        background: var(--vc-line);
+      }
+      #vc-flow-library .recent {
+        display: grid;
+        gap: 8px;
+      }
+      #vc-flow-library .session-link {
+        padding: 7px 9px;
+      }
+      #vc-flow-library .session-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+      }
+      #vc-flow-library .dot {
+        width: 8px;
+        height: 8px;
+        flex: none;
+        border-radius: 50%;
+        background: var(--vc-moss);
+      }
+      #vc-flow-library .dot.paused {
+        background: var(--vc-sedge);
+      }
+      #vc-flow-library .session-meta {
+        margin: 4px 0 0 16px;
+        color: var(--vc-muted);
+        font-size: 11px;
+      }
+      #vc-flow-library .sidebar-bottom {
+        display: flex;
+        gap: 10px;
+        margin-top: auto;
+        padding: 12px 9px 0;
+        border-top: 1px solid var(--vc-line);
+        color: var(--vc-muted);
+        font-size: 12px;
+      }
+      #vc-flow-library .main {
+        min-width: 0;
+        padding: 40px clamp(28px, 5vw, 58px) 42px;
+      }
+      #vc-flow-library .eyebrow {
+        margin: 0 0 8px;
+        color: var(--vc-muted);
+        font-size: 12px;
+      }
+      #vc-flow-library h1 {
+        max-width: 620px;
+        margin: 0;
+        font-size: clamp(27px, 4vw, 35px);
+        font-weight: 500;
+        letter-spacing: -0.035em;
+        line-height: 1.14;
+      }
+      #vc-flow-library .intro {
+        margin: 11px 0 26px;
+        color: var(--vc-muted);
+      }
+      #vc-flow-library .flow-row {
+        display: grid;
+        grid-template-columns: 145px minmax(0, 1fr);
+        gap: 20px;
+        padding: 18px 0;
+        border-top: 1px solid var(--vc-line);
+      }
+      #vc-flow-library .flow-row:last-of-type {
+        border-bottom: 1px solid var(--vc-line);
+      }
+      #vc-flow-library .flow-label {
+        color: var(--vc-muted);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      #vc-flow-library .flow-content h2 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 500;
+      }
+      #vc-flow-library .flow-content p {
+        margin: 5px 0 14px;
+        color: var(--vc-muted);
+        font-size: 12px;
+      }
+      #vc-flow-library .material-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+      }
+      #vc-flow-library .material {
+        padding: 7px 10px;
+        border: 1px solid var(--vc-line);
+        border-radius: 6px;
+        background: var(--vc-panel);
+        font-size: 12px;
+      }
+      #vc-flow-library .material.selected {
+        border-color: var(--vc-moss);
+        background: var(--vc-moss-soft);
+      }
+      #vc-flow-library .mini-action {
+        margin-left: 3px;
+        color: var(--vc-moss);
+        font-size: 12px;
+        font-weight: 600;
+      }
+      #vc-flow-library .sessions-heading {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin: 29px 0 8px;
+      }
+      #vc-flow-library .sessions-heading h2 {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 500;
+      }
+      #vc-flow-library .sessions-heading span {
+        color: var(--vc-muted);
+        font-size: 11px;
+      }
+      #vc-flow-library .session-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+        padding: 12px 2px;
+        border-top: 1px solid var(--vc-line);
+      }
+      #vc-flow-library .session-row strong {
+        display: block;
+        font-size: 13px;
+        font-weight: 500;
+      }
+      #vc-flow-library .session-row small {
+        display: block;
+        margin-top: 3px;
+        color: var(--vc-muted);
+        font-size: 11px;
+      }
+      #vc-flow-library .status {
+        color: var(--vc-muted);
+        font-size: 11px;
+      }
+      #vc-flow-library .status.active {
+        color: var(--vc-moss);
+      }
+      #vc-flow-library .status.paused {
+        color: var(--vc-sedge);
+      }
+      @media (max-width: 700px) {
+        #vc-flow-library .layout {
+          grid-template-columns: 172px minmax(0, 1fr);
+        }
+        #vc-flow-library .flow-row {
+          grid-template-columns: 1fr;
+          gap: 8px;
+        }
+      }
+      @media (max-width: 540px) {
+        #vc-flow-library .layout {
+          grid-template-columns: 1fr;
+        }
+        #vc-flow-library .sidebar {
+          gap: 12px;
+          border-right: 0;
+          border-bottom: 1px solid var(--vc-line);
+        }
+        #vc-flow-library .nav {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        #vc-flow-library .recent,
+        #vc-flow-library .sidebar-bottom {
+          display: none;
+        }
+        #vc-flow-library .main {
+          padding: 28px 20px;
+        }
+      }
+    </style>
+    <div id="vc-flow-library">
+      <div class="windowbar" aria-hidden="true"><i></i><i></i><i></i><span>VibeCab</span></div>
+      <div class="layout">
+        <aside class="sidebar" aria-label="Main navigation">
+          <div class="brand">VibeCab<small>Your ideas and creative work</small></div>
+          <nav class="nav" aria-label="Your work">
+            <p class="nav-label">Start</p>
+            <div class="nav-item active">Home</div>
+            <div class="nav-item">Ideas <span class="nav-count">12</span></div>
+            <div class="nav-divider"></div>
+            <p class="nav-label">Keep building</p>
+            <div class="nav-item">Projects <span class="nav-count">3</span></div>
+            <div class="nav-item">Drafts <span class="nav-count">8</span></div>
+          </nav>
+          <div class="recent" aria-label="Recent Sessions">
+            <p class="nav-label">Sessions</p>
+            <div class="session-link">
+              <div class="session-title"><span class="dot"></span>Polish the opening</div>
+              <p class="session-meta">North Shore · Active</p>
+            </div>
+            <div class="session-link">
+              <div class="session-title"><span class="dot paused"></span>Choose a direction</div>
+              <p class="session-meta">4 Ideas · Paused</p>
+            </div>
+          </div>
+          <div class="sidebar-bottom"><span>Settings</span><span>Trash</span></div>
+        </aside>
+        <main class="main">
+          <p class="eyebrow">Your creative work</p>
+          <h1>Start with what you have.</h1>
+          <p class="intro">Work directly on a Draft, or bring a few Ideas together and see where they lead.</p>
+          <section class="flow-row" aria-label="Work on a Draft">
+            <div class="flow-label">A Draft to improve</div>
+            <div class="flow-content">
+              <h2>Pick up a Draft</h2>
+              <p>Start a Session around a document and collaborate until it’s where you want it.</p>
+              <div class="material-list">
+                <span class="material selected">North Shore · v4</span>
+                <span class="material">Grant proposal · v2</span>
+                <span class="mini-action">All Drafts →</span>
+              </div>
+            </div>
+          </section>
+          <section class="flow-row" aria-label="Explore Ideas">
+            <div class="flow-label">Ideas to explore</div>
+            <div class="flow-content">
+              <h2>Bring Ideas together</h2>
+              <p>Choose Ideas for a Session. Turn one thread of exploration into a Project when it’s ready.</p>
+              <div class="material-list">
+                <span class="material selected">A neighborhood radio station</span>
+                <span class="material selected">Stories across generations</span>
+                <span class="material">A town that disappears</span>
+                <span class="mini-action">Browse Ideas →</span>
+              </div>
+            </div>
+          </section>
+          <div class="sessions-heading">
+            <h2>Pick up where you left off</h2>
+            <span>All Sessions →</span>
+          </div>
+          <div class="session-row">
+            <div><strong>Polish the opening</strong><small>North Shore · Draft updated today</small></div>
+            <span class="status active">● Active</span>
+          </div>
+          <div class="session-row">
+            <div><strong>Choose a direction</strong><small>Exploring 4 Ideas · Last opened yesterday</small></div>
+            <span class="status paused">● Paused</span>
+          </div>
+        </main>
+      </div>
+    </div>
+  </section>
+</div>

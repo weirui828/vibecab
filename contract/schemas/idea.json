@@ -7,7 +7,9 @@
     "ideaId": { "type": "string", "minLength": 1 },
     "text": { "type": "string", "minLength": 1 },
     "createdAt": { "type": "string", "format": "date-time" },
-    "links": { "type": "array", "items": { "type": "string" } }
+    "links": { "type": "array", "items": { "type": "string" } },
+    "sessionIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "projectIds": { "type": "array", "items": { "type": "string", "minLength": 1 } }
   },
   "required": ["ideaId", "text", "createdAt"],
   "additionalProperties": false

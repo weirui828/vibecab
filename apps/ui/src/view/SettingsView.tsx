@@ -132,7 +132,7 @@ export function SettingsView({ onBack }: { onBack: () => void }) {
     <section className="settings-view page">
       <header className="page-header">
         <div>
-          <p className="eyebrow">Workspace</p>
+          <p className="eyebrow">VibeCab</p>
           <h2 className="page-title">Settings</h2>
           <p className="meta">Everything here stays on this Mac.</p>
         </div>
@@ -417,7 +417,7 @@ export function SettingsView({ onBack }: { onBack: () => void }) {
       ) : null}
       {tab === "Data" ? (
         <section aria-label="Data settings">
-          <p>Workspace: {workspace}</p>
+          <p>Local data folder: {workspace}</p>
           <button onClick={() => void window.vibecab.app.reveal(workspace)}>Reveal in Finder</button>
           <button
             onClick={() =>

@@ -7,7 +7,11 @@
     "projectId": { "type": "string", "minLength": 1 },
     "title": { "type": "string", "minLength": 1 },
     "background": { "type": "string" },
-    "createdAt": { "type": "string", "format": "date-time" }
+    "createdAt": { "type": "string", "format": "date-time" },
+    "ideaIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "artifactIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "sessionIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "sourceSessionIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
   },
   "required": ["projectId", "title", "createdAt"],
   "additionalProperties": false

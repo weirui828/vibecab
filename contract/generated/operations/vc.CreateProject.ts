@@ -4,6 +4,10 @@ export interface VcCreateProjectOperation {
   payload: {
     title: string;
     background?: string;
+    ideaIds?: string[];
+    artifactIds?: string[];
+    sessionIds?: string[];
+    sourceSessionIds?: string[];
   };
   result: {
     projectId: string;

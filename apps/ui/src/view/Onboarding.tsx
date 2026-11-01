@@ -22,7 +22,7 @@ export function Onboarding({
           <Mark width={132} />
           <p className="eyebrow">Welcome</p>
           <h2>Think together, one comment at a time.</h2>
-          <p>VibeCab keeps your drafts and conversations in one private workspace.</p>
+          <p>VibeCab keeps your Drafts and Sessions together on this Mac.</p>
           <Button variant="primary" onClick={() => setStep(1)}>
             Get started
           </Button>

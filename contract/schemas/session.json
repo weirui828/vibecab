@@ -10,7 +10,9 @@
     "state": { "enum": ["active", "paused", "ended"] },
     "replyTrigger": { "enum": ["realtime", "batch", "manual"] },
     "createdAt": { "type": "string", "format": "date-time" },
-    "artifactIds": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+    "artifactIds": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "ideaIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+    "projectIds": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
   },
   "required": ["sessionId", "title", "state", "replyTrigger", "createdAt"],
   "additionalProperties": false

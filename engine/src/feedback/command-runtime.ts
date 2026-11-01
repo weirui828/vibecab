@@ -49,15 +49,59 @@ export abstract class FeedbackCommandRuntime extends FeedbackCoreRuntime {
           raw,
           "#/properties/payload",
         );
+        for (const ideaId of p.ideaIds ?? []) this.get<Idea>("idea", "idea", ideaId);
+        for (const artifactId of p.artifactIds ?? []) this.store.artifact(artifactId);
+        for (const sessionId of p.sessionIds ?? []) this.session(sessionId);
+        for (const sessionId of p.sourceSessionIds ?? []) this.session(sessionId);
         const projectId = this.ids.next("project_");
         this.save<Project>("project", "project", projectId, {
           projectId,
           title: p.title,
           ...(p.background === undefined ? {} : { background: p.background }),
+          ...(p.ideaIds?.length ? { ideaIds: [...new Set(p.ideaIds)] } : {}),
+          ...(p.artifactIds?.length ? { artifactIds: [...new Set(p.artifactIds)] } : {}),
+          ...(p.sessionIds?.length ? { sessionIds: [...new Set(p.sessionIds)] } : {}),
+          ...(p.sourceSessionIds?.length ? { sourceSessionIds: [...new Set(p.sourceSessionIds)] } : {}),
           createdAt: this.clock.now(),
         });
         this.event("vc.ProjectCreated", { kind: "project", id: projectId }, { projectId });
         return { projectId };
+      }
+      case "vc.AttachProjectItem":
+      case "vc.DetachProjectItem": {
+        const p = this.contract.read<{
+          projectId: string;
+          item: { kind: "idea" | "artifact" | "session"; id: string };
+        }>("operations/" + name, raw, "#/properties/payload");
+        const project = this.get<Project>("project", "project", p.projectId),
+          key = p.item.kind === "idea" ? "ideaIds" : p.item.kind === "artifact" ? "artifactIds" : "sessionIds";
+        if (p.item.kind === "idea") this.get<Idea>("idea", "idea", p.item.id);
+        else if (p.item.kind === "artifact") this.store.artifact(p.item.id);
+        else this.session(p.item.id);
+        const current = project[key] ?? [],
+          attached = name === "vc.AttachProjectItem",
+          values = attached ? [...new Set([...current, p.item.id])] : current.filter((id) => id !== p.item.id);
+        if (!attached && values.length === current.length) fail("not_found", "Item is not attached to this Project");
+        this.save<Project>("project", "project", p.projectId, { ...project, [key]: values });
+        if (!attached && p.item.kind === "session") {
+          const session = this.session(p.item.id);
+          if (session.primaryProjectId === p.projectId) {
+            const detached = { ...session };
+            delete detached.primaryProjectId;
+            this.save<Session>("session", "session", p.item.id, detached);
+          }
+        }
+        const eventType = attached ? "vc.ProjectItemAttached" : "vc.ProjectItemDetached";
+        this.event(
+          eventType,
+          { kind: "project", id: p.projectId },
+          {
+            projectId: p.projectId,
+            kind: p.item.kind,
+            id: p.item.id,
+          },
+        );
+        return { projectId: p.projectId };
       }
       case "vc.StartSession": {
         const p = this.contract.read<VcStartSessionOperation["payload"]>(
@@ -66,15 +110,22 @@ export abstract class FeedbackCommandRuntime extends FeedbackCoreRuntime {
           "#/properties/payload",
         );
         if (p.primaryProjectId) this.get<Project>("project", "project", p.primaryProjectId);
+        for (const ideaId of p.ideaIds ?? []) this.get<Idea>("idea", "idea", ideaId);
         const sessionId = this.ids.next("session_");
         this.save<Session>("session", "session", sessionId, {
           sessionId,
           title: p.title,
           ...(p.primaryProjectId ? { primaryProjectId: p.primaryProjectId } : {}),
+          ...(p.ideaIds?.length ? { ideaIds: [...new Set(p.ideaIds)] } : {}),
           state: "active",
           replyTrigger: p.replyTrigger ?? this.settings().sessions.default?.replyTrigger ?? "manual",
           createdAt: this.clock.now(),
         });
+        if (p.primaryProjectId) {
+          const project = this.get<Project>("project", "project", p.primaryProjectId),
+            sessionIds = [...new Set([...(project.sessionIds ?? []), sessionId])];
+          this.save<Project>("project", "project", p.primaryProjectId, { ...project, sessionIds });
+        }
         this.event("vc.SessionStarted", { kind: "session", id: sessionId }, { sessionId });
         return { sessionId };
       }

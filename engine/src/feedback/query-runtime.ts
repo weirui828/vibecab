@@ -26,7 +26,15 @@ export class Feedback extends FeedbackAgreementRuntime {
     switch (name) {
       case "vc.Ideas":
         this.contract.read("operations/vc.Ideas", raw, "#/properties/payload");
-        return this.list<Idea>("idea", "idea");
+        return this.list<Idea>("idea", "idea").map((idea) => ({
+          ...idea,
+          sessionIds: this.list<Session>("session", "session")
+            .filter((session) => session.ideaIds?.includes(idea.ideaId))
+            .map((session) => session.sessionId),
+          projectIds: this.list<Project>("project", "project")
+            .filter((project) => project.ideaIds?.includes(idea.ideaId))
+            .map((project) => project.projectId),
+        }));
       case "vc.Projects":
         this.contract.read("operations/vc.Projects", raw, "#/properties/payload");
         return this.list<Project>("project", "project");
@@ -36,11 +44,20 @@ export class Feedback extends FeedbackAgreementRuntime {
           raw,
           "#/properties/payload",
         );
+        const projects = this.list<Project>("project", "project");
         const values = this.list<Session>("session", "session").map((session) => ({
           ...session,
           artifactIds: this.list<SessionArtifact>("attachment", "session-artifact")
             .filter((link) => link.sessionId === session.sessionId)
             .map((link) => link.artifactId),
+          projectIds: [
+            ...new Set([
+              ...(session.primaryProjectId ? [session.primaryProjectId] : []),
+              ...projects
+                .filter((project) => project.sessionIds?.includes(session.sessionId))
+                .map((project) => project.projectId),
+            ]),
+          ],
         }));
         return p.sessionId ? values.filter((s) => s.sessionId === p.sessionId) : values;
       }

@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/vc.AttachProjectItem.json",
+  "title": "vcAttachProjectItemOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": {
+        "projectId": { "type": "string", "minLength": 1 },
+        "item": {
+          "type": "object",
+          "properties": {
+            "kind": { "enum": ["idea", "artifact", "session"] },
+            "id": { "type": "string", "minLength": 1 }
+          },
+          "required": ["kind", "id"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["projectId", "item"],
+      "additionalProperties": false
+    },
+    "result": { "type": "object", "properties": { "projectId": { "type": "string" } }, "required": ["projectId"] }
+  },
+  "required": ["payload", "result"],
+  "additionalProperties": false,
+  "operation": {
+    "name": "vc.AttachProjectItem",
+    "kind": "command",
+    "meta": {
+      "effect": "collaborate",
+      "irreversible": false,
+      "channels": ["in_process", "http", "cli"]
+    }
+  }
+}

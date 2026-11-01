@@ -27,6 +27,7 @@ import { CommentDock } from "./CommentDock.js";
 import { DecisionRecordPanel } from "./DecisionRecordPanel.js";
 import { useCommentSelection } from "./selection.js";
 import { useSessionSync } from "./useSessionSync.js";
+import { getSessionHeaderMeta } from "./headerMeta.js";
 
 export function SessionView({
   sessionId,
@@ -37,6 +38,7 @@ export function SessionView({
   onAddDraft,
   onBack,
   onRefresh,
+  onCreateProject,
 }: {
   sessionId: string;
   session: VcSessionsOperation["result"][number];
@@ -46,6 +48,7 @@ export function SessionView({
   onAddDraft: () => Promise<void>;
   onBack: () => void;
   onRefresh: () => void;
+  onCreateProject?: () => void;
 }) {
   const [artifacts, setArtifacts] = useState(initialArtifacts),
     [activeArtifactId, setActiveArtifactId] = useState(initialArtifacts[0]?.artifactId ?? "");
@@ -317,17 +320,7 @@ export function SessionView({
         onSubmit={() => void post()}
       />
     ) : undefined;
-  const openThreads = threads.filter((thread) =>
-      thread.comments.some((comment) => ["open", "discussing", "agreed", "scheduled"].includes(comment.state)),
-    ).length,
-    waitingOnAgent = Object.values(delivery).filter((state) => state === "queued" || state === "delivered").length,
-    replyMode = { realtime: "live replies", batch: "batched replies", manual: "manual replies" }[session.replyTrigger],
-    headerMeta = [
-      `${elements.filter((element) => element.parentId === null).length} blocks`,
-      `${openThreads} open ${openThreads === 1 ? "thread" : "threads"}`,
-      ...(waitingOnAgent ? [`${waitingOnAgent} waiting on the agent`] : []),
-      replyMode,
-    ].join(" · ");
+  const headerMeta = getSessionHeaderMeta(session, elements, threads, delivery);
   return (
     <section className="session-view">
       <SessionHeader
@@ -346,6 +339,7 @@ export function SessionView({
         setPendingExportId={setPendingExportId}
         setShowThreads={setShowThreads}
         onBack={onBack}
+        onCreateProject={onCreateProject}
       />
       <SessionPanelLayout threadsVisible={threadsVisible}>
         <SessionSidebar

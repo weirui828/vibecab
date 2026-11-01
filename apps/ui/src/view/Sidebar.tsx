@@ -9,14 +9,17 @@ type Theme = "system" | "light" | "dark";
 
 export function Sidebar({
   artifactsCount,
+  ideasCount,
+  projectsCount,
   sessions,
   activeSessionId,
-  onHome,
+  route,
   state,
   theme,
   setTheme,
   needsYou,
   onSelectNone,
+  onNavigate,
   onConnected,
   onRefresh,
   onError,
@@ -26,14 +29,17 @@ export function Sidebar({
   onToggleCollapsed,
 }: {
   artifactsCount: number;
+  ideasCount: number;
+  projectsCount: number;
   sessions: VcSessionsOperation["result"];
   activeSessionId?: string;
-  onHome: boolean;
+  route: string;
   state: ConnectionState;
   theme: Theme;
   setTheme: (theme: Theme) => void;
   needsYou: (sessionId: string) => number;
   onSelectNone: () => void;
+  onNavigate: (path: string) => void;
   onConnected: () => void;
   onRefresh: () => Promise<void>;
   onError: (message: string) => void;
@@ -44,54 +50,70 @@ export function Sidebar({
 }) {
   if (collapsed)
     return (
-      <aside className="sidebar is-collapsed" aria-label="Workspace sidebar">
+      <aside className="sidebar is-collapsed" aria-label="Main navigation">
+        <div className="collapsed-brand" aria-hidden="true">
+          <Mark width={30} />
+        </div>
         <button
-          className="collapsed-brand"
-          aria-label="Expand workspace sidebar"
+          className="sidebar-toggle collapsed-sidebar-toggle"
+          aria-label="Expand main navigation"
           title="Expand sidebar"
           onClick={onToggleCollapsed}
         >
-          <Mark width={30} />
-          <span aria-hidden="true">›</span>
+          ›
         </button>
       </aside>
     );
   return (
-    <aside className="sidebar" aria-label="Workspace sidebar">
+    <aside className="sidebar" aria-label="Main navigation">
       <div className="sidebar-brand">
         <Wordmark width={168} />
         <p className="tagline">Thinking. Vibing. Building.</p>
-        <button
-          className="sidebar-toggle"
-          aria-label="Collapse workspace sidebar"
-          title="Collapse sidebar"
-          onClick={onToggleCollapsed}
-        >
-          ‹
-        </button>
       </div>
-      <nav className="sidebar-nav" aria-label="Workspace">
-        <p className="eyebrow">Workspace</p>
+      <nav className="sidebar-nav" aria-label="Your work">
+        <button className="nav-link" aria-current={route === "/" ? "page" : undefined} onClick={() => onNavigate("/")}>
+          Home
+        </button>
         <button
           className="nav-link"
-          aria-current={onHome ? "page" : undefined}
-          onClick={() => {
-            onSelectNone();
-            window.location.hash = "/";
-          }}
+          aria-current={route === "/ideas" ? "page" : undefined}
+          onClick={() => onNavigate("/ideas")}
+        >
+          {terms.idea}s <span className="count">{ideasCount}</span>
+        </button>
+        <button
+          className="nav-link"
+          aria-current={route === "/projects" ? "page" : undefined}
+          onClick={() => onNavigate("/projects")}
+        >
+          {terms.project}s <span className="count">{projectsCount}</span>
+        </button>
+        <button
+          className="nav-link"
+          aria-current={route === "/drafts" ? "page" : undefined}
+          onClick={() => onNavigate("/drafts")}
         >
           {terms.draft}s <span className="count">{artifactsCount}</span>
         </button>
       </nav>
       <div className="sidebar-sessions">
         <div className="row">
-          <p className="eyebrow">{terms.session}s</p>
+          <button
+            className="eyebrow sidebar-session-heading"
+            aria-current={route === "/sessions" ? "page" : undefined}
+            onClick={() => onNavigate("/sessions")}
+          >
+            {terms.session}s
+          </button>
           <button
             className="icon-button"
             aria-label={`New ${terms.session.toLowerCase()}`}
             onClick={() =>
               void startSession("New session")
-                .then(onRefresh)
+                .then(async ({ sessionId }) => {
+                  await onRefresh();
+                  window.location.hash = "/s/" + encodeURIComponent(sessionId);
+                })
                 .catch((failure) => onError(String(failure)))
             }
           >
@@ -116,7 +138,8 @@ export function Sidebar({
                 <Mound tone={session.state !== "active" ? "quiet" : waiting ? "attention" : "active"} />
                 <span className="session-link-title">{session.title}</span>
                 <small className="meta">
-                  {session.state} · {waiting} needs you
+                  {terms[session.state]} · {waiting} {waiting === 1 ? "item" : "items"} need{waiting === 1 ? "s" : ""}{" "}
+                  you
                 </small>
               </button>
               <span className="session-link-actions">
@@ -182,9 +205,11 @@ export function Sidebar({
           ))}
         </div>
         <p className="footer-links">
+          <button onClick={() => onNavigate("/help")}>{terms.help}</button>
+          <span aria-hidden="true"> · </span>
           <button
             onClick={() => {
-              window.location.hash = "/settings";
+              onNavigate("/settings");
             }}
           >
             Settings
@@ -192,12 +217,16 @@ export function Sidebar({
           <span aria-hidden="true"> · </span>
           <button
             onClick={() => {
-              window.location.hash = "/trash";
+              onNavigate("/trash");
             }}
           >
             Trash
           </button>
         </p>
+        <button className="sidebar-toggle" aria-label="Collapse main navigation" onClick={onToggleCollapsed}>
+          <span aria-hidden="true">‹</span>
+          Collapse sidebar
+        </button>
       </footer>
     </aside>
   );

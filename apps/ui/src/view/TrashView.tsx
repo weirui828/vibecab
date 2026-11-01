@@ -92,7 +92,7 @@ export function TrashView({ onBack, onChanged }: { onBack: () => void; onChanged
     <section aria-label="Trash view" className="trash-view page">
       <header className="page-header">
         <div>
-          <p className="eyebrow">Workspace</p>
+          <p className="eyebrow">Recently removed</p>
           <h2 className="page-title">Trash</h2>
           <p className="meta">Items are automatically purged after {retentionDays} days.</p>
         </div>
