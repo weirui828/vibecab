@@ -28,6 +28,7 @@ import { DecisionRecordPanel } from "./DecisionRecordPanel.js";
 import { useCommentSelection } from "./selection.js";
 import { useSessionSync } from "./useSessionSync.js";
 import { getSessionHeaderMeta } from "./headerMeta.js";
+import { DocumentMap } from "./DocumentMap.js";
 
 export function SessionView({
   sessionId,
@@ -373,6 +374,7 @@ export function SessionView({
             }
           }}
         >
+          {artifact && !viewingVersion ? <DocumentMap elements={elements} /> : null}
           {viewingVersion ? (
             <p role="status" className="viewing-banner">
               Viewing v{viewingVersion} — read only{" "}
