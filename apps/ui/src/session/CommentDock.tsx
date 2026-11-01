@@ -1,43 +1,21 @@
+import type { ReactNode } from "react";
 import type { Element } from "../../../../contract/generated/index.js";
-import { CommentComposer } from "./CommentComposer.js";
 
-/** Bottom composer for whole-session comments and the floating button for a text selection. */
+/** Whole-session composer plus the floating button shown next to a text selection. */
 export function CommentDock({
   selected,
   float,
-  body,
-  setBody,
-  suggestion,
-  setSuggestion,
-  replyingTo,
-  onSubmit,
-  onCancelReply,
+  composer,
   onFloatClick,
 }: {
   selected?: { element: Element; locator?: { quote: string; prefix: string; suffix: string } };
   float?: { left: number; top: number };
-  body: string;
-  setBody: (value: string) => void;
-  suggestion: string;
-  setSuggestion: (value: string) => void;
-  replyingTo: boolean;
-  onSubmit: () => void;
-  onCancelReply: () => void;
+  composer?: ReactNode;
   onFloatClick: () => void;
 }) {
   return (
     <>
-      {selected ? null : (
-        <CommentComposer
-          body={body}
-          setBody={setBody}
-          suggestion={suggestion}
-          setSuggestion={setSuggestion}
-          onSubmit={onSubmit}
-          replyingTo={replyingTo}
-          onCancel={replyingTo ? onCancelReply : undefined}
-        />
-      )}
+      {composer}
       {float && selected ? (
         <button
           type="button"

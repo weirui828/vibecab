@@ -1287,6 +1287,37 @@ button.comment-float {
 .thread-card:focus-visible {
   outline-offset: 0;
 }
+.inline-threads {
+  display: grid;
+  gap: 8px;
+  margin: 2px 0 26px;
+}
+.inline-thread {
+  padding: 12px;
+  border-left: 3px solid var(--color-warning-border);
+  background: var(--color-surface-raised);
+}
+.inline-quote {
+  flex: 1;
+  margin: 0;
+  color: var(--color-fg-muted);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-style: italic;
+  line-height: 1.45;
+}
+.inline-quote q {
+  quotes: "“" "”";
+}
+.inline-reply {
+  margin-top: 8px;
+}
+.inline-reply .comment-form {
+  margin: 0;
+}
+.inline-reply .comment-form textarea {
+  min-height: 48px;
+}
 .thread-card[data-anchor="revised"] {
   border-left: 3px solid var(--color-info-default);
 }
@@ -1474,18 +1505,18 @@ button.comment-float {
   flex-wrap: wrap;
   gap: 4px;
 }
-.threads-panel .comment-actions button:not(.agree) {
+.thread-card .comment-actions button:not(.agree) {
   padding: 3px 8px !important;
   border-color: transparent !important;
   background: transparent !important;
   color: var(--color-fg-muted);
   font-size: 12.5px !important;
 }
-.threads-panel .comment-actions button:not(.agree):hover {
+.thread-card .comment-actions button:not(.agree):hover {
   background: var(--color-surface-sunken) !important;
   color: var(--color-fg-default);
 }
-.threads-panel .agree {
+.thread-card .agree {
   padding: 4px 10px !important;
   font-size: 12.5px !important;
 }

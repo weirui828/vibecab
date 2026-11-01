@@ -17,6 +17,7 @@ import type { VcThreadsOperation } from "../../../../contract/generated/index.js
 import { DocumentView } from "../document/DocumentView.js";
 import { UpdateDiff } from "./UpdateDiff.js";
 import { coalesce } from "../coalesce.js";
+import { formatCountdown, turnFailureText } from "./workflowText.js";
 
 type Session = VcSessionsOperation["result"][number];
 type PlanItem = UpdatePlan["items"][number];
@@ -32,6 +33,7 @@ export function SessionWorkflow({
   onComment,
   selectedElementId,
   commentSlot,
+  annotations,
   commentable = true,
 }: {
   sessionId: string;
@@ -44,6 +46,7 @@ export function SessionWorkflow({
   onComment: (element: Element, locator?: { quote: string; prefix: string; suffix: string }) => void;
   selectedElementId?: string;
   commentSlot?: ReactNode;
+  annotations?: Record<string, ReactNode>;
   commentable?: boolean;
 }) {
   const [queryResult, setQueryResult] = useState<VcUpdatesOperation["result"]>({ updates: [] }),
@@ -275,6 +278,7 @@ export function SessionWorkflow({
         onComment={onComment}
         selectedElementId={selectedElementId}
         commentSlot={commentSlot}
+        annotations={annotations}
         commentable={commentable}
       />
       {conflicts.some((conflict) => conflict.state === "open") ? (
@@ -485,15 +489,4 @@ function updateResultCounts(results: Update["itemResults"]): string {
   const applied = results.filter((item) => item.status === "addressed").length,
     notApplied = results.filter((item) => item.status === "not_addressed").length;
   return `${applied} item${applied === 1 ? "" : "s"} applied · ${notApplied} not applied`;
-}
-
-function formatCountdown(seconds: number): string {
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
-}
-
-function turnFailureText(code: string | undefined): string {
-  if (code === "budget_exceeded") return "the session budget was reached. Check today's usage.";
-  if (code === "unavailable") return "the model is not configured or unavailable.";
-  if (code === "uncertain") return "the provider response could not be confirmed.";
-  return "the reply did not complete. Try again.";
 }

@@ -11,7 +11,7 @@ const floatWidth = 88;
  * button shown next to a text selection. The engine owns validation; this only resolves the
  * DOM selection into a schema-shaped anchor candidate.
  */
-export function useCommentSelection(elements: Element[], onClear: () => void) {
+export function useCommentSelection(elements: Element[], onClear: () => void, onRangeCaptured: () => void) {
   const [selected, setSelected] = useState<Selected>();
   const [float, setFloat] = useState<{ left: number; top: number }>();
   useEffect(() => {
@@ -47,6 +47,7 @@ export function useCommentSelection(elements: Element[], onClear: () => void) {
       setFloat(undefined);
       return;
     }
+    onRangeCaptured();
     setSelected({
       element,
       locator: locatorForTextSelection(element.text, start, start + quote.length),

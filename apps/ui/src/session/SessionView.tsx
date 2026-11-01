@@ -15,16 +15,17 @@ import type {
 } from "../../../../contract/generated/index.js";
 import { DocumentView } from "../document/DocumentView.js";
 import { ResumeCard } from "./ResumeCard.js";
-import { ThreadPanel } from "./ThreadPanel.js";
+import { ThreadCard, ThreadPanel } from "./ThreadPanel.js";
+import { groupInlineThreads } from "./inlineThreads.js";
 import { SessionWorkflow } from "./SessionWorkflow.js";
 import { SessionHeader, SessionSidebar } from "./SessionChrome.js";
 import { useAnchorHighlights } from "./useAnchorHighlights.js";
-import { coalesce } from "../coalesce.js";
 import { useExportSaver } from "./useExportSaver.js";
 import { CommentComposer } from "./CommentComposer.js";
 import { CommentDock } from "./CommentDock.js";
 import { DecisionRecordPanel } from "./DecisionRecordPanel.js";
 import { useCommentSelection } from "./selection.js";
+import { useSessionSync } from "./useSessionSync.js";
 
 export function SessionView({
   sessionId,
@@ -80,10 +81,8 @@ export function SessionView({
     [showThreads, setShowThreads] = useState(true),
     [updatedToast, setUpdatedToast] = useState(""),
     [message, setMessage] = useState("");
-  const onRefreshRef = useRef(onRefresh);
   const [decisionRecord, setDecisionRecord] = useState<unknown[]>();
-  useEffect(() => void (onRefreshRef.current = onRefresh), [onRefresh]);
-  const refresh = useCallback(async () => {
+  const refreshNow = useCallback(async () => {
     if (!artifact) return;
     const versionArgs = viewingVersion ? { version: viewingVersion } : {};
     // Load the Document first so it paints immediately; everything else follows in parallel.
@@ -174,7 +173,29 @@ export function SessionView({
     setTurns(nextTurns);
     setResume(nextResume);
     setDigest(nextDigest);
-  }, [artifact, sessionId, viewingVersion]);
+    // Deliberately keyed on primitives: a new `artifact` object identity must not restart the
+    // refresh chain on every render.
+  }, [artifact?.artifactId, artifact?.headVersion, sessionId, viewingVersion]);
+  // Polls, live events and user actions ask for refreshes concurrently. Run them one at a time and
+  // queue at most one follow-up, so a result can never be applied out of order and a refresh
+  // requested while another was in flight still sees the latest state.
+  const running = useRef<Promise<void> | undefined>(undefined),
+    queued = useRef(false);
+  const refresh = useCallback(() => {
+    if (running.current) {
+      queued.current = true;
+      return running.current;
+    }
+    running.current = (async () => {
+      do {
+        queued.current = false;
+        await refreshNow();
+      } while (queued.current);
+    })().finally(() => {
+      running.current = undefined;
+    });
+    return running.current;
+  }, [refreshNow]);
   useEffect(() => {
     let active = true;
     void refresh().catch(() => {
@@ -185,95 +206,21 @@ export function SessionView({
     };
   }, [refresh]);
   useExportSaver(pendingExportId, setPendingExportId, artifact?.title, setMessage);
-  useEffect(() => {
-    const refresher = coalesce(refresh),
-      mountedAt = Date.now();
-    const unsub = window.vibecab.subscribe(0, {}, (event) => {
-      // Subscriptions replay history from seq 0; only events newer than this view may toast or move the reader.
-      const live = Date.parse(event.ts) >= mountedAt - 1_000;
-      if (
-        event.type === "vc.VersionCommitted" &&
-        artifact &&
-        typeof event.payload === "object" &&
-        event.payload !== null &&
-        Reflect.get(event.payload, "artifactId") === artifact.artifactId
-      ) {
-        const version = Reflect.get(event.payload, "version");
-        // Replayed history still advances the head; only live commits toast and move the reader.
-        if (typeof version === "number")
-          setArtifacts((current) =>
-            current.map((item) =>
-              item.artifactId === artifact.artifactId
-                ? { ...item, headVersion: Math.max(item.headVersion, version) }
-                : item,
-            ),
-          );
-        if (live) {
-          setUpdatedToast(typeof version === "number" ? `Updated to v${version}` : "Document updated");
-          setViewingVersion(undefined);
-          const topId = document.elementFromPoint(220, 100)?.closest<HTMLElement>("[data-element-id]")
-            ?.dataset.elementId;
-          onRefreshRef.current();
-          window.requestAnimationFrame(() => {
-            if (topId)
-              document.querySelector(`[data-element-id="${CSS.escape(topId)}"]`)?.scrollIntoView({ block: "start" });
-          });
-        }
-      }
-      if (
-        [
-          "vc.VersionCommitted",
-          "vc.CommentPosted",
-          "vc.CommentEdited",
-          "vc.CommentDeleted",
-          "vc.DeliveryStateChanged",
-          "vc.AgentTurnChanged",
-        ].includes(event.type)
-      )
-        refresher.schedule();
-      if (
-        event.type === "vc.LifecycleChanged" &&
-        typeof event.payload === "object" &&
-        event.payload !== null &&
-        Reflect.get(event.payload, "kind") === "export" &&
-        Reflect.get(event.payload, "action") === "completed"
-      ) {
-        const exportId = Reflect.get(event.payload, "id");
-        if (typeof exportId === "string") setPendingExportId(exportId);
-      }
-    });
-    const fallback = window.setInterval(() => refresher.schedule(), 1_500);
-    return () => {
-      refresher.stop();
-      unsub();
-      window.clearInterval(fallback);
-    };
-  }, [artifact, refresh]);
-  useEffect(() => {
-    let timer: number | undefined;
-    const mark = () => {
-      if (document.hasFocus())
-        timer = window.setTimeout(() => {
-          void window.vibecab.command("vc.MarkSeen", { sessionId });
-        }, 3000);
-    };
-    const focus = () => mark(),
-      blur = () => {
-        if (timer) window.clearTimeout(timer);
-      };
-    mark();
-    window.addEventListener("focus", focus);
-    window.addEventListener("blur", blur);
-    return () => {
-      if (timer) window.clearTimeout(timer);
-      window.removeEventListener("focus", focus);
-      window.removeEventListener("blur", blur);
-    };
-  }, [sessionId]);
+  useSessionSync({
+    artifact,
+    sessionId,
+    refresh,
+    onRefresh,
+    setArtifacts,
+    setViewingVersion,
+    setUpdatedToast,
+    setPendingExportId,
+  });
   useAnchorHighlights(threads);
   const { selected, float, setSelected, chooseRange, clearSelection, dismissFloat } = useCommentSelection(
     elements,
     () => setSuggestion(""),
+    () => setReplyTo(""),
   );
   const post = async () => {
     if (!body.trim()) return;
@@ -315,6 +262,54 @@ export function SessionView({
       />
     </div>
   ) : undefined;
+  const renderReply = (commentId: string) =>
+    replyTo === commentId ? (
+      <div className="inline-reply">
+        <CommentComposer
+          body={body}
+          setBody={setBody}
+          suggestion={suggestion}
+          setSuggestion={setSuggestion}
+          onSubmit={() => void post()}
+          onCancel={() => setReplyTo("")}
+          autoFocus
+        />
+      </div>
+    ) : undefined;
+  const card = (thread: import("./inlineThreads.js").Thread, inline: boolean) => (
+    <ThreadCard
+      key={thread.threadId}
+      thread={thread}
+      turns={turns}
+      nextUpdateCommentIds={nextUpdateCommentIds}
+      delivery={delivery}
+      currentVersion={artifact?.headVersion ?? 0}
+      onRefresh={refresh}
+      onReply={(commentId) => {
+        clearSelection();
+        setReplyTo(commentId);
+      }}
+      onAskAgent={(threadId) =>
+        void window.vibecab.command("vc.AskAgent", { sessionId, threadIds: [threadId] }).then(refresh)
+      }
+      onSetThreadTrigger={(threadId, mode) =>
+        void window.vibecab.command("vc.SetReplyTrigger", { sessionId, threadId, mode }).then(refresh)
+      }
+      renderReply={renderReply}
+      inline={inline}
+    />
+  );
+  const { annotations } = groupInlineThreads(threads, elements, (thread) => card(thread, true));
+  const wholeSessionComposer =
+    !selected && !replyTo ? (
+      <CommentComposer
+        body={body}
+        setBody={setBody}
+        suggestion={suggestion}
+        setSuggestion={setSuggestion}
+        onSubmit={() => void post()}
+      />
+    ) : undefined;
   const openThreads = threads.filter((thread) =>
       thread.comments.some((comment) => ["open", "discussing", "agreed", "scheduled"].includes(comment.state)),
     ).length,
@@ -430,6 +425,7 @@ export function SessionView({
                   }}
                   selectedElementId={selected?.element.elementId}
                   commentSlot={commentSlot}
+                  annotations={annotations}
                 />
               </>
             )
@@ -453,13 +449,7 @@ export function SessionView({
             <CommentDock
               selected={selected}
               float={float}
-              body={body}
-              setBody={setBody}
-              suggestion={suggestion}
-              setSuggestion={setSuggestion}
-              replyingTo={Boolean(replyTo)}
-              onSubmit={() => void post()}
-              onCancelReply={() => setReplyTo("")}
+              composer={wholeSessionComposer}
               onFloatClick={dismissFloat}
             />
           ) : null}
@@ -490,6 +480,7 @@ export function SessionView({
             onSetThreadTrigger={(threadId, mode) =>
               void window.vibecab.command("vc.SetReplyTrigger", { sessionId, threadId, mode }).then(refresh)
             }
+            renderReply={renderReply}
           />
         ) : null}
       </div>

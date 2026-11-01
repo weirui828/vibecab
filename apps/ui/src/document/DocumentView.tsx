@@ -28,6 +28,7 @@ export function DocumentView({
   showChanges,
   selectedElementId,
   commentSlot,
+  annotations,
   commentable = true,
 }: {
   artifactId: string;
@@ -38,6 +39,8 @@ export function DocumentView({
   showChanges?: boolean;
   selectedElementId?: string;
   commentSlot?: ReactNode;
+  /** Inline discussions keyed by the top-level block they belong to, rendered under that block. */
+  annotations?: Record<string, ReactNode>;
   commentable?: boolean;
 }) {
   const [visibleCount, setVisibleCount] = useState(400);
@@ -201,16 +204,17 @@ export function DocumentView({
     slotIsVisible = selectedTopId !== undefined && visible.some((element) => element.elementId === selectedTopId);
   return (
     <article className="document" aria-label={`Document version ${version}`} data-artifact-id={artifactId}>
-      {visible.map((element) =>
-        selectedTopId === element.elementId ? (
+      {visible.map((element) => {
+        const slot = selectedTopId === element.elementId ? commentSlot : undefined,
+          annotation = annotations?.[element.elementId];
+        return (
           <Fragment key={element.elementId}>
             {renderElement(element)}
-            {commentSlot}
+            {slot}
+            {annotation}
           </Fragment>
-        ) : (
-          <Fragment key={element.elementId}>{renderElement(element)}</Fragment>
-        ),
-      )}
+        );
+      })}
       {commentSlot && !slotIsVisible ? commentSlot : null}
       {top.length > visibleCount ? (
         <button onClick={() => setVisibleCount((count) => count + 100)}>

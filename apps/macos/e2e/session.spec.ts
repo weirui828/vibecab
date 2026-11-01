@@ -252,8 +252,14 @@ test("imports, comments on text, receives a reply, and catches up after relaunch
     );
     if (!JSON.stringify(replyState.threads).includes("I can tighten that sentence."))
       throw new Error(`Scripted reply was not posted: ${JSON.stringify(replyState)}`);
-    await expect(page.getByText("I can tighten that sentence.", { exact: true })).toBeVisible({ timeout: 20_000 });
-    await page.getByRole("button", { name: "Agree with option: Tighten sentence" }).click();
+    // The same thread appears inline beside its paragraph and in the rail.
+    await expect(page.locator(".inline-thread").getByText("I can tighten that sentence.", { exact: true })).toBeVisible(
+      { timeout: 20_000 },
+    );
+    await expect(
+      page.locator(".threads-panel").getByText("I can tighten that sentence.", { exact: true }),
+    ).toBeVisible();
+    await page.locator(".threads-panel").getByRole("button", { name: "Agree with option: Tighten sentence" }).click();
     await page.getByRole("button", { name: "Update now" }).click();
     await expect
       .poll(
@@ -264,7 +270,9 @@ test("imports, comments on text, receives a reply, and catches up after relaunch
         { timeout: 10_000 },
       )
       .toBe(true);
-    await expect(page.getByText("Applied in v2", { exact: true })).toBeVisible({ timeout: 30_000 });
+    await expect(page.locator(".threads-panel").getByText("Applied in v2", { exact: true })).toBeVisible({
+      timeout: 30_000,
+    });
     await expect(page.getByRole("heading", { name: "v1 → v2" })).toBeVisible({ timeout: 30_000 });
     await expect(page.locator(".update-diff")).toContainText("clearer sentence");
     const screenshots = join(appPath, "test-results");
@@ -287,7 +295,9 @@ test("imports, comments on text, receives a reply, and catches up after relaunch
     );
     await expect(page.getByText("Since you were here")).toBeVisible();
     await expect(page.getByText("New reply · I can tighten that sentence.", { exact: true })).toBeVisible();
-    await expect(page.getByText("I can tighten that sentence.", { exact: true })).toBeVisible();
+    await expect(
+      page.locator(".threads-panel").getByText("I can tighten that sentence.", { exact: true }),
+    ).toBeVisible();
     await app.evaluate(({ app: electronApp }) => electronApp.quit());
     await app.close();
     app = undefined;

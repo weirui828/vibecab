@@ -108,7 +108,7 @@ it("cancels an Update during plan review without changing the version", async ()
     await (await app.screen.findByRole("button", { name: "Cancel" })).click();
     await app.waitFor(async () => expect(await app.latestUpdateStatus()).toBe("cancelled"));
     expect(await app.headVersion()).toBe(1);
-    expect(app.screen.getByText("Agreed — waiting for the next Update")).toBeTruthy();
+    expect(app.screen.getAllByText("Agreed — waiting for the next Update")).toHaveLength(2);
   } finally {
     await app.close();
   }
@@ -269,7 +269,7 @@ it("in Manual mode replies only after Ask agent", async () => {
       expect(app.screen.getByRole("button", { name: "Ask agent" }).hasAttribute("disabled")).toBe(false),
     );
     await app.screen.getByRole("button", { name: "Ask agent" }).click();
-    expect(await app.screen.findByText("Manual reply.", {}, { timeout: 4_000 })).toBeTruthy();
+    expect(await app.screen.findAllByText("Manual reply.", {}, { timeout: 4_000 })).toHaveLength(2);
   } finally {
     await app.close();
   }
@@ -333,9 +333,13 @@ it("uses friendly feedback labels and a single separator with relative comment t
   try {
     await app.comment("Needs a response", app.elements[0]!.elementId);
     await app.reloadSession();
-    const comment = await app.screen.findByText("Needs a response");
-    const article = comment.closest("article");
+    await app.waitFor(
+      () => expect(app.dom.window.document.querySelector(".threads-panel article.thread-card")).toBeTruthy(),
+      { timeout: 4_000 },
+    );
+    const article = app.dom.window.document.querySelector<HTMLElement>(".threads-panel article.thread-card");
     if (!article) throw new Error("Comment has no thread article");
+    expect(app.within(article).getByText("Needs a response")).toBeTruthy();
     expect(app.within(article).getByText("Open")).toBeTruthy();
     expect(app.within(article).getByText(/^You · \d+ days? ago$/)).toBeTruthy();
     expect(app.within(article).queryByText(/You ·\s+·/)).toBeNull();
@@ -561,16 +565,26 @@ it("labels agreements made during a running Update for the next Update", async (
     await app.screen.findByRole("button", { name: "Approve plan" }, { timeout: 4_000 });
     const secondComment = await app.comment("Second request", app.elements[1]!.elementId);
     await app.reloadSession();
-    const refreshedThread = await app.screen.findByText("Second request", {}, { timeout: 4_000 });
-    const article = refreshedThread.closest("article");
+    const railCards = () => [
+      ...(app.dom.window.document.querySelectorAll<HTMLElement>(".threads-panel article.thread-card") ?? []),
+    ];
+    // Live-host UI under the parallel full-suite runner can need more than one poll cycle here.
+    await app.waitFor(
+      () => expect(railCards().some((card) => card.textContent?.includes("Second request"))).toBe(true),
+      { timeout: 10_000 },
+    );
+    const article = railCards().find((card) => card.textContent?.includes("Second request"));
     if (!article) throw new Error("Second comment has no thread article");
     app.fireEvent.click(app.within(article).getByRole("button", { name: "Agree as written" }));
-    await app.waitFor(async () => {
-      const records = await app.query<Array<{ commentId: string; state: string }>>("vc.DecisionRecord", {
-        artifactId: app.artifactId,
-      });
-      expect(records.find((record) => record.commentId === secondComment.commentId)?.state).toBe("agreed");
-    });
+    await app.waitFor(
+      async () => {
+        const records = await app.query<Array<{ commentId: string; state: string }>>("vc.DecisionRecord", {
+          artifactId: app.artifactId,
+        });
+        expect(records.find((record) => record.commentId === secondComment.commentId)?.state).toBe("agreed");
+      },
+      { timeout: 10_000 },
+    );
     expect(await app.within(article).findByText("Will go into the next Update", {}, { timeout: 4_000 })).toBeTruthy();
   } finally {
     await app.close();
@@ -592,15 +606,54 @@ it("comments on an individual piece from its comment affordance", async () => {
       target: { value: "Tighten this piece." },
     });
     app.fireEvent.click(app.screen.getByRole("button", { name: "Post comment" }));
-    await app.waitFor(async () => {
-      const threads = await app.query<Array<{ comments: Array<{ anchor?: { elementId: string } }> }>>("vc.Threads", {
-        sessionId: app.sessionId,
-        artifactId: app.artifactId,
-      });
-      expect(threads).toHaveLength(1);
-      expect(threads[0]?.comments[0]?.anchor?.elementId).toBe(second.elementId);
+    await app.waitFor(
+      async () => {
+        const threads = await app.query<Array<{ comments: Array<{ anchor?: { elementId: string } }> }>>("vc.Threads", {
+          sessionId: app.sessionId,
+          artifactId: app.artifactId,
+        });
+        expect(threads).toHaveLength(1);
+        expect(threads[0]?.comments[0]?.anchor?.elementId).toBe(second.elementId);
+      },
+      { timeout: 4_000 },
+    );
+    // Locality: the thread is rendered under the piece it belongs to, not in the rail.
+    const doc = app.dom.window.document;
+    await app.waitFor(
+      () => {
+        expect(doc.querySelector(".document .inline-threads")?.textContent).toContain("Tighten this piece.");
+      },
+      { timeout: 4_000 },
+    );
+    const inline = doc.querySelector(".document .inline-threads") as HTMLElement,
+      block = doc.querySelector(`[data-element-id="${second.elementId}"]`);
+    expect(inline.textContent).toContain("Tighten this piece.");
+    expect(block?.nextElementSibling?.classList.contains("inline-threads")).toBe(true);
+    expect(doc.querySelector(".threads-panel")?.textContent).toContain("Tighten this piece.");
+    // Replies open and stay inline too.
+    app.fireEvent.click(app.within(inline).getByRole("button", { name: "Reply" }));
+    await app.waitFor(() => expect(doc.querySelector(".document .inline-reply")).toBeTruthy(), { timeout: 4_000 });
+    const replyArea = doc.querySelector(".document .inline-reply") as HTMLElement;
+    app.fireEvent.change(app.within(replyArea).getByRole("textbox", { name: "Comment" }), {
+      target: { value: "Agreed, tightening it." },
     });
-    expect(await app.screen.findByText("Tighten this piece.", {}, { timeout: 4_000 })).toBeTruthy();
+    app.fireEvent.click(app.within(replyArea).getByRole("button", { name: "Post comment" }));
+    await app.waitFor(
+      async () => {
+        const threads = await app.query<Array<{ comments: Array<{ body: string }> }>>("vc.Threads", {
+          sessionId: app.sessionId,
+          artifactId: app.artifactId,
+        });
+        expect(threads[0]?.comments).toHaveLength(2);
+      },
+      { timeout: 4_000 },
+    );
+    await app.waitFor(
+      () => {
+        expect(doc.querySelector(".document .inline-threads")?.textContent).toContain("Agreed, tightening it.");
+      },
+      { timeout: 4_000 },
+    );
   } finally {
     await app.close();
   }

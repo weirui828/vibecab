@@ -138,4 +138,19 @@ it("opens the comment slot under the selected piece and marks it selected", () =
     "true",
   );
 });
+
+it("renders inline annotations under the block they belong to", () => {
+  const list = elements[2]!,
+    { container } = render(
+      <DocumentView
+        artifactId="artifact"
+        version={1}
+        elements={elements}
+        onComment={vi.fn()}
+        annotations={{ [list.elementId]: <div className="sentinel-annotation" /> }}
+      />,
+    ),
+    annotation = container.querySelector(".sentinel-annotation");
+  expect(annotation?.previousElementSibling?.getAttribute("data-element-id")).toBe(list.elementId);
+});
 // @vitest-environment jsdom
