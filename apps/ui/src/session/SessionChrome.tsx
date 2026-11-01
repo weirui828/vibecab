@@ -1,5 +1,6 @@
-import type { Dispatch, SetStateAction } from "react";
+import { useId, type Dispatch, type KeyboardEvent, type SetStateAction } from "react";
 import type { DiffResult, OutputSet } from "../../../../contract/generated/index.js";
+import { terms } from "../copy/terms.js";
 import { HistoryPanel, SnapshotPanel } from "./HistorySnapshotPanels.js";
 
 type ArtifactItem = { artifactId: string; title: string; headVersion: number };
@@ -98,6 +99,23 @@ export function SessionSidebar(props: {
   onAddDraft: () => Promise<void>;
   onRefresh: () => void;
 }) {
+  const arrowId = `session-arrow-${useId().replaceAll(":", "")}`;
+  const pauseSession = () =>
+    void window.vibecab.command("vc.PauseSession", { sessionId: props.sessionId }).then(props.onRefresh);
+  const resumeSession = () =>
+    void window.vibecab.command("vc.ResumeSession", { sessionId: props.sessionId }).then(props.onRefresh);
+  const endSession = () => {
+    if (window.confirm("End this Session? It can’t be resumed afterward.")) {
+      void window.vibecab.command("vc.EndSession", { sessionId: props.sessionId }).then(props.onRefresh);
+    }
+  };
+  const activateWithKeyboard = (event: KeyboardEvent<SVGGElement>, action: () => void) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      action();
+    }
+  };
+
   return (
     <nav className="session-sidebar" aria-label="Session drafts">
       <h2 className="eyebrow">Drafts</h2>
@@ -148,34 +166,119 @@ export function SessionSidebar(props: {
         </details>
       ) : null}
       <div className="session-controls">
-        <h2 className="eyebrow">Session</h2>
-        {props.sessionState === "active" ? (
-          <button
-            onClick={() =>
-              void window.vibecab.command("vc.PauseSession", { sessionId: props.sessionId }).then(props.onRefresh)
+        <h2 className="eyebrow">{terms.session}</h2>
+        <svg
+          className="session-state-diagram"
+          viewBox="0 0 190 145"
+          role="group"
+          aria-label={`Session lifecycle. Current state: ${terms[props.sessionState]}.`}
+        >
+          <defs>
+            <marker id={arrowId} markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+              <path d="M0 0 L6 3 L0 6 Z" />
+            </marker>
+          </defs>
+          <g
+            className="session-transition-button"
+            data-disabled={props.sessionState !== "active"}
+            role="button"
+            aria-label="Pause Session"
+            aria-disabled={props.sessionState !== "active"}
+            tabIndex={props.sessionState === "active" ? 0 : -1}
+            onClick={() => props.sessionState === "active" && pauseSession()}
+            onKeyDown={(event) =>
+              activateWithKeyboard(event, () => {
+                if (props.sessionState === "active") pauseSession();
+              })
             }
           >
-            Pause
-          </button>
-        ) : null}
-        {props.sessionState === "paused" ? (
-          <button
-            onClick={() =>
-              void window.vibecab.command("vc.ResumeSession", { sessionId: props.sessionId }).then(props.onRefresh)
+            <path className="session-transition-hit" d="M30 34 C3 43 3 94 30 105" />
+            <path className="session-transition" d="M30 34 C3 43 3 94 30 105" markerEnd={`url(#${arrowId})`} />
+            <text className="session-transition-label" x="12" y="70">
+              Pause
+            </text>
+          </g>
+          <g
+            className="session-transition-button"
+            data-disabled={props.sessionState !== "paused"}
+            role="button"
+            aria-label="Resume Session"
+            aria-disabled={props.sessionState !== "paused"}
+            tabIndex={props.sessionState === "paused" ? 0 : -1}
+            onClick={() => props.sessionState === "paused" && resumeSession()}
+            onKeyDown={(event) =>
+              activateWithKeyboard(event, () => {
+                if (props.sessionState === "paused") resumeSession();
+              })
             }
           >
-            Resume
-          </button>
-        ) : null}
-        {props.sessionState !== "ended" ? (
-          <button
-            onClick={() =>
-              void window.vibecab.command("vc.EndSession", { sessionId: props.sessionId }).then(props.onRefresh)
+            <path className="session-transition-hit" d="M48 105 C75 94 75 43 48 34" />
+            <path className="session-transition" d="M48 105 C75 94 75 43 48 34" markerEnd={`url(#${arrowId})`} />
+            <text className="session-transition-label" x="67" y="70">
+              Resume
+            </text>
+          </g>
+          <g
+            className="session-transition-button"
+            data-disabled={props.sessionState !== "active"}
+            role="button"
+            aria-label="End Session from Active"
+            aria-disabled={props.sessionState !== "active"}
+            tabIndex={props.sessionState === "active" ? 0 : -1}
+            onClick={() => props.sessionState === "active" && endSession()}
+            onKeyDown={(event) =>
+              activateWithKeyboard(event, () => {
+                if (props.sessionState === "active") endSession();
+              })
             }
           >
-            End
-          </button>
-        ) : null}
+            <path className="session-transition-hit" d="M53 27 C83 2 109 11 133 54" />
+            <path className="session-transition" d="M53 27 C83 2 109 11 133 54" markerEnd={`url(#${arrowId})`} />
+            <text className="session-transition-label" x="94" y="15">
+              End
+            </text>
+          </g>
+          <g
+            className="session-transition-button"
+            data-disabled={props.sessionState !== "paused"}
+            role="button"
+            aria-label="End Session from Paused"
+            aria-disabled={props.sessionState !== "paused"}
+            tabIndex={props.sessionState === "paused" ? 0 : -1}
+            onClick={() => props.sessionState === "paused" && endSession()}
+            onKeyDown={(event) =>
+              activateWithKeyboard(event, () => {
+                if (props.sessionState === "paused") endSession();
+              })
+            }
+          >
+            <path className="session-transition-hit" d="M53 112 C83 137 109 127 133 76" />
+            <path className="session-transition" d="M53 112 C83 137 109 127 133 76" markerEnd={`url(#${arrowId})`} />
+            <text className="session-transition-label" x="94" y="139">
+              End
+            </text>
+          </g>
+          {(
+            [
+              { state: "active", x: 40, y: 25 },
+              { state: "paused", x: 40, y: 114 },
+              { state: "ended", x: 149, y: 65 },
+            ] as const
+          ).map(({ state, x, y }) => (
+            <g
+              key={state}
+              className="session-state-node"
+              data-current={props.sessionState === state}
+              data-state={state}
+              role="img"
+              aria-label={terms[state]}
+            >
+              <title>{terms[state]}</title>
+              <circle className="session-state-current-ring" cx={x} cy={y} r="12" />
+              <circle className="session-state-dot" cx={x} cy={y} r="8" />
+            </g>
+          ))}
+        </svg>
       </div>
     </nav>
   );

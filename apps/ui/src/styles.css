@@ -779,6 +779,80 @@
   gap: 2px;
   margin-top: 28px;
 }
+.session-state-diagram {
+  width: 100%;
+  height: auto;
+  margin: 0 0 8px;
+  overflow: visible;
+}
+.session-state-diagram marker path {
+  fill: var(--color-border-strong);
+}
+.session-transition {
+  fill: none;
+  stroke: var(--color-border-strong);
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+.session-transition-button {
+  cursor: pointer;
+}
+.session-transition-button:focus,
+.session-transition-button:focus-visible {
+  outline: none;
+}
+.session-transition-button[data-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+.session-transition-hit {
+  fill: none;
+  stroke: transparent;
+  stroke-width: 16;
+  pointer-events: stroke;
+}
+.session-transition-button:hover:not([data-disabled="true"]) .session-transition,
+.session-transition-button:focus-visible .session-transition {
+  stroke: var(--color-accent-default);
+  stroke-width: 3;
+}
+.session-transition-label {
+  fill: var(--color-fg-muted);
+  font-size: 10px;
+  text-anchor: middle;
+}
+.session-transition-button:hover:not([data-disabled="true"]) .session-transition-label,
+.session-transition-button:focus-visible .session-transition-label {
+  fill: var(--color-accent-default);
+}
+.session-state-dot {
+  fill: var(--color-border-strong);
+  stroke: var(--color-surface-base);
+  stroke-width: 2;
+}
+.session-state-current-ring {
+  display: none;
+  fill: none;
+  stroke-width: 2;
+}
+.session-state-node[data-current="true"] .session-state-current-ring {
+  display: block;
+}
+.session-state-node[data-state="active"] .session-state-dot {
+  fill: var(--color-accent-default);
+}
+.session-state-node[data-state="active"] .session-state-current-ring {
+  stroke: var(--color-accent-default);
+}
+.session-state-node[data-state="paused"] .session-state-dot {
+  fill: var(--color-warning-default);
+}
+.session-state-node[data-state="paused"] .session-state-current-ring {
+  stroke: var(--color-warning-default);
+}
+.session-state-node[data-state="ended"] .session-state-current-ring {
+  stroke: var(--color-border-strong);
+}
 .session-sidebar .session-controls button {
   border-color: transparent;
   background: transparent;
