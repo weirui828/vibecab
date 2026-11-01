@@ -16,6 +16,10 @@ run(process.execPath, [resolve(appRoot, "scripts/generate-icons.mjs")]);
 await rm(resolve(appRoot, "build/engine-deploy"), { recursive: true, force: true });
 run("pnpm", ["deploy", "--filter", "@vibecab/host", "--prod", resolve(appRoot, "build/engine-deploy")]);
 run(process.execPath, [resolve(appRoot, "scripts/stage-package.mjs")]);
+// Clear electron-builder's per-architecture output and staging directories first.
+// Its own cleanup can race recursive writes when replacing a previous package.
+await rm(resolve(root, "release/mac-arm64"), { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+await rm(resolve(root, "release/mac-arm64.tmp"), { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 run(
   "pnpm",
   [
