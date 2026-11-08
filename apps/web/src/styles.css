@@ -697,9 +697,11 @@
 /* ---------- Toast ---------- */
 .vc-toast {
   position: fixed;
-  left: 50%;
-  bottom: 88px; /* above the session's floating bar */
+  inset: auto auto 88px 50%; /* above the session's floating bar; resets the popover's centring */
   z-index: 60;
+  margin: 0;
+  border: 0;
+  overflow: visible;
   display: flex;
   align-items: center;
   gap: 16px;

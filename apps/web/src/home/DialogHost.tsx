@@ -62,7 +62,12 @@ export function DialogHost({
         onClose={close}
         onAttach={(artifactId) =>
           attachTo
-            ? actions.attach(attachTo.sessionId, artifactId, attachTo.artifactIds.length ? "reference" : "primary")
+            ? actions.attach(
+                attachTo.sessionId,
+                artifactId,
+                attachTo.artifactIds.length ? "reference" : "primary",
+                attachTo.state === "paused",
+              )
             : Promise.resolve(false)
         }
       />

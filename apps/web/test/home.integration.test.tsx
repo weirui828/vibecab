@@ -91,3 +91,41 @@ it("moves a Session to Trash and brings it back with Undo", async () => {
     expect(sessions.map((s) => s.title)).toContain("Tundra walk");
   });
 });
+
+it("brings a Draft into a paused session by resuming it, and says so first", async () => {
+  const draft = async (title: string) =>
+    (await command<{ artifactId: string }>("vc.CreateArtifact", { title, mediaKind: "doc" })).artifactId;
+  const main = await draft("Paused main"),
+    extra = await draft("Bring me in");
+  const sessionId = (await command<{ sessionId: string }>("vc.StartSession", { title: "On hold" })).sessionId;
+  await command("vc.AttachArtifact", { sessionId, artifactId: main, role: "primary" });
+  await command("vc.PauseSession", { sessionId });
+  tl.cleanup();
+  window.location.hash = "/s/" + sessionId;
+  const { App } = await import("../src/App.js");
+  tl.render(<App bridge={bridge} />);
+  tl.fireEvent.click(await tl.screen.findByRole("button", { name: "Session actions" }));
+  tl.fireEvent.click(await tl.screen.findByRole("menuitem", { name: "Bring in a draft" }));
+  const dialog = await tl.screen.findByRole("dialog", { name: "Bring in a draft" });
+  expect(dialog.textContent).toContain("joins “On hold”, which resumes.");
+  tl.fireEvent.change(tl.within(dialog).getByRole("combobox"), { target: { value: extra } });
+  tl.fireEvent.click(tl.within(dialog).getByRole("button", { name: "Bring in" }));
+  await tl.waitFor(async () => {
+    const [session] = await bridge.query<Array<{ state: string; artifactIds: string[] }>>("vc.Sessions", {
+      sessionId,
+    });
+    expect(session?.state).toBe("active");
+    expect(session?.artifactIds).toContain(extra);
+  });
+  expect(window.location.hash).toBe(`#/s/${sessionId}/d/${extra}`);
+});
+
+it("clears “Give it a title.” once a file is chosen or the kind of Draft changes", async () => {
+  await renderApp();
+  tl.fireEvent.click(await tl.screen.findByRole("button", { name: "New draft" }));
+  const dialog = await tl.screen.findByRole("dialog", { name: "New draft" });
+  tl.fireEvent.click(tl.within(dialog).getByRole("button", { name: "Create" }));
+  expect(await tl.within(dialog).findByText("Give it a title.")).toBeTruthy();
+  tl.fireEvent.click(tl.within(dialog).getByText("Import Markdown"));
+  expect(tl.within(dialog).queryByText("Give it a title.")).toBeNull();
+});
