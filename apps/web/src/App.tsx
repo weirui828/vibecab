@@ -216,13 +216,19 @@ function SignedOut() {
       <div className="inner">
         <Mark height={36} />
         <h1 className="vc-display" style={{ fontSize: 34, marginTop: 12 }}>
-          Open VibeCab from its link
+          Sign in this browser
         </h1>
         <p className="vc-muted" style={{ margin: 0 }}>
-          For your safety, VibeCab opens only from the one-time link the web host prints when it starts. Run this and
-          open the link it shows:
+          This browser isn't signed in yet. For your safety, each browser signs in once with a one-time link, so nothing
+          else on this computer can use VibeCab as you.
         </p>
-        <code>pnpm web</code>
+        <p className="vc-muted" style={{ margin: 0 }}>
+          Open the link printed where VibeCab started, or get a new one while it runs:
+        </p>
+        <code>node apps/web/bin/vibecab-web.mjs link</code>
+        <p className="vc-muted small" style={{ margin: 0 }}>
+          Not running? Start it with <code>pnpm web</code>.
+        </p>
       </div>
     </div>
   );
