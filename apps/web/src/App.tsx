@@ -8,17 +8,15 @@ import { LiveStoreProvider } from "./live/LiveStore.js";
 import { useWorkspace } from "./live/workspace.js";
 import { ToastProvider } from "./ui/Toast.js";
 import { Mark, Wordmark } from "./ui/Brand.js";
-import { initialShell, useRoute, useTheme } from "./shell/prefs.js";
-import type { ShellChoice } from "./shell/prefs.js";
+import { useRoute, useTheme } from "./shell/prefs.js";
 import { Sidebar } from "./shell/Navigation.js";
 import type { NavProps } from "./shell/Navigation.js";
-import { TopBar } from "./shell/TopBar.js";
 import { DialogHost } from "./home/DialogHost.js";
 import { DraftsView, HomeView, LaterView, NeedsYouView, PageSkeleton } from "./home/Views.js";
 
 type Access = "checking" | "signed-out" | "ready";
 
-export function App({ bridge = webBridge(), shell = initialShell() }: { bridge?: WebBridge; shell?: ShellChoice }) {
+export function App({ bridge = webBridge() }: { bridge?: WebBridge }) {
   const [access, setAccess] = useState<Access>("checking"),
     [connection, setConnection] = useState<ConnectionState>("Starting"),
     [version, setVersion] = useState("0.1.0"),
@@ -57,7 +55,6 @@ export function App({ bridge = webBridge(), shell = initialShell() }: { bridge?:
     <LiveStoreProvider bridge={bridge}>
       <ToastProvider>
         <Shell
-          shell={shell}
           connection={connection}
           ready={access === "ready" && connection === "Connected"}
           theme={theme}
@@ -71,7 +68,6 @@ export function App({ bridge = webBridge(), shell = initialShell() }: { bridge?:
 }
 
 function Shell({
-  shell,
   connection,
   ready,
   theme,
@@ -79,7 +75,6 @@ function Shell({
   version,
   onRestart,
 }: Pick<NavProps, "connection" | "theme" | "setTheme" | "version"> & {
-  shell: ShellChoice;
   ready: boolean;
   onRestart(): void;
 }) {
@@ -135,36 +130,28 @@ function Shell({
     ) : null;
   return (
     <DialogHost sessions={workspace.sessions ?? []}>
-      <div className="vc-app" data-shell={shell}>
-        {shell === "sidebar" ? (
-          <>
-            <Sidebar {...nav} />
-            <dialog
-              ref={sheet}
-              className="vc-sheet"
-              aria-label="Navigation"
-              onClick={(e) => e.target === sheet.current && sheet.current?.close()}
-            >
-              <Sidebar {...nav} onNavigate={() => sheet.current?.close()} />
-            </dialog>
-          </>
-        ) : (
-          <TopBar {...nav} />
-        )}
+      <div className="vc-app">
+        <Sidebar {...nav} />
+        <dialog
+          ref={sheet}
+          className="vc-sheet"
+          aria-label="Navigation"
+          onClick={(e) => e.target === sheet.current && sheet.current?.close()}
+        >
+          <Sidebar {...nav} onNavigate={() => sheet.current?.close()} />
+        </dialog>
         <main className="vc-main">
-          {shell === "sidebar" && (
-            <div className="vc-mobilebar">
-              <a href="#/" aria-label="Home" style={{ display: "inline-flex" }}>
-                <Wordmark height={24} />
-              </a>
-              <IconButton
-                variant="ghost"
-                label="Menu"
-                icon={<Icon name="bars-3" size={20} />}
-                onClick={() => sheet.current?.showModal?.()}
-              />
-            </div>
-          )}
+          <div className="vc-mobilebar">
+            <a href="#/" aria-label="Home" style={{ display: "inline-flex" }}>
+              <Wordmark height={24} />
+            </a>
+            <IconButton
+              variant="ghost"
+              label="Menu"
+              icon={<Icon name="bars-3" size={20} />}
+              onClick={() => sheet.current?.showModal?.()}
+            />
+          </div>
           {banner}
           {page}
         </main>

@@ -9,7 +9,6 @@
   :root {
     --vc-sidebar: 240px;
     --vc-rail: 64px;
-    --vc-topbar: 60px;
     --vc-column: 720px;
     --vc-radius: 12px;
     --vc-radius-sm: 8px;
@@ -153,7 +152,7 @@
 .vc-app {
   min-height: 100dvh;
 }
-.vc-app[data-shell="sidebar"] {
+.vc-app {
   display: grid;
   grid-template-columns: var(--vc-sidebar) minmax(0, 1fr);
 }
@@ -167,11 +166,8 @@
   margin: 0 auto;
   padding: clamp(40px, 9vh, 96px) 32px 128px;
 }
-.vc-app[data-shell="top"] .vc-page {
-  padding-top: clamp(32px, 7vh, 72px);
-}
 
-/* Sidebar (version A) */
+/* Sidebar */
 .vc-sidebar {
   position: sticky;
   top: 0;
@@ -378,70 +374,7 @@
   font-size: 11.5px;
 }
 
-/* Top bar (version B) */
-.vc-topbar {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  height: var(--vc-topbar);
-  padding: 0 20px;
-  border-bottom: 1px solid var(--color-border-subtle);
-  background: color-mix(in srgb, var(--color-surface-base) 88%, transparent);
-  backdrop-filter: blur(12px);
-}
-.vc-topbar .end {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 4px;
-}
-.vc-topbar .vc-connection {
-  margin-right: 8px;
-}
-
-/* Floating bar on phones (version B), Handscroll's bottom bar. */
-.vc-dock {
-  position: fixed;
-  left: 50%;
-  bottom: max(16px, env(safe-area-inset-bottom));
-  z-index: 30;
-  display: none;
-  transform: translateX(-50%);
-  gap: 4px;
-  padding: 6px;
-  border: 1px solid var(--color-border-subtle);
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--color-surface-base) 92%, transparent);
-  backdrop-filter: blur(12px);
-  box-shadow: var(--vc-shadow-pop);
-}
-.vc-dock a {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 40px;
-  border-radius: 999px;
-  color: var(--color-fg-muted);
-}
-.vc-dock a[aria-current="page"] {
-  background: var(--color-surface-raised);
-  color: var(--color-fg-default);
-}
-.vc-dock .dot {
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--color-warning-default);
-}
-
-/* Phone top bar (version A) */
+/* Phone top bar */
 .vc-mobilebar {
   position: sticky;
   top: 0;
@@ -874,44 +807,44 @@
 
 /* ---------- Responsive ---------- */
 @media (max-width: 1023px) {
-  .vc-app[data-shell="sidebar"] {
+  .vc-app {
     grid-template-columns: var(--vc-rail) minmax(0, 1fr);
   }
-  .vc-app[data-shell="sidebar"] > .vc-sidebar {
+  .vc-app > .vc-sidebar {
     align-items: center;
     padding: 18px 10px 14px;
   }
-  .vc-app[data-shell="sidebar"] > .vc-sidebar .collapsible {
+  .vc-app > .vc-sidebar .collapsible {
     display: none;
   }
-  .vc-app[data-shell="sidebar"] > .vc-sidebar .rail-only {
+  .vc-app > .vc-sidebar .rail-only {
     display: flex;
   }
-  .vc-app[data-shell="sidebar"] > .vc-sidebar .vc-nav-link {
+  .vc-app > .vc-sidebar .vc-nav-link {
     justify-content: center;
     width: 44px;
     padding: 0;
   }
-  .vc-app[data-shell="sidebar"] > .vc-sidebar .vc-nav-link .label,
-  .vc-app[data-shell="sidebar"] > .vc-sidebar .vc-nav-link .count {
+  .vc-app > .vc-sidebar .vc-nav-link .label,
+  .vc-app > .vc-sidebar .vc-nav-link .count {
     display: none;
   }
-  .vc-app[data-shell="sidebar"] > .vc-sidebar .vc-sidebar-foot {
+  .vc-app > .vc-sidebar .vc-sidebar-foot {
     align-items: center;
     padding: 14px 0 0;
   }
-  .vc-app[data-shell="sidebar"] > .vc-sidebar .vc-rail-mark {
+  .vc-app > .vc-sidebar .vc-rail-mark {
     display: block;
   }
 }
 @media (max-width: 719px) {
-  .vc-app[data-shell="sidebar"] {
+  .vc-app {
     display: block;
   }
-  .vc-app[data-shell="sidebar"] > .vc-sidebar {
+  .vc-app > .vc-sidebar {
     display: none;
   }
-  .vc-app[data-shell="sidebar"] .vc-mobilebar {
+  .vc-app .vc-mobilebar {
     display: flex;
   }
   .vc-page {
@@ -930,31 +863,15 @@
   .vc-row .when {
     display: none;
   }
-  .vc-topbar {
-    grid-template-columns: 1fr auto;
-    padding: 0 12px 0 16px;
-  }
-  .vc-topbar nav {
-    display: none;
-  }
-  .vc-topbar .vc-connection .label {
-    display: none;
-  }
-  .vc-dock {
-    display: flex;
-  }
-  .vc-topbar .wide-only {
-    display: none;
-  }
   .vc-choice {
     grid-template-columns: 1fr;
   }
   .vc-toast {
-    bottom: 84px;
+    bottom: 24px;
   }
 }
 
-/* The sheet: the sidebar on phones (version A). */
+/* The sheet: the sidebar on phones. */
 .vc-sheet {
   position: fixed;
   inset: 0 auto 0 0;
