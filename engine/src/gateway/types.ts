@@ -33,6 +33,7 @@ export type ModelEvent =
       type: "usage";
       inputTokens?: number;
       outputTokens?: number;
+      cachedInputTokens?: number;
       quality: "reported" | "estimated" | "unknown";
     }
   | {
@@ -47,8 +48,17 @@ export type ModelEvent =
     };
 export type ProviderModel = ContractProviderModel;
 export type ModelCapabilities = ProviderModel["capabilities"];
+/** The built-in agent's id in budgets and call records; SDK agents (W12) have their own. */
+export const BUILT_IN_AGENT = "vibecab";
+/** Who a model call works for, recorded with the call. */
+export interface CallAttribution {
+  agentId: string;
+  sessionId?: string;
+  purpose: "reply" | "update" | "plan" | "digest" | "review";
+}
 export interface ModelCallOptions {
   reservationId: string;
+  attribution?: CallAttribution;
   idempotencyKey?: string;
   signal: AbortSignal;
   onSent?: () => Promise<void>;

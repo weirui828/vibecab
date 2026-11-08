@@ -12,7 +12,16 @@ export class BudgetLedger {
     private readonly timeZone: () => string = () => Intl.DateTimeFormat().resolvedOptions().timeZone,
     private readonly defaultTurnLimit: () => number | undefined = () => undefined,
   ) {}
+  /** Today's date in the budget time zone, as YYYY-MM-DD. */
+  private date(): string {
+    return this.normalize({ kind: "daily" }).key ?? fail("internal", "Could not determine local budget date");
+  }
+  /** daily and agent accounts are counted per day; an agent's account key gains "@date". */
+  private dated(scope: BudgetScope): boolean {
+    return scope.kind === "agent" && !!scope.key && !scope.key.includes("@");
+  }
   private normalize(scope: BudgetScope): BudgetScope {
+    if (this.dated(scope)) return { kind: "agent", key: `${scope.key}@${this.date()}` };
     if (scope.kind === "daily" && !scope.key) {
       let key: string;
       try {
@@ -37,6 +46,20 @@ export class BudgetLedger {
     const normalized = this.normalize(scope);
     return `${normalized.kind}:${normalized.key}`;
   }
+  /**
+   * A limit that holds for every day (the overall daily one, or an agent's): kept apart from the dated accounts, so
+   * a new day's account starts under it rather than with none.
+   */
+  private standingKey(scope: BudgetScope): string | undefined {
+    if (scope.kind === "daily") return "daily";
+    if (scope.kind === "agent" && scope.key) return "agent:" + scope.key.split("@")[0];
+    return undefined;
+  }
+  private standing(scope: BudgetScope): number | null {
+    const key = this.standingKey(scope),
+      found = key ? this.store.feedback("budget-standing", key) : undefined;
+    return found === undefined ? null : this.contract.read<{ limitMicros: number | null }>("json", found).limitMicros;
+  }
   private readState(scope: BudgetScope): BudgetState {
     const normalized = this.normalize(scope),
       found = this.store.feedback("budget-account", this.key(normalized));
@@ -44,11 +67,42 @@ export class BudgetLedger {
       "budget-state",
       found ?? {
         account: normalized,
-        limitMicros: normalized.kind === "turn" ? (this.defaultTurnLimit() ?? null) : null,
+        limitMicros:
+          normalized.kind === "turn"
+            ? (this.defaultTurnLimit() ?? null)
+            : this.standingKey(normalized)
+              ? this.standing(normalized)
+              : null,
         usedMicros: 0,
         reservedMicros: 0,
       },
     );
+  }
+  /** Today's spending: overall, and per agent (the built-in agent always, others once they have a limit or use). */
+  today(): {
+    date: string;
+    daily: { limitMicros: number | null; usedMicros: number; reservedMicros: number };
+    agents: Array<{ agentId: string; limitMicros: number | null; usedMicros: number; reservedMicros: number }>;
+  } {
+    const date = this.date(),
+      pick = ({ limitMicros, usedMicros, reservedMicros }: BudgetState) => ({
+        limitMicros,
+        usedMicros,
+        reservedMicros,
+      });
+    const ids = new Set(["vibecab"]);
+    for (const row of this.store.feedbackList("budget-standing")) {
+      const key = this.contract.read<{ key: string }>("json", row).key;
+      if (key.startsWith("agent:")) ids.add(key.slice("agent:".length));
+    }
+    for (const state of this.states())
+      if (state.account.kind === "agent" && state.account.key?.endsWith("@" + date))
+        ids.add(state.account.key.split("@")[0]!);
+    return {
+      date,
+      daily: pick(this.readState({ kind: "daily" })),
+      agents: [...ids].sort().map((agentId) => ({ agentId, ...pick(this.readState({ kind: "agent", key: agentId })) })),
+    };
   }
   state(scope: BudgetScope): BudgetState {
     return this.readState(scope);
@@ -60,6 +114,15 @@ export class BudgetLedger {
     if (limitMicros !== null && (!Number.isSafeInteger(limitMicros) || limitMicros < 0))
       fail("invalid", "Budget limit must be a non-negative integer");
     return this.store.transaction(() => {
+      // Set without a date, the daily limit (or an agent's) holds for every day from now on.
+      const standing =
+        (scope.kind === "daily" && !scope.key) || this.dated(scope) ? this.standingKey(scope) : undefined;
+      if (standing)
+        this.store.saveFeedback(
+          "budget-standing",
+          standing,
+          this.contract.read("json", { key: standing, limitMicros }),
+        );
       const current = this.readState(scope),
         next = this.contract.read<BudgetState>("budget-state", {
           ...current,

@@ -58,7 +58,8 @@ export class ProviderGateway {
       startMs = Date.parse(startedAt);
     let quality: "reported" | "estimated" | "unknown" = "unknown",
       inputTokens: number | undefined,
-      outputTokens: number | undefined;
+      outputTokens: number | undefined,
+      cachedInputTokens: number | undefined;
     let finishReason: "stop" | "length" | "tool_calls" | "content_filter" | "error" = "error",
       errorCode: string | undefined;
     try {
@@ -67,6 +68,7 @@ export class ProviderGateway {
           quality = event.quality;
           inputTokens = event.inputTokens;
           outputTokens = event.outputTokens;
+          cachedInputTokens = event.cachedInputTokens;
           yield event;
           continue;
         }
@@ -128,6 +130,12 @@ export class ProviderGateway {
           finishReason,
           durationMs: Math.max(0, Date.parse(this.clock.now()) - startMs),
           ...(errorCode ? { errorCode } : {}),
+          ...(options.attribution?.agentId ? { agentId: options.attribution.agentId } : {}),
+          ...(options.attribution?.sessionId ? { sessionId: options.attribution.sessionId } : {}),
+          ...(options.attribution?.purpose ? { purpose: options.attribution.purpose } : {}),
+          ...(inputTokens !== undefined ? { inputTokens } : {}),
+          ...(outputTokens !== undefined ? { outputTokens } : {}),
+          ...(cachedInputTokens !== undefined ? { cachedInputTokens } : {}),
           createdAt: startedAt,
         }),
       );

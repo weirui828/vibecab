@@ -4,9 +4,15 @@
   "title": "BudgetAccount",
   "type": "object",
   "properties": {
-    "kind": { "enum": ["daily", "session", "grant", "run", "turn"] },
-    "key": { "type": "string", "minLength": 1 }
+    "kind": {
+      "enum": ["daily", "agent", "session", "grant", "run", "turn"]
+    },
+    "key": {
+      "type": "string",
+      "minLength": 1
+    }
   },
   "required": ["kind"],
-  "additionalProperties": false
+  "additionalProperties": false,
+  "description": "A budget account. daily and agent are counted per day (the key gains the date); their limits set without a date last for every day after."
 }

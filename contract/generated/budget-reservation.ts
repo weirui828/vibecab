@@ -11,7 +11,10 @@ export interface BudgetReservation {
   usageQuality?: "reported" | "estimated" | "unknown";
   settledMicros?: number;
 }
+/**
+ * A budget account. daily and agent are counted per day (the key gains the date); their limits set without a date last for every day after.
+ */
 export interface BudgetAccount {
-  kind: "daily" | "session" | "grant" | "run" | "turn";
+  kind: "daily" | "agent" | "session" | "grant" | "run" | "turn";
   key?: string;
 }

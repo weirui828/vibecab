@@ -11,6 +11,10 @@
     "toolName": "settings",
     "description": "Read settings."
   },
+  "sys.SpendingToday": {
+    "toolName": "spending_today",
+    "description": "Today's model spending, overall and per agent, against its limits."
+  },
   "sys.Usage": {
     "toolName": "usage",
     "description": "Read usage."

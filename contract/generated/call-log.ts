@@ -12,4 +12,13 @@ export interface CallLog {
   durationMs: number;
   errorCode?: string;
   createdAt: string;
+  /**
+   * The agent the call worked for: vibecab, or an SDK agent (W12).
+   */
+  agentId?: string;
+  sessionId?: string;
+  purpose?: "reply" | "update" | "plan" | "digest" | "review";
+  inputTokens?: number;
+  outputTokens?: number;
+  cachedInputTokens?: number;
 }

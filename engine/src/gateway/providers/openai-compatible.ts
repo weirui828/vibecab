@@ -96,6 +96,9 @@ export class OpenAICompatibleProvider implements ModelProvider {
             type: "usage",
             inputTokens: chunk.usage.prompt_tokens,
             outputTokens: chunk.usage.completion_tokens,
+            ...(typeof chunk.usage.prompt_tokens_details?.cached_tokens === "number"
+              ? { cachedInputTokens: chunk.usage.prompt_tokens_details.cached_tokens }
+              : {}),
             quality: "reported",
           };
         const choice = chunk.choices[0];

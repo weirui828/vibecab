@@ -134,6 +134,12 @@ export abstract class QueryOperations extends CommandOperations {
         if (!budgets) fail("unavailable", "Budget ledger is not started");
         return { accounts: budgets.states(), calls: budgets.calls() };
       }
+      case "sys.SpendingToday": {
+        read();
+        const budgets = this.budgets;
+        if (!budgets) fail("unavailable", "Budget ledger is not started");
+        return budgets.today();
+      }
       case "sys.Budgets": {
         read();
         const budgets = this.budgets;

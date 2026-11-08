@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/sys.SpendingToday.json",
+  "title": "sysSpendingTodayOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "properties": {
+        "date": {
+          "type": "string",
+          "format": "date"
+        },
+        "daily": {
+          "type": "object",
+          "properties": {
+            "limitMicros": {
+              "type": ["integer", "null"],
+              "minimum": 0
+            },
+            "usedMicros": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "reservedMicros": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          "required": ["limitMicros", "usedMicros", "reservedMicros"],
+          "additionalProperties": false
+        },
+        "agents": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "agentId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "limitMicros": {
+                "type": ["integer", "null"],
+                "minimum": 0
+              },
+              "usedMicros": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "reservedMicros": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": ["agentId", "limitMicros", "usedMicros", "reservedMicros"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": ["date", "daily", "agents"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["payload", "result"],
+  "additionalProperties": false,
+  "operation": {
+    "name": "sys.SpendingToday",
+    "kind": "query",
+    "meta": {
+      "effect": "read",
+      "irreversible": false,
+      "channels": ["in_process", "http", "cli", "mcp"]
+    }
+  }
+}

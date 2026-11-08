@@ -13,8 +13,11 @@ export interface BudgetState {
   usedMicros: number;
   reservedMicros: number;
 }
+/**
+ * A budget account. daily and agent are counted per day (the key gains the date); their limits set without a date last for every day after.
+ */
 export interface BudgetAccount {
-  kind: "daily" | "session" | "grant" | "run" | "turn";
+  kind: "daily" | "agent" | "session" | "grant" | "run" | "turn";
   key?: string;
 }
 export interface CallLog {
@@ -29,4 +32,13 @@ export interface CallLog {
   durationMs: number;
   errorCode?: string;
   createdAt: string;
+  /**
+   * The agent the call worked for: vibecab, or an SDK agent (W12).
+   */
+  agentId?: string;
+  sessionId?: string;
+  purpose?: "reply" | "update" | "plan" | "digest" | "review";
+  inputTokens?: number;
+  outputTokens?: number;
+  cachedInputTokens?: number;
 }

@@ -602,6 +602,7 @@ export const schemasById: Record<string, AnySchema> = {
       "kind": {
         "enum": [
           "daily",
+          "agent",
           "session",
           "grant",
           "run",
@@ -616,7 +617,8 @@ export const schemasById: Record<string, AnySchema> = {
     "required": [
       "kind"
     ],
-    "additionalProperties": false
+    "additionalProperties": false,
+    "description": "A budget account. daily and agent are counted per day (the key gains the date); their limits set without a date last for every day after."
   },
   "https://vibecab.local/schemas/budget-reservation.json": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
@@ -816,6 +818,36 @@ export const schemasById: Record<string, AnySchema> = {
       "createdAt": {
         "type": "string",
         "format": "date-time"
+      },
+      "agentId": {
+        "type": "string",
+        "minLength": 1,
+        "description": "The agent the call worked for: vibecab, or an SDK agent (W12)."
+      },
+      "sessionId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "purpose": {
+        "enum": [
+          "reply",
+          "update",
+          "plan",
+          "digest",
+          "review"
+        ]
+      },
+      "inputTokens": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "outputTokens": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "cachedInputTokens": {
+        "type": "integer",
+        "minimum": 0
       }
     },
     "required": [
@@ -4769,6 +4801,113 @@ export const schemasById: Record<string, AnySchema> = {
     "additionalProperties": false,
     "operation": {
       "name": "sys.Settings",
+      "kind": "query",
+      "meta": {
+        "effect": "read",
+        "irreversible": false,
+        "channels": [
+          "in_process",
+          "http",
+          "cli",
+          "mcp"
+        ]
+      }
+    }
+  },
+  "https://vibecab.local/schemas/operations/sys.SpendingToday.json": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://vibecab.local/schemas/operations/sys.SpendingToday.json",
+    "title": "sysSpendingTodayOperation",
+    "type": "object",
+    "properties": {
+      "payload": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "daily": {
+            "type": "object",
+            "properties": {
+              "limitMicros": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0
+              },
+              "usedMicros": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "reservedMicros": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "limitMicros",
+              "usedMicros",
+              "reservedMicros"
+            ],
+            "additionalProperties": false
+          },
+          "agents": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "agentId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "limitMicros": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "minimum": 0
+                },
+                "usedMicros": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "reservedMicros": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "agentId",
+                "limitMicros",
+                "usedMicros",
+                "reservedMicros"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "date",
+          "daily",
+          "agents"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "required": [
+      "payload",
+      "result"
+    ],
+    "additionalProperties": false,
+    "operation": {
+      "name": "sys.SpendingToday",
       "kind": "query",
       "meta": {
         "effect": "read",
@@ -12890,6 +13029,7 @@ export const schemasByPath: Record<string, string> = {
   "operations/sys.SetProviderKeyRef.json": "https://vibecab.local/schemas/operations/sys.SetProviderKeyRef.json",
   "operations/sys.SetSettings.json": "https://vibecab.local/schemas/operations/sys.SetSettings.json",
   "operations/sys.Settings.json": "https://vibecab.local/schemas/operations/sys.Settings.json",
+  "operations/sys.SpendingToday.json": "https://vibecab.local/schemas/operations/sys.SpendingToday.json",
   "operations/sys.Usage.json": "https://vibecab.local/schemas/operations/sys.Usage.json",
   "operations/tmr.Cancel.json": "https://vibecab.local/schemas/operations/tmr.Cancel.json",
   "operations/tmr.Events.json": "https://vibecab.local/schemas/operations/tmr.Events.json",

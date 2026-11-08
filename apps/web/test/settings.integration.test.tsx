@@ -173,6 +173,22 @@ it("sets the daily limit and agent limits from Settings", async () => {
   });
 });
 
+it("gives the VibeCab agent its own daily limit beside the overall one", async () => {
+  await open("/settings/spending");
+  const spending = tl.within(await tl.screen.findByRole("region", { name: "Spending" }));
+  const field = await spending.findByLabelText("VibeCab agent: daily limit ($)");
+  tl.fireEvent.change(field, { target: { value: "1.25" } });
+  tl.fireEvent.submit(field.closest("form")!);
+  await tl.waitFor(async () => {
+    const today = await bridge.query<{ agents: Array<{ agentId: string; limitMicros: number | null }> }>(
+      "sys.SpendingToday",
+      {},
+    );
+    expect(today.agents).toContainEqual(expect.objectContaining({ agentId: "vibecab", limitMicros: 1_250_000 }));
+  });
+  await tl.waitFor(() => expect(spending.getByText(/\$0\.00 today of \$1\.25/)).toBeTruthy());
+});
+
 it("gives the assistant access once, lists it without the secret, and revokes it", async () => {
   const { container } = await open("/settings/agents");
   const assistant = tl.within(await tl.screen.findByRole("region", { name: "Your AI assistants" }));
