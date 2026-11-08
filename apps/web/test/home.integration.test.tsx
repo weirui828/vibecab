@@ -39,10 +39,10 @@ async function renderApp() {
   return tl.render(<App bridge={bridge} />);
 }
 
-it("shows the empty Home with one way forward on a new workspace", async () => {
+it("welcomes a new workspace without a model with the first run", async () => {
   await renderApp();
-  expect(await tl.screen.findByText("Nothing drafted yet.")).toBeTruthy();
-  expect(tl.screen.getAllByRole("button", { name: /New draft/ })).toHaveLength(1);
+  expect(await tl.screen.findByText("Welcome to VibeCab.")).toBeTruthy();
+  expect(tl.screen.getByRole("button", { name: "Get started" })).toBeTruthy();
 });
 
 it("lists Sessions and Drafts from the engine, and keeps them live", async () => {

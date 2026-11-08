@@ -3,6 +3,7 @@
 @import "./document/document.css";
 @import "./session/comments.css";
 @import "./session/loop.css";
+@import "./settings/settings.css";
 @source "../node_modules/@wei/design-system/dist";
 
 /* VibeCab web. Semantic design-system tokens only: no raw colours (a test enforces it).

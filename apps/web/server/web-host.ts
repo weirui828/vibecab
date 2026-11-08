@@ -1,7 +1,10 @@
+import { randomBytes, timingSafeEqual } from "node:crypto";
+import { existsSync } from "node:fs";
 import { createServer, request as httpRequest } from "node:http";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
-import { readFile } from "node:fs/promises";
-import { extname, join, normalize, resolve, sep } from "node:path";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { dirname, extname, join, normalize, resolve, sep } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { AddressInfo } from "node:net";
 import { Access, sameHost, sameOrigin } from "./access.js";
 import { EngineLink } from "./engine.js";
@@ -15,6 +18,8 @@ export interface WebHostOptions {
   middleware?: (req: IncomingMessage, res: ServerResponse, next: () => void) => void;
   fakeProvider?: string;
   version?: string;
+  /** Path of the MCP stdio relay for assistant setup; found in the repository when not given. */
+  mcpRelayPath?: string;
 }
 
 export interface WebHost {
@@ -64,7 +69,23 @@ async function readBody(req: IncomingMessage): Promise<Buffer> {
 export async function startWebHost(options: WebHostOptions): Promise<WebHost> {
   const engine = new EngineLink(options.workspace, options.fakeProvider ? { fakeProvider: options.fakeProvider } : {});
   let port = 0;
-  const gate = new Access();
+  const gate = new Access(),
+    control = randomBytes(32);
+  const launchUrl = () => "http://127.0.0.1:" + port + "/?launch=" + gate.renew();
+  const controlled = (req: IncomingMessage) => {
+    const given = Buffer.from(String(req.headers["x-vibecab-control"] ?? ""), "base64url");
+    return given.length === control.length && timingSafeEqual(given, control);
+  };
+  const relayPath = () => {
+    if (options.mcpRelayPath) return options.mcpRelayPath;
+    let dir = dirname(fileURLToPath(import.meta.url));
+    for (let i = 0; i < 6; i++) {
+      const candidate = join(dir, "adapters", "mcp-server", "bin", "vibecab-mcp.mjs");
+      if (existsSync(candidate)) return candidate;
+      dir = dirname(dir);
+    }
+    return undefined;
+  };
   const sockets = new Set<ServerResponse>();
 
   async function forward(req: IncomingMessage, res: ServerResponse, retried = false, body?: Buffer): Promise<void> {
@@ -115,7 +136,10 @@ export async function startWebHost(options: WebHostOptions): Promise<WebHost> {
         connection: await engine.state(),
         version: options.version ?? "0.1.0",
         workspacePath: options.workspace,
+        mcpRelayPath: relayPath(),
       });
+    // A fresh single-use sign-in link, for another browser (asked by a signed-in tab or by `vibecab-web link`).
+    if (req.method === "POST" && path === "/app/launch-link") return json({ url: launchUrl() });
     if (req.method === "POST" && path === "/app/start-engine") {
       try {
         return json({ connection: await engine.start() });
@@ -162,7 +186,7 @@ export async function startWebHost(options: WebHostOptions): Promise<WebHost> {
       return res.end();
     }
     if (path.startsWith("/v1/") || path.startsWith("/app/")) {
-      if (!gate.authorized(req))
+      if (!(path === "/app/launch-link" && controlled(req)) && !gate.authorized(req))
         return error(res, 401, "unauthenticated", "Open VibeCab from the link printed by the web host");
       if (path.startsWith("/app/")) return app(req, res, path);
       sockets.add(res);
@@ -184,12 +208,20 @@ export async function startWebHost(options: WebHostOptions): Promise<WebHost> {
   port = (server.address() as AddressInfo).port;
   gate.bind(port);
   const url = "http://127.0.0.1:" + port;
+  // `vibecab-web link` finds this host and proves it may ask for a sign-in link with a secret only the
+  // workspace owner can read (file mode 0600, like the app token).
+  const runtimeFile = join(options.workspace, ".vibecab", "web.json");
+  await mkdir(dirname(runtimeFile), { recursive: true, mode: 0o700 });
+  await writeFile(runtimeFile, JSON.stringify({ url, pid: process.pid, control: control.toString("base64url") }), {
+    mode: 0o600,
+  });
   return {
     url,
     port,
     engine,
-    launchUrl: () => url + "/?launch=" + gate.renew(),
+    launchUrl,
     close: async () => {
+      await rm(runtimeFile, { force: true });
       for (const res of sockets) res.destroy();
       server.closeAllConnections();
       await new Promise<void>((done) => server.close(() => done()));
