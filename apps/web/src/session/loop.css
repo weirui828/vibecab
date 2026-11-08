@@ -414,3 +414,149 @@
 .vc-catchup + .vc-doc-wrap > .vc-strip:first-child {
   margin-top: calc(12px - clamp(40px, 8vh, 88px));
 }
+
+/* ---------- W5: history, Snapshots, export, Trash, Ideas and Projects ---------- */
+.vc-bar-sep {
+  width: 1px;
+  margin: 8px 3px;
+  background: var(--color-border-subtle);
+}
+.vc-strip-note {
+  width: 100%;
+  margin: 0;
+  padding-left: 19px;
+  color: var(--color-fg-muted);
+  font-size: 13px;
+}
+.vc-history .list {
+  gap: 10px;
+}
+.vc-history .section {
+  margin: 28px 0 4px;
+}
+.vc-versions,
+.vc-snapshots {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.vc-versions button {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 12px;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+.vc-versions button:hover {
+  background: var(--color-surface-raised);
+}
+.vc-versions li[data-current] button {
+  background: var(--color-surface-raised);
+  box-shadow: inset 3px 0 0 var(--color-accent-default);
+}
+.vc-versions .title,
+.vc-snapshots .title {
+  font-weight: 600;
+}
+.vc-versions .sub,
+.vc-snapshots .sub {
+  grid-column: 1 / -1;
+  color: var(--color-fg-muted);
+  font-size: 13px;
+}
+.vc-versions .chips,
+.vc-snapshots .chips {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  gap: 4px;
+  margin-top: 4px;
+}
+.vc-tag {
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-fg);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.vc-snapshots li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 12px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--color-surface-raised);
+}
+.vc-snapshots .row {
+  display: flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: 14px;
+  margin-top: 6px;
+  font-size: 13px;
+}
+.vc-inline-form {
+  display: flex;
+  gap: 6px;
+}
+.vc-inline-form input {
+  min-height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--color-border-control);
+  border-radius: 8px;
+  background: var(--color-surface-base);
+  font-size: 13px;
+}
+.vc-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.vc-choice.three {
+  grid-template-columns: repeat(3, 1fr);
+}
+.vc-error {
+  margin: 0;
+  color: var(--color-danger-fg);
+  font-size: 14px;
+}
+.vc-row .title.static::after {
+  display: none;
+}
+.vc-row .title.wrap {
+  white-space: normal;
+}
+.vc-capture {
+  margin-top: 36px;
+}
+.vc-lede {
+  max-width: 60ch;
+  margin: 4px 0 0;
+  color: var(--color-fg-muted);
+  font-size: 16px;
+  line-height: 1.6;
+}
+.vc-muted.small {
+  font-size: 13.5px;
+}
+@media (max-width: 719px) {
+  .vc-choice.three {
+    grid-template-columns: 1fr;
+  }
+}
+/* Wide screens make room for the history sheet instead of hiding the page under it. */
+@media (min-width: 1280px) {
+  .vc-session:has(.vc-history) .vc-doc-wrap,
+  .vc-session:has(.vc-history) > .vc-catchup {
+    padding-right: 452px;
+  }
+}

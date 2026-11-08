@@ -7,6 +7,7 @@ import { navigate } from "../shell/prefs.js";
 import { newCommandId } from "../bridge/webBridge.js";
 
 export type TrashKind = "artifact" | "session";
+export type Trashable = TrashKind | "idea" | "project";
 
 export interface NewDraft {
   title: string;
@@ -73,7 +74,7 @@ export function useActions() {
       const type = to === "pause" ? "vc.PauseSession" : to === "resume" ? "vc.ResumeSession" : "vc.EndSession";
       await run(type, { sessionId });
     },
-    async trash(kind: TrashKind, id: string, title: string) {
+    async trash(kind: Trashable, id: string, title: string) {
       const target = { kind, id };
       if ((await run("vc.Trash", { target })) === undefined) return;
       toast(`“${title}” moved to Trash`, {

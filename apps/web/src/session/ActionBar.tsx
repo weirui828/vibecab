@@ -23,6 +23,7 @@ function Glyph({ d }: { d: string }) {
 const bubble =
   "M4.5 6.5A2.5 2.5 0 0 1 7 4h10a2.5 2.5 0 0 1 2.5 2.5v7A2.5 2.5 0 0 1 17 16h-6l-4.5 4v-4h0A2.5 2.5 0 0 1 4.5 13.5v-7Z";
 const margin = "M4.5 5.5h15v13h-15zM14.5 5.5v13";
+const bookmark = "M7 4.5h10v15.5l-5-3.6-5 3.6z";
 const spark =
   "M12 3.5l1.9 5.1 5.1 1.9-5.1 1.9L12 17.5l-1.9-5.1-5.1-1.9 5.1-1.9zM18.5 15.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z";
 
@@ -137,7 +138,11 @@ export function ActionBar({
   modelReady,
   onReplyMode,
   onAsk,
+  onHistory,
+  onSnapshot,
 }: {
+  onHistory(): void;
+  onSnapshot(): void;
   replyMode: ReplyMode;
   modelReady: boolean;
   onReplyMode(mode: ReplyMode): void;
@@ -197,6 +202,16 @@ export function ActionBar({
           <Glyph d={margin} />
           {threadCount > 0 && <span className="count">{threadCount}</span>}
         </BarButton>
+        <span className="vc-bar-sep" aria-hidden="true" />
+        <BarButton label="History" onClick={onHistory}>
+          <Icon name="clock" size={20} />
+        </BarButton>
+        {canComment && (
+          <BarButton label={`Save a snapshot`} onClick={onSnapshot}>
+            <Glyph d={bookmark} />
+          </BarButton>
+        )}
+        <span className="vc-bar-sep" aria-hidden="true" />
         <BarButton label="Filter threads" pressed={filtering || filtered} onClick={() => setFiltering((v) => !v)}>
           <Icon name="funnel" size={20} />
           {filtered && <span className="dot" aria-hidden="true" />}

@@ -14,6 +14,8 @@ import type { NavProps } from "./shell/Navigation.js";
 import { DialogHost } from "./home/DialogHost.js";
 import { DraftsView, HomeView, LaterView, NeedsYouView, PageSkeleton } from "./home/Views.js";
 import { SessionView, parseSessionRoute } from "./session/SessionView.js";
+import { TrashView } from "./home/TrashView.js";
+import { IdeasView, ProjectView, ProjectsView } from "./home/IdeasProjects.js";
 
 type Access = "checking" | "signed-out" | "ready";
 
@@ -116,7 +118,13 @@ function Shell({
       <PageSkeleton />
     );
   else if (route === "/settings") page = <LaterView title="Settings" line="Settings arrive in a later step." />;
-  else if (route === "/trash") page = <LaterView title="Trash" line="Trash arrives in a later step." />;
+  else if (route === "/trash") page = <TrashView />;
+  else if (route === "/ideas") page = <IdeasView sessions={workspace.sessions ?? []} />;
+  else if (route === "/projects") page = <ProjectsView />;
+  else if (route.startsWith("/p/"))
+    page = (
+      <ProjectView projectId={route.slice(3)} sessions={workspace.sessions ?? []} drafts={workspace.drafts ?? []} />
+    );
   else page = <HomeView workspace={workspace} />;
   const banner =
     connection === "Engine stopped" || connection === "Engine unreachable" ? (

@@ -54,6 +54,7 @@ export function SessionView({ session, artifactId }: { session: SessionRow; arti
             key={current.artifactId}
             session={session}
             artifactId={current.artifactId}
+            drafts={ordered}
             loop={loop}
             skeleton={<DocSkeleton />}
           />

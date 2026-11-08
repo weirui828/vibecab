@@ -191,6 +191,32 @@ export function contractSuite(
       expect(hash).toMatch(/^[a-f0-9]{64}$/);
       expect(await client.getBlob(hash)).toEqual(bytes);
     });
+    it("attaches and detaches Ideas, Drafts and Sessions on a Project", async () => {
+      const read = <T>(op: string, result: unknown) =>
+        schema.read<T>("operations/" + op, result, "#/properties/result");
+      const project = await cmd("vc.CreateProject", { title: "Gathered" }),
+        idea = await cmd("vc.CaptureIdea", { text: "A thought" });
+      if (!project.ok || !idea.ok) throw Error("setup failed");
+      const projectId = read<{ projectId: string }>("vc.CreateProject", project.result).projectId,
+        ideaId = read<{ ideaId: string }>("vc.CaptureIdea", idea.result).ideaId;
+      // Gathering items into a Project is not offered to an assistant over MCP.
+      if (client.channel === "mcp") {
+        expect(await cmd("vc.AttachProjectItem", { projectId, item: { kind: "idea", id: ideaId } })).toMatchObject({
+          ok: false,
+          error: { code: "forbidden" },
+        });
+        return;
+      }
+      expect(await cmd("vc.AttachProjectItem", { projectId, item: { kind: "idea", id: ideaId } })).toMatchObject({
+        ok: true,
+      });
+      expect(await query("vc.Projects", {})).toMatchObject([{ projectId, ideaIds: [ideaId] }]);
+      expect(await cmd("vc.DetachProjectItem", { projectId, item: { kind: "idea", id: ideaId } })).toMatchObject({
+        ok: true,
+      });
+      expect(await query("vc.Projects", {})).toMatchObject([{ projectId, ideaIds: [] }]);
+    });
+
     it("supports project sessions, attached anchored threads, and explicit agreement", async () => {
       const a = await imported("Target sentence.");
       const project = await cmd("vc.CreateProject", { title: "Draft" });

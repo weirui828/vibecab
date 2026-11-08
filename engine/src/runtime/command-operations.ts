@@ -333,6 +333,8 @@ export abstract class CommandOperations extends StorageAccessRuntime {
       }
       case "vc.CaptureIdea":
       case "vc.CreateProject":
+      case "vc.AttachProjectItem":
+      case "vc.DetachProjectItem":
       case "vc.RenameSession":
       case "vc.AttachArtifact":
       case "vc.ResumeSession":
