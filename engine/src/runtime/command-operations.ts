@@ -35,6 +35,7 @@ export abstract class CommandOperations extends StorageAccessRuntime {
             budgets?: SettingsDocument["budgets"];
             sessions?: Record<string, Json>;
             trashRetentionDays?: SettingsDocument["trashRetentionDays"];
+            roles?: NonNullable<SettingsDocument["roles"]>;
           };
         }>("operations/sys.SetSettings", cmd.payload, "#/properties/payload");
         const current = this.settings(),
@@ -52,17 +53,22 @@ export abstract class CommandOperations extends StorageAccessRuntime {
             next = typeof patch === "object" && patch !== null && !Array.isArray(patch) ? patch : {};
           sessions[sessionId] = { ...existing, ...next };
         }
-        // null removes a model alias (a Claude Code or Codex agent being turned off); the default always stays.
+        // null removes an agent from the pool (W13), and from any role it had.
         const models: Record<string, ProviderModel> = { ...current.models };
         for (const [alias, model] of Object.entries(p.patch.models ?? {})) {
           if (model) models[alias] = model;
-          else if (alias === "default") fail("invalid", "The default model cannot be removed");
           else delete models[alias];
         }
+        const merged = { ...current.roles, ...p.patch.roles },
+          roles = {
+            ...(merged.vibecab && models[merged.vibecab] ? { vibecab: merged.vibecab } : {}),
+            ...(merged.tmr ? { tmr: { ...merged.tmr, panel: merged.tmr.panel.filter((m) => models[m.agentId]) } } : {}),
+          };
         const settings = this.saveSettings({
           models,
           budgets,
           sessions,
+          ...(Object.keys(roles).length ? { roles } : {}),
           ...(p.patch.trashRetentionDays !== undefined || current.trashRetentionDays !== undefined
             ? { trashRetentionDays: p.patch.trashRetentionDays ?? current.trashRetentionDays }
             : {}),

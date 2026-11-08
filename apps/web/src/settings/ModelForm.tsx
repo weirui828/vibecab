@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { Button, Field, Input } from "@wei/design-system";
 import type { ProviderModel as ContractProviderModel } from "../../../../contract/generated/index.js";
 import { fillBaseUrl, providerCatalog } from "../../../../contract/src/provider-catalog.js";
@@ -12,6 +13,10 @@ export interface SettingsShape {
   models?: Record<string, ProviderModel>;
   budgets?: { realtimeDebounceSeconds?: number; defaultTurnLimitMicros?: number; toolCallLimit?: number };
   trashRetentionDays?: number;
+  roles?: {
+    vibecab?: string;
+    tmr?: { panel: Array<{ agentId: string; label?: string }>; process?: "independent-review"; spendMicros?: number };
+  };
 }
 
 const CUSTOM = "custom";
@@ -39,18 +44,38 @@ function placeholderValues(template: string, url: string): Record<string, string
 const price = (micros: number) => "$" + dollars(micros);
 
 /**
- * The default model: a built-in provider (or any OpenAI-compatible address), a model from its list or typed in, and
+ * A pool agent's model (the default one unless `alias` says which): a built-in provider (or any OpenAI-compatible address), a model from its list or typed in, and
  * its key. Address, context and price come from the catalog or the provider's live list; "More details" changes
  * them, and a price changed by hand is kept as yours. The key goes to the engine's key store and is never shown again.
  * Used by Settings and by the first run.
  */
-export function ModelForm({ onSaved, submitLabel = "Save" }: { onSaved?(): void; submitLabel?: string }) {
+export function ModelForm({
+  onSaved,
+  submitLabel = "Save",
+  alias = "default",
+  extra,
+  lead,
+  tail,
+  check,
+}: {
+  onSaved?(alias: string): void;
+  submitLabel?: string;
+  /** The pool agent this model is for (W13). */
+  alias?: string;
+  /** The agent's name and instructions, saved with its model. */
+  extra?: { name?: string; instructions?: string };
+  /** Fields shown before and after the model's own (the agent's name, what it runs on, its instructions). */
+  lead?: ReactNode;
+  tail?: ReactNode;
+  /** A problem with the lead or tail fields, shown instead of saving. */
+  check?(): string | undefined;
+}) {
   const settings = useLiveQuery<SettingsShape>("sys.Settings", {}),
     bridge = useBridge(),
     run = useRun(),
     toast = useToast(),
     listId = useId(),
-    current = settings.data?.models?.default;
+    current = settings.data?.models?.[alias];
   const [providerId, setProviderId] = useState("openai"),
     [places, setPlaces] = useState<Record<string, string>>({}),
     [customUrl, setCustomUrl] = useState("https://"),
@@ -134,11 +159,18 @@ export function ModelForm({ onSaved, submitLabel = "Save" }: { onSaved?(): void;
 
   const baseUrl = provider ? fillBaseUrl(provider.baseUrl, places) : customUrl.trim();
   const local = provider?.keyNeeded === false;
-  // A saved key belongs to the address it was saved for: another provider needs its own.
-  const keySaved = keyFor !== undefined && keyFor === baseUrl;
+  // A saved key belongs to the address it was saved for: another provider needs its own. Agents on the same
+  // provider share its key (W13), so a second agent there needs no new one.
+  const ownKey = keyFor !== undefined && keyFor === baseUrl,
+    sharedKey = Object.entries(settings.data?.models ?? {}).find(
+      ([other, m]) => other !== alias && m.keyRef && m.baseUrl === baseUrl,
+    )?.[1].keyRef,
+    keySaved = ownKey || sharedKey !== undefined;
 
   async function save() {
     setError(undefined);
+    const problem = check?.();
+    if (problem) return setError(problem);
     if (/\{[a-zA-Z]+\}/.test(baseUrl)) return setError(`Type the ${provider?.placeholders?.[0]?.label ?? "address"}.`);
     try {
       new URL(baseUrl);
@@ -156,7 +188,19 @@ export function ModelForm({ onSaved, submitLabel = "Save" }: { onSaved?(): void;
       provider: "openai-compatible",
       baseUrl,
       model: model.trim(),
-      ...(current?.keyRef ? { keyRef: current.keyRef } : {}),
+      ...(ownKey && current?.keyRef
+        ? { keyRef: current.keyRef }
+        : sharedKey
+          ? { keyRef: sharedKey }
+          : current?.keyRef
+            ? { keyRef: current.keyRef }
+            : {}),
+      ...(extra?.name?.trim() ? { name: extra.name.trim() } : current?.name && !extra ? { name: current.name } : {}),
+      ...(extra?.instructions?.trim()
+        ? { instructions: extra.instructions.trim() }
+        : current?.instructions && !extra
+          ? { instructions: current.instructions }
+          : {}),
       capabilities: {
         tools: chosen?.tools ?? current?.capabilities.tools ?? true,
         jsonSchemaOutput: chosen?.jsonSchemaOutput ?? current?.capabilities.jsonSchemaOutput ?? true,
@@ -171,16 +215,16 @@ export function ModelForm({ onSaved, submitLabel = "Save" }: { onSaved?(): void;
     };
     // The model first: the engine stores a key only for a model alias that exists. A local server needs no key,
     // but the engine calls only with one, so it gets a stand-in.
-    let ok = (await run("sys.SetSettings", { patch: { models: { default: next } } })) !== undefined;
+    let ok = (await run("sys.SetSettings", { patch: { models: { [alias]: next } } })) !== undefined;
     const secret = key.trim() || (local && !keySaved ? "local" : "");
-    if (ok && secret) ok = (await run("sys.SetProviderKey", { alias: "default", secret })) !== undefined;
+    if (ok && secret) ok = (await run("sys.SetProviderKey", { alias, secret })) !== undefined;
     setBusy(false);
     if (ok) {
       touched.current = false;
       if (secret || keySaved) setKeyFor(baseUrl);
       setKey("");
-      toast("Model saved");
-      onSaved?.();
+      toast(extra ? "Agent saved" : "Model saved");
+      onSaved?.(alias);
     }
   }
 
@@ -193,6 +237,7 @@ export function ModelForm({ onSaved, submitLabel = "Save" }: { onSaved?(): void;
         void save();
       }}
     >
+      {lead}
       <Field label="Provider" hint={provider?.note}>
         <select
           className="vc-select"
@@ -328,6 +373,7 @@ export function ModelForm({ onSaved, submitLabel = "Save" }: { onSaved?(): void;
           )}
         </>
       )}
+      {tail}
       {error && (
         <p className="vc-error" role="alert">
           {error}

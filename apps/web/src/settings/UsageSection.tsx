@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { terms } from "../../../ui/src/copy/terms.js";
 import { useLiveQuery } from "../live/LiveStore.js";
 import type { SessionRow } from "../live/workspace.js";
-import { Section, agentNames, dollars } from "./common.js";
+import { Section, dollars, useAgentName } from "./common.js";
 
 type Totals = {
   calls: number;
@@ -178,7 +178,8 @@ function Breakdown({
  * Agents paid by their own subscription (W12) show tokens and calls; their cost is "subscription".
  */
 export function UsageSection({ sessions }: { sessions: SessionRow[] }) {
-  const [days, setDays] = useState<Range>(7);
+  const [days, setDays] = useState<Range>(7),
+    agentName = useAgentName();
   const span = useMemo(() => periodOf(days), [days]);
   const args = (groupBy: string) => ({ from: span.from, to: span.to, groupBy });
   const byDay = useLiveQuery<Stats>("sys.UsageStats", args("day")),
@@ -246,7 +247,7 @@ export function UsageSection({ sessions }: { sessions: SessionRow[] }) {
             title="By agent"
             column="Agent"
             stats={byAgent.data}
-            name={(k) => agentNames[k] ?? (k || "Before agents were recorded")}
+            name={(k) => (k ? agentName(k) : "Before agents were recorded")}
           />
           <Breakdown title="By model" column="Model" stats={byModel.data} name={(k) => k} />
           <Breakdown

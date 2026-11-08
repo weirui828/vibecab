@@ -15,8 +15,8 @@ const loop = (over: Partial<Loop> = {}): Loop => ({
   modelReady: true,
   planReview: false,
   autoAgree: false,
-  agents: ["vibecab"],
-  agent: "vibecab",
+  agents: [{ id: "default", name: "Main agent" }],
+  agent: "default",
   ...over,
 });
 const thread = (comments: Array<Partial<Thread["comments"][number]>>): Thread =>
@@ -215,11 +215,17 @@ describe("change history", () => {
 });
 
 describe("who can work in a session", () => {
-  it("counts Claude Code or Codex alone as enough, and lists only the agents that are set up", async () => {
-    const { available } = await import("../src/session/loop.js");
-    expect(available({ default: {} })).toEqual(["vibecab"]);
-    expect(available({ "claude-code": {} })).toEqual(["claude-code"]);
-    expect(available({ default: {}, codex: {}, "claude-code": {} })).toEqual(["vibecab", "claude-code", "codex"]);
+  it("lists the pool agents that can use tools, and picks a session's agent as the engine does", async () => {
+    const { available, sessionAgent } = await import("../src/session/loop.js");
+    const tools = { capabilities: { tools: true } },
+      models = { default: tools, ada: { ...tools, name: "Ada" }, plain: { capabilities: { tools: false } } };
+    expect(available(models)).toEqual(["ada", "default"]);
     expect(available({})).toEqual([]);
+    expect(sessionAgent({ models }, "s")).toBe("default");
+    expect(sessionAgent({ models, roles: { vibecab: "ada" } }, "s")).toBe("ada");
+    expect(sessionAgent({ models, roles: { vibecab: "ada" }, sessions: { s: { agent: "default" } } }, "s")).toBe(
+      "default",
+    );
+    expect(sessionAgent({ models, sessions: { s: { agent: "plain" } } }, "s")).toBe("default");
   });
 });

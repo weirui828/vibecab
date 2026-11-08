@@ -52,8 +52,9 @@
       "exclusiveMinimum": 0
     },
     "agent": {
-      "enum": ["vibecab", "claude-code", "codex"],
-      "description": "Which agent replies in this session's threads. Claude Code and Codex run through their SDKs with this computer's sign-in (W12)."
+      "type": "string",
+      "minLength": 1,
+      "description": "The pool agent that works in this session; \"vibecab\" means the VibeCab role's agent (W13)."
     }
   },
   "additionalProperties": false

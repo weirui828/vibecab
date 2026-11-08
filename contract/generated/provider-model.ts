@@ -27,4 +27,12 @@ export interface ProviderModel {
    * Where the price came from: the built-in catalog, a provider's live list, or the person.
    */
   pricingSource?: "catalog" | "live" | "custom";
+  /**
+   * The agent's display name in the pool (W13).
+   */
+  name?: string;
+  /**
+   * Extra instructions added to every request this agent makes, VibeCab or TMR (W13).
+   */
+  instructions?: string;
 }

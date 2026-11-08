@@ -47,8 +47,7 @@ export function useCommentActions(sessionId: string) {
     ) => run("vc.Agree", { commentId, ...choice }),
     decline: (commentId: string, reason?: string) => run("vc.Decline", { commentId, ...(reason ? { reason } : {}) }),
     setReplyMode: (mode: "realtime" | "batch" | "manual") => run("vc.SetReplyTrigger", { sessionId, mode }),
-    setAgent: (agent: "vibecab" | "claude-code" | "codex") =>
-      run("sys.SetSettings", { patch: { sessions: { [sessionId]: { agent } } } }),
+    setAgent: (agent: string) => run("sys.SetSettings", { patch: { sessions: { [sessionId]: { agent } } } }),
     ask: (threadIds?: string[]) => run("vc.AskAgent", { sessionId, ...(threadIds ? { threadIds } : {}) }),
   };
 }

@@ -66,6 +66,17 @@
     "pricingSource": {
       "enum": ["catalog", "live", "custom"],
       "description": "Where the price came from: the built-in catalog, a provider's live list, or the person."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 60,
+      "description": "The agent's display name in the pool (W13)."
+    },
+    "instructions": {
+      "type": "string",
+      "maxLength": 4000,
+      "description": "Extra instructions added to every request this agent makes, VibeCab or TMR (W13)."
     }
   },
   "required": ["provider", "baseUrl", "model", "capabilities", "pricing"],

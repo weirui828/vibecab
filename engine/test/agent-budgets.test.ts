@@ -72,10 +72,11 @@ it("limits one agent per day without touching another, and reports today per age
       reservedMicros: 0,
     });
     expect(() => ledger.reserve("d", [{ kind: "agent", key: "vibecab" }], 60)).toThrow(exceeded);
-    // The built-in agent is always listed, even before it has spent anything.
+    // Every pool agent is listed, even before it has spent anything (W13).
     const fresh = setup();
-    expect(fresh.ledger.today().agents).toEqual([
-      { agentId: "vibecab", limitMicros: null, usedMicros: 0, reservedMicros: 0 },
+    expect(fresh.ledger.today().agents).toEqual([]);
+    expect(fresh.ledger.today(["ada"]).agents).toEqual([
+      { agentId: "ada", limitMicros: null, usedMicros: 0, reservedMicros: 0 },
     ]);
     fresh.store.close();
   } finally {
@@ -105,10 +106,11 @@ it("records who made a call, what for, and how many tokens it used", async () =>
       },
     ))
       void event;
+    // The call is the pool agent's whose model it used (W13), whoever asked.
     expect(ledger.calls()).toEqual([
       expect.objectContaining({
         callId: "call-1",
-        agentId: "vibecab",
+        agentId: "default",
         sessionId: "session_1",
         purpose: "reply",
         inputTokens: 12,

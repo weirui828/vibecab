@@ -11,18 +11,37 @@ import type { Thread } from "./threads.js";
 import { visibleComments } from "./threads.js";
 
 export type { Agreement, FeedbackConflict, Update };
-export type SessionAgent = "vibecab" | "claude-code" | "codex";
-/** The agents that can work here: the VibeCab agent when it has a default model, and Claude Code and Codex when on. */
-export function available(models: Record<string, unknown> | undefined): SessionAgent[] {
-  return (["vibecab", "claude-code", "codex"] as const).filter((id) =>
-    Boolean(models?.[id === "vibecab" ? "default" : id]),
-  );
+/** A pool agent's id (its model alias, W13). */
+export type SessionAgent = string;
+type PoolModel = { name?: string; capabilities?: { tools?: boolean } };
+/** What a person calls an agent: the name they gave it, else a name for the built-in ids, else its id. */
+export function agentName(models: Record<string, PoolModel> | undefined, id: string): string {
+  return models?.[id]?.name?.trim() || fallbackNames[id] || id;
 }
-export const agentWords: Record<SessionAgent, string> = {
-  vibecab: "VibeCab agent",
-  "claude-code": "Claude Code",
-  codex: "Codex",
-};
+const fallbackNames: Record<string, string> = { default: "Main agent", "claude-code": "Claude Code", codex: "Codex" };
+/** The pool agents that can work in a session: those whose model can use tools, in name order. */
+export function available(models: Record<string, PoolModel> | undefined): SessionAgent[] {
+  return Object.keys(models ?? {})
+    .filter((id) => models?.[id]?.capabilities?.tools !== false)
+    .sort((a, b) => agentName(models, a).localeCompare(agentName(models, b)));
+}
+/** The agent that works in a session, as the engine picks it: its choice, else the VibeCab role's, else the default. */
+export function sessionAgent(
+  settings: {
+    models?: Record<string, PoolModel>;
+    roles?: { vibecab?: string };
+    sessions?: Record<string, { agent?: string }>;
+  },
+  sessionId: string,
+): SessionAgent | undefined {
+  const set = available(settings.models),
+    has = (id: string | undefined): id is string => Boolean(id && set.includes(id)),
+    chosen = settings.sessions?.[sessionId]?.agent ?? settings.sessions?.default?.agent;
+  if (chosen !== "vibecab" && has(chosen)) return chosen;
+  if (has(settings.roles?.vibecab)) return settings.roles.vibecab;
+  if (has("default")) return "default";
+  return [...set].sort()[0];
+}
 
 const running = new Set(["queued", "planning", "awaiting_plan_review", "writing", "checking"]);
 export const isRunning = (update: Update) => running.has(update.status);
@@ -33,7 +52,8 @@ export function useLoop(sessionId: string, artifactId: string, enabled = true) {
     updates = useLiveQuery<VcUpdatesOperation["result"]>("vc.Updates", { artifactId }, enabled),
     conflicts = useLiveQuery<FeedbackConflict[]>("vc.Conflicts", { sessionId, artifactId }, enabled),
     settings = useLiveQuery<{
-      models?: Record<string, unknown>;
+      models?: Record<string, PoolModel>;
+      roles?: { vibecab?: string };
       sessions?: Record<string, { planReview?: boolean; agent?: SessionAgent }>;
     }>("sys.Settings", {}),
     grants = useLiveQuery<Grant[]>("vc.Grants", {});
@@ -45,17 +65,15 @@ export function useLoop(sessionId: string, artifactId: string, enabled = true) {
     latest: list.at(-1),
     scheduledAt: updates.data?.scheduledAt,
     conflicts: (conflicts.data ?? []).filter((c) => c.state === "open"),
-    // Any agent with a model is enough to work with: the VibeCab agent's default model, or Claude Code / Codex alone.
+    // Any agent in the pool that can use tools is enough to work with (W13).
     modelReady: settings.data ? available(settings.data.models).length > 0 : true,
     planReview: settings.data?.sessions?.[sessionId]?.planReview === true,
-    // Who replies here (W12): the agents that are set up, and the session's choice among them — else the first
-    // one, as the engine does (the VibeCab agent when it has a model, else Claude Code, else Codex).
-    agents: settings.data ? available(settings.data.models) : (["vibecab"] as SessionAgent[]),
-    agent: ((): SessionAgent => {
-      const set = settings.data ? available(settings.data.models) : (["vibecab"] as SessionAgent[]),
-        chosen = settings.data?.sessions?.[sessionId]?.agent;
-      return chosen && set.includes(chosen) ? chosen : (set[0] ?? "vibecab");
-    })(),
+    // Who replies here (W13): any pool agent that can use tools; the session's choice, else the VibeCab role's.
+    agents: (settings.data ? available(settings.data.models) : []).map((id) => ({
+      id,
+      name: agentName(settings.data?.models, id),
+    })),
+    agent: settings.data ? sessionAgent(settings.data, sessionId) : undefined,
     autoAgree: (grants.data ?? []).some(
       (g) =>
         !g.revokedAt &&

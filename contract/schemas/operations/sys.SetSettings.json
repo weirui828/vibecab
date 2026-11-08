@@ -32,6 +32,9 @@
             },
             "trashRetentionDays": {
               "$ref": "https://vibecab.local/schemas/settings.json#/properties/trashRetentionDays"
+            },
+            "roles": {
+              "$ref": "https://vibecab.local/schemas/roles.json"
             }
           },
           "additionalProperties": false

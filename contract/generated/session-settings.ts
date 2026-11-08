@@ -15,7 +15,7 @@ export interface SessionSettings {
   holdIdleMinutes?: number;
   updateIdleMinutes?: number;
   /**
-   * Which agent replies in this session's threads. Claude Code and Codex run through their SDKs with this computer's sign-in (W12).
+   * The pool agent that works in this session; "vibecab" means the VibeCab role's agent (W13).
    */
-  agent?: "vibecab" | "claude-code" | "codex";
+  agent?: string;
 }

@@ -7,13 +7,13 @@ import { ThemeSwitch } from "../shell/Navigation.js";
 import { navigate } from "../shell/prefs.js";
 import type { ThemeChoice } from "../shell/prefs.js";
 import { relativeTime } from "../ui/time.js";
-import { AssistantSection, DataSection, GrantsSection, ToolsSection } from "./AccessSections.js";
-import { AgentGroup, Section, agentNames, dollars, toMicros, useRun } from "./common.js";
+import { AssistantSection, DataSection } from "./AccessSections.js";
+import { AgentGroup, Section, dollars, toMicros, useAgentName, useRun } from "./common.js";
 import { UsageSection } from "./UsageSection.js";
 import { EngineFacts } from "./EngineFacts.js";
 import type { AppState } from "../bridge/webBridge.js";
-import { SdkAgents } from "./SdkAgents.js";
-import { ModelForm } from "./ModelForm.js";
+import { AgentPool } from "./AgentPool.js";
+import { Roles } from "./Roles.js";
 import type { SettingsShape } from "./ModelForm.js";
 
 interface BudgetState {
@@ -37,14 +37,14 @@ interface CallLog {
 type Spend = { limitMicros: number | null; usedMicros: number; reservedMicros: number };
 type Today = { date: string; daily: Spend; agents: Array<Spend & { agentId: string }> };
 /** An agent paid by its own subscription (W12) is never charged here. */
-const subscriptionAgents = new Set(["claude-code", "codex"]);
+const subscriptionKinds = new Set(["claude-agent-sdk", "codex-sdk"]);
 
 /** One agent's line: today's use, and its own daily limit beside the overall one. */
-function AgentLimit({ agent }: { agent: Spend & { agentId: string } }) {
+function AgentLimit({ agent, provider }: { agent: Spend & { agentId: string }; provider: string | undefined }) {
   const run = useRun(),
     [limit, setLimit] = useState<string>(),
-    name = agentNames[agent.agentId] ?? agent.agentId;
-  if (subscriptionAgents.has(agent.agentId))
+    name = useAgentName()(agent.agentId);
+  if (provider && subscriptionKinds.has(provider))
     return (
       <li>
         <span className="what">
@@ -89,7 +89,7 @@ function AgentLimit({ agent }: { agent: Spend & { agentId: string } }) {
   );
 }
 
-function SpendingSection({ budgets }: { budgets: SettingsShape["budgets"] }) {
+function SpendingSection({ budgets, models }: { budgets: SettingsShape["budgets"]; models: SettingsShape["models"] }) {
   const usage = useLiveQuery<{ accounts: BudgetState[]; calls: CallLog[] }>("sys.Usage", {}),
     today = useLiveQuery<Today>("sys.SpendingToday", {}),
     run = useRun(),
@@ -164,7 +164,7 @@ function SpendingSection({ budgets }: { budgets: SettingsShape["budgets"] }) {
           <p className="vc-label">Per agent</p>
           <ul className="vc-plain-list">
             {agents.map((agent) => (
-              <AgentLimit key={agent.agentId} agent={agent} />
+              <AgentLimit key={agent.agentId} agent={agent} provider={models?.[agent.agentId]?.provider} />
             ))}
           </ul>
         </div>
@@ -300,17 +300,18 @@ function AnotherBrowser() {
 
 const tabs = [
   ["agents", "Agents"],
+  ["roles", "Roles"],
   ["spending", "Spending"],
   ["general", "General"],
 ] as const;
 type Tab = (typeof tabs)[number][0];
 
-/** Addresses from before the three tabs: the tab each part now lives in, and the part to scroll to. */
+/** Older addresses: the tab each part now lives in, and the part to scroll to. */
 const moved: Record<string, [Tab, string]> = {
-  model: ["agents", "model"],
-  agent: ["agents", "replies"],
-  permissions: ["agents", "permissions"],
-  tools: ["agents", "tools"],
+  model: ["agents", "pool"],
+  agent: ["roles", "replies"],
+  permissions: ["roles", "permissions"],
+  tools: ["roles", "tools"],
   assistant: ["agents", "assistants-agent"],
   data: ["general", "data"],
   appearance: ["general", "appearance"],
@@ -392,27 +393,7 @@ export function SettingsView({
       <div className="vc-tab-panel" role="tabpanel" id={"panel-" + tab} aria-labelledby={"tab-" + tab} key={tab}>
         {tab === "agents" && (
           <>
-            <AgentGroup
-              id="vibecab-agent"
-              name="VibeCab agent"
-              about={`Replies to comments and writes ${terms.update}s in your ${terms.session.toLowerCase()}s.`}
-              facts={
-                settings.data?.models?.default ? `Thinks with ${settings.data.models.default.model}` : "No model yet"
-              }
-            >
-              <Section
-                id="model"
-                level={3}
-                title="Model"
-                lede={`The model it thinks with. VibeCab sends it only what a reply or an ${terms.update} needs.`}
-              >
-                <ModelForm />
-              </Section>
-              <RepliesSection budgets={settings.data?.budgets} />
-              <GrantsSection sessions={sessions} />
-              <ToolsSection />
-            </AgentGroup>
-            <SdkAgents settings={settings.data} />
+            <AgentPool settings={settings.data} />
             <AgentGroup
               id="assistants-agent"
               name="Your AI assistants"
@@ -422,9 +403,16 @@ export function SettingsView({
             </AgentGroup>
           </>
         )}
+        {tab === "roles" && (
+          <Roles
+            settings={settings.data}
+            sessions={sessions}
+            replies={<RepliesSection budgets={settings.data?.budgets} />}
+          />
+        )}
         {tab === "spending" && (
           <>
-            <SpendingSection budgets={settings.data?.budgets} />
+            <SpendingSection budgets={settings.data?.budgets} models={settings.data?.models} />
             <UsageSection sessions={sessions} />
           </>
         )}

@@ -13,13 +13,34 @@
     "budgets": {
       "type": "object",
       "properties": {
-        "localTimeZone": { "type": "string", "minLength": 1 },
-        "defaultTurnLimitMicros": { "type": "integer", "minimum": 0 },
-        "defaultTurnTokenLimit": { "type": "integer", "minimum": 1 },
-        "realtimeDebounceSeconds": { "type": "integer", "minimum": 1 },
-        "toolCallLimit": { "type": "integer", "minimum": 1 },
-        "toolTimeoutMs": { "type": "integer", "minimum": 1 },
-        "toolResultByteLimit": { "type": "integer", "minimum": 1 }
+        "localTimeZone": {
+          "type": "string",
+          "minLength": 1
+        },
+        "defaultTurnLimitMicros": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "defaultTurnTokenLimit": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "realtimeDebounceSeconds": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "toolCallLimit": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "toolTimeoutMs": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "toolResultByteLimit": {
+          "type": "integer",
+          "minimum": 1
+        }
       },
       "additionalProperties": false
     },
@@ -29,7 +50,14 @@
         "$ref": "https://vibecab.local/schemas/session-settings.json"
       }
     },
-    "trashRetentionDays": { "type": "integer", "minimum": 1, "maximum": 3650 }
+    "trashRetentionDays": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 3650
+    },
+    "roles": {
+      "$ref": "https://vibecab.local/schemas/roles.json"
+    }
   },
   "required": ["models", "budgets", "sessions"],
   "additionalProperties": false

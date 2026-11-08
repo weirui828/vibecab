@@ -23,7 +23,6 @@ import { LifecycleHelpersRuntime } from "./helpers-runtime.js";
 import { escapeHtml } from "./helpers-runtime.js";
 import { sessionPreferences } from "../session-preferences.js";
 import { renderHtmlDocument, renderHtmlFragment, renderMarkdown } from "./render.js";
-import { BUILT_IN_AGENT } from "../gateway/types.js";
 import { baseModelRef } from "../session-preferences.js";
 import { isQuiet, nextSweepDeferral, shouldForceSweep } from "./sweep-policy.js";
 
@@ -458,7 +457,7 @@ export abstract class LifecycleJobsRuntime extends LifecycleHelpersRuntime {
         { kind: "turn", key: digestId },
         { kind: "session", key: sessionId },
         { kind: "daily" },
-        { kind: "agent", key: BUILT_IN_AGENT },
+        { kind: "agent", key: alias },
       ],
       estimateReservationMicros(request, model),
     );
@@ -466,7 +465,7 @@ export abstract class LifecycleJobsRuntime extends LifecycleHelpersRuntime {
     for await (const event of this.gateway.call(request, {
       reservationId,
       idempotencyKey: digestId,
-      attribution: { agentId: BUILT_IN_AGENT, sessionId, purpose: "digest" },
+      attribution: { agentId: alias, sessionId, purpose: "digest" },
       signal: new AbortController().signal,
     })) {
       if (event.type === "output") output = this.contract.read<DigestContent>("digest-content", event.json);
