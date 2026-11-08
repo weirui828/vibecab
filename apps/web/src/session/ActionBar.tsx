@@ -97,11 +97,13 @@ function FilterPanel({
   filter,
   onChange,
   place,
+  marginFits,
   onPlace,
 }: {
+  marginFits: boolean;
   filter: ThreadFilter;
   onChange(f: ThreadFilter): void;
-  place: CommentPlace | undefined;
+  place: CommentPlace;
   onPlace(place: CommentPlace): void;
 }) {
   const seg = <K extends keyof ThreadFilter>(key: K, options: Array<[ThreadFilter[K], string]>) => (
@@ -120,24 +122,25 @@ function FilterPanel({
   );
   return (
     <div className="vc-filter" role="dialog" aria-label="Thread options">
-      {place && (
-        <>
-          <p className="vc-label">Show threads</p>
-          <div className="vc-segmented small" role="group" aria-label="Show threads">
-            {(
-              [
-                ["below", "Under each block"],
-                ["beside", "Beside the text"],
-              ] as const
-            ).map(([value, label]) => (
-              <button key={value} type="button" aria-pressed={place === value} onClick={() => onPlace(value)}>
-                {label}
-              </button>
-            ))}
-          </div>
-          <p className="vc-label">Which threads</p>
-        </>
-      )}
+      <>
+        <p className="vc-label">Show threads</p>
+        <div className="vc-segmented small" role="group" aria-label="Show threads">
+          {(
+            [
+              ["below", "Under each block"],
+              ["beside", "Beside the text"],
+            ] as const
+          ).map(([value, label]) => (
+            <button key={value} type="button" aria-pressed={place === value} onClick={() => onPlace(value)}>
+              {label}
+            </button>
+          ))}
+        </div>
+        {place === "beside" && !marginFits && (
+          <p className="hint">The margin needs a wider window. Until then, threads show under each block.</p>
+        )}
+        <p className="vc-label">Which threads</p>
+      </>
       {seg("status", [
         ["open", "Open"],
         ["all", "All"],
@@ -173,10 +176,12 @@ export function ActionBar({
   onHistory,
   onSnapshot,
   place,
+  marginFits,
   onPlace,
 }: {
-  /** Where threads show; undefined when the screen is too narrow for a choice. */
-  place: CommentPlace | undefined;
+  /** Where threads show, as chosen; the margin is used only while it fits (`marginFits`). */
+  place: CommentPlace;
+  marginFits: boolean;
   onPlace(place: CommentPlace): void;
   onHistory(): void;
   onSnapshot(): void;
@@ -261,7 +266,9 @@ export function ActionBar({
           <Icon name="funnel" size={20} />
           {filtered && <span className="dot" aria-hidden="true" />}
         </BarButton>
-        {filtering && <FilterPanel filter={filter} onChange={onFilter} place={place} onPlace={onPlace} />}
+        {filtering && (
+          <FilterPanel filter={filter} onChange={onFilter} place={place} marginFits={marginFits} onPlace={onPlace} />
+        )}
         {panel === "agent" && (
           <AgentPanel
             mode={replyMode}
