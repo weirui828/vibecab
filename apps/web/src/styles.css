@@ -1273,3 +1273,80 @@
   color: var(--color-fg-muted);
   font-size: 12.5px;
 }
+
+/* Session state: a small pill in the header that names the state and opens the ways on. */
+.vc-facts-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.vc-facts-line .vc-facts {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.vc-menu-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 6px 0 8px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 999px;
+  background: var(--color-surface-base);
+  color: var(--color-fg-default);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.vc-menu-text:hover {
+  border-color: var(--color-border-default);
+}
+.vc-menu-text svg {
+  color: var(--color-fg-muted);
+}
+.vc-state .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-success-default, var(--color-accent-default));
+}
+.vc-state[data-state="paused"] .dot {
+  background: var(--color-warning-default);
+}
+.vc-state[data-state="ended"] .dot {
+  background: var(--color-fg-muted);
+}
+.vc-state[data-state="ended"] .vc-menu-text {
+  color: var(--color-fg-muted);
+}
+
+/* Sidebar: the Sessions heading opens the full list; ended ones are one quiet link away. */
+.vc-nav-heading {
+  color: var(--color-fg-muted);
+  text-decoration: none;
+}
+.vc-nav-heading:hover,
+.vc-nav-heading[aria-current="page"] {
+  color: var(--color-fg-default);
+}
+.vc-nav-more {
+  display: block;
+  margin: 4px 10px 0;
+  padding: 4px 0;
+  color: var(--color-fg-muted);
+  font-size: 12.5px;
+  text-decoration: none;
+}
+.vc-nav-more:hover {
+  color: var(--color-fg-default);
+}
+.vc-session-head .vc-facts-line {
+  margin-top: 3px;
+}
+.vc-session-head .vc-facts-line .vc-facts {
+  margin-top: 0;
+}

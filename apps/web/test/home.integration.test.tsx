@@ -129,3 +129,33 @@ it("clears “Give it a title.” once a file is chosen or the kind of Draft cha
   tl.fireEvent.click(tl.within(dialog).getByText("Import Markdown"));
   expect(tl.within(dialog).queryByText("Give it a title.")).toBeNull();
 });
+
+it("shows a session's state, pauses and resumes it, asks before ending, and lists ended ones", async () => {
+  const sessionId = (await command<{ sessionId: string }>("vc.StartSession", { title: "Field season" })).sessionId;
+  tl.cleanup();
+  window.location.hash = "/s/" + sessionId;
+  const { App } = await import("../src/App.js");
+  tl.render(<App bridge={bridge} />);
+  const state = async (name: string) => tl.screen.findByRole("button", { name: new RegExp(`^${name}`) });
+  const stateOf = async () => (await bridge.query<Array<{ state: string }>>("vc.Sessions", { sessionId }))[0]?.state;
+  tl.fireEvent.click(await state("Active"));
+  tl.fireEvent.click(await tl.screen.findByRole("menuitem", { name: "Pause" }));
+  await tl.waitFor(async () => expect(await stateOf()).toBe("paused"));
+  tl.fireEvent.click(await state("Paused"));
+  tl.fireEvent.click(await tl.screen.findByRole("menuitem", { name: "Resume" }));
+  await tl.waitFor(async () => expect(await stateOf()).toBe("active"));
+  // Ending asks first, and offers pausing instead.
+  tl.fireEvent.click(await state("Active"));
+  tl.fireEvent.click(await tl.screen.findByRole("menuitem", { name: "End session…" }));
+  const ask = await tl.screen.findByRole("dialog", { name: "End “Field season”?" });
+  expect(tl.within(ask).getByRole("button", { name: "Pause instead" })).toBeTruthy();
+  tl.fireEvent.click(tl.within(ask).getByRole("button", { name: "End session" }));
+  await tl.waitFor(async () => expect(await stateOf()).toBe("ended"));
+  // Ended sessions leave the sidebar list but stay one link away, on the Sessions page.
+  const more = await tl.screen.findByRole("link", { name: /^\d+ ended$/ });
+  tl.fireEvent.click(more);
+  window.location.hash = "/sessions/ended";
+  const ended = await tl.screen.findByRole("region", { name: "Ended" });
+  await tl.waitFor(() => expect(ended.textContent).toContain("Field season"));
+  expect(tl.screen.queryByRole("region", { name: "Active" })).toBeNull();
+});

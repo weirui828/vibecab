@@ -10,6 +10,7 @@ import { sessionTone } from "../shell/Navigation.js";
 import { attentionSentence, attentionTone } from "./attentionText.js";
 import { useActions } from "./actions.js";
 import { useDialogs } from "./DialogHost.js";
+import { sessionStateItems } from "../session/SessionState.js";
 
 const stateWord: Record<SessionRow["state"], string> = {
   active: terms.active,
@@ -46,14 +47,12 @@ export function SessionRows({
           .join(" — ");
         const menu: MenuItem[] = [
           { label: "Rename", onSelect: () => dialogs.rename("session", session.sessionId, session.title) },
-          ...(session.state === "active"
-            ? [{ label: "Pause", onSelect: () => void actions.setSessionState(session.sessionId, "pause") }]
-            : session.state === "paused"
-              ? [{ label: "Resume", onSelect: () => void actions.setSessionState(session.sessionId, "resume") }]
-              : []),
-          ...(session.state !== "ended"
-            ? [{ label: "End", onSelect: () => void actions.setSessionState(session.sessionId, "end") }]
-            : []),
+          ...sessionStateItems(
+            session,
+            session.artifactIds.map((artifactId) => ({ artifactId })),
+            actions,
+            dialogs,
+          ),
           {
             label: "Move to Trash",
             tone: "danger",

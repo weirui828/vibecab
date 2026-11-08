@@ -12,6 +12,7 @@ import type { DraftRow, SessionRow } from "../live/workspace.js";
 import { useDialogs } from "../home/DialogHost.js";
 import { useActions } from "../home/actions.js";
 import { Menu } from "../ui/Menu.js";
+import { SessionState } from "./SessionState.js";
 import type { MenuItem } from "../ui/Menu.js";
 import { plural, relativeTime } from "../ui/time.js";
 import { navigate } from "../shell/prefs.js";
@@ -87,7 +88,6 @@ function SessionHeader({
     elements = useLiveQuery<Element[]>("vc.Elements", { artifactId: current?.artifactId ?? "" }, current !== undefined);
   const blocks = elements.data?.filter((e) => e.parentId === null).length;
   const facts = [
-    session.state === "active" ? undefined : session.state === "paused" ? terms.paused : terms.ended,
     artifact.data ? `version ${artifact.data.headVersion}` : undefined,
     blocks !== undefined ? plural(blocks, "block") : undefined,
     artifact.data ? `updated ${relativeTime(artifact.data.updatedAt)}` : undefined,
@@ -118,14 +118,6 @@ function SessionHeader({
       separatorBefore: session.state !== "ended",
       onSelect: () => dialogs.rename("session", session.sessionId, session.title),
     },
-    ...(session.state === "active"
-      ? [{ label: "Pause", onSelect: () => void actions.setSessionState(session.sessionId, "pause") }]
-      : session.state === "paused"
-        ? [{ label: "Resume", onSelect: () => void actions.setSessionState(session.sessionId, "resume") }]
-        : []),
-    ...(session.state !== "ended"
-      ? [{ label: "End", onSelect: () => void actions.setSessionState(session.sessionId, "end") }]
-      : []),
     {
       label: "Move to Trash",
       tone: "danger",
@@ -140,7 +132,10 @@ function SessionHeader({
     <header className="vc-session-head">
       <div className="title">
         <h1>{session.title}</h1>
-        {facts && <p className="vc-facts">{facts}</p>}
+        <div className="vc-facts-line">
+          <SessionState session={session} drafts={drafts} />
+          {facts && <p className="vc-facts">{facts}</p>}
+        </div>
       </div>
       {drafts.length > 1 && (
         <nav
