@@ -30,8 +30,69 @@ interface CallLog {
   createdAt: string;
 }
 
+type Spend = { limitMicros: number | null; usedMicros: number; reservedMicros: number };
+type Today = { date: string; daily: Spend; agents: Array<Spend & { agentId: string }> };
+/** Names for agent ids; an agent paid by its own subscription (W12) is never charged here. */
+export const agentNames: Record<string, string> = {
+  vibecab: "VibeCab agent",
+  "claude-code": "Claude Code",
+  codex: "Codex",
+};
+const subscriptionAgents = new Set(["claude-code", "codex"]);
+
+/** One agent's line: today's use, and its own daily limit beside the overall one. */
+function AgentLimit({ agent }: { agent: Spend & { agentId: string } }) {
+  const run = useRun(),
+    [limit, setLimit] = useState<string>(),
+    name = agentNames[agent.agentId] ?? agent.agentId;
+  if (subscriptionAgents.has(agent.agentId))
+    return (
+      <li>
+        <span className="what">
+          {name}
+          <span className="vc-facts">Paid by its own subscription — not counted here</span>
+        </span>
+      </li>
+    );
+  return (
+    <li>
+      <span className="what">
+        {name}
+        <span className="vc-facts">
+          ${dollars(agent.usedMicros)} today
+          {agent.limitMicros != null ? ` of $${dollars(agent.limitMicros)}` : " · only the overall limit"}
+        </span>
+      </span>
+      <form
+        className="vc-inline-setting"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const value = limit?.trim() ? toMicros(limit) : null;
+          if (value === undefined) return;
+          void run("sys.SetBudget", { account: { kind: "agent", key: agent.agentId }, limitMicros: value }).then(
+            (ok) => ok !== undefined && setLimit(undefined),
+          );
+        }}
+      >
+        <Field label={`${name}: daily limit ($)`} hideLabel>
+          <Input
+            inputMode="decimal"
+            placeholder="No own limit"
+            value={limit ?? (agent.limitMicros != null ? dollars(agent.limitMicros) : "")}
+            onChange={(e) => setLimit(e.target.value)}
+          />
+        </Field>
+        <Button type="submit" size="sm" variant="ghost" disabled={limit === undefined}>
+          Save
+        </Button>
+      </form>
+    </li>
+  );
+}
+
 function SpendingSection({ budgets }: { budgets: SettingsShape["budgets"] }) {
   const usage = useLiveQuery<{ accounts: BudgetState[]; calls: CallLog[] }>("sys.Usage", {}),
+    today = useLiveQuery<Today>("sys.SpendingToday", {}),
     run = useRun(),
     [limit, setLimit] = useState<string>(),
     [turn, setTurn] = useState<string>();
@@ -41,7 +102,9 @@ function SpendingSection({ budgets }: { budgets: SettingsShape["budgets"] }) {
     if (await run("sys.SetSettings", { patch: { budgets: { ...budgets, defaultTurnLimitMicros: value } } }))
       setTurn(undefined);
   }
-  const daily = usage.data?.accounts.find((a) => a.account.kind === "daily");
+  // Today's account, not just any daily one: each day has its own.
+  const daily = today.data?.daily,
+    agents = today.data?.agents ?? [];
   const calls = [...(usage.data?.calls ?? [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 8);
   async function save() {
     const value = limit?.trim() ? toMicros(limit) : null;
@@ -97,6 +160,16 @@ function SpendingSection({ budgets }: { budgets: SettingsShape["budgets"] }) {
           Save
         </Button>
       </form>
+      {agents.length > 0 && (
+        <div className="vc-agent-limits">
+          <p className="vc-label">Per agent</p>
+          <ul className="vc-plain-list">
+            {agents.map((agent) => (
+              <AgentLimit key={agent.agentId} agent={agent} />
+            ))}
+          </ul>
+        </div>
+      )}
       {calls.length > 0 && (
         <table className="vc-calls">
           <caption className="vc-label">Recent model calls</caption>

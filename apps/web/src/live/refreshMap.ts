@@ -23,8 +23,23 @@ const map: Record<string, string[]> = {
   "vc.ConflictDetected": ["vc.DecisionRecord", "vc.Conflicts", "vc.AttentionInbox", "vc.FeedbackItems"],
   "vc.ConflictResolved": ["vc.DecisionRecord", "vc.Conflicts", "vc.AttentionInbox", "vc.FeedbackItems"],
   "vc.DeliveryStateChanged": ["vc.DeliveryState", "vc.Threads"],
-  "vc.UpdateChanged": ["vc.Updates", "vc.DecisionRecord", "vc.Artifact", "vc.Versions", "vc.AttentionInbox"],
-  "vc.AgentTurnChanged": ["vc.AgentTurns", "vc.Threads", "vc.DeliveryState", "vc.AttentionInbox"],
+  "vc.UpdateChanged": [
+    "vc.Updates",
+    "vc.DecisionRecord",
+    "vc.Artifact",
+    "vc.Versions",
+    "vc.AttentionInbox",
+    "sys.Usage",
+    "sys.SpendingToday",
+  ],
+  "vc.AgentTurnChanged": [
+    "vc.AgentTurns",
+    "vc.Threads",
+    "vc.DeliveryState",
+    "vc.AttentionInbox",
+    "sys.Usage",
+    "sys.SpendingToday",
+  ],
   "vc.LifecycleChanged": [
     "vc.OutputSets",
     "vc.Labels",
@@ -38,11 +53,11 @@ const map: Record<string, string[]> = {
   ],
   "sys.AccessTokenCreated": ["sys.AccessTokens"],
   "sys.AccessTokenRevoked": ["sys.AccessTokens"],
-  "sys.SettingsChanged": ["sys.Settings", "sys.Budgets", "sys.Usage"],
+  "sys.SettingsChanged": ["sys.Settings", "sys.Budgets", "sys.Usage", "sys.SpendingToday"],
   "sys.ProviderKeyRefSet": ["sys.Settings"],
   "vc.ToolServerChanged": ["vc.ToolServers", "vc.Grants"],
   "vc.ToolPolicyChanged": ["vc.ToolServers", "vc.Grants"],
-  "sys.BudgetChanged": ["sys.Settings", "sys.Budgets", "sys.Usage"],
+  "sys.BudgetChanged": ["sys.Settings", "sys.Budgets", "sys.Usage", "sys.SpendingToday"],
 };
 
 /** Events no screen of the web app shows yet (TMR runs, review requests, external tool calls). */

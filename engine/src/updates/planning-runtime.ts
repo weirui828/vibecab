@@ -14,6 +14,11 @@ import type { ModelEvent as GatewayEvent, ModelRequest as GatewayRequest } from 
 import { UpdatePreparationRuntime } from "./preparation-runtime.js";
 import { discussionFor, storeRequestIndex } from "./helpers.js";
 import { untrustedMcpResult } from "../agent/index.js";
+import { BUILT_IN_AGENT } from "../gateway/types.js";
+
+/** What an Update's model call is for, by its prompt: planning, writing, or judging a conflict. */
+const purposeOf = (promptName: string): "plan" | "update" | "review" =>
+  promptName === "plan" ? "plan" : promptName === "judge" ? "review" : "update";
 import { sessionPreferences } from "../session-preferences.js";
 
 export abstract class UpdatePlanningRuntime extends UpdatePreparationRuntime {
@@ -180,6 +185,7 @@ export abstract class UpdatePlanningRuntime extends UpdatePreparationRuntime {
         { kind: "turn", key: update.updateId },
         { kind: "session", key: this.updateSessionId(update) },
         { kind: "daily" },
+        { kind: "agent", key: BUILT_IN_AGENT },
       ],
       estimateReservationMicros(request, model),
     );
@@ -187,6 +193,7 @@ export abstract class UpdatePlanningRuntime extends UpdatePreparationRuntime {
     const events: GatewayEvent[] = [];
     for await (const event of this.gateway.call(request, {
       reservationId,
+      attribution: { agentId: BUILT_IN_AGENT, sessionId: this.updateSessionId(update), purpose: purposeOf(promptName) },
       idempotencyKey: `${update.updateId}:${promptName}:${manifest.requestIndex}`,
       signal: new AbortController().signal,
     })) {
@@ -257,11 +264,17 @@ export abstract class UpdatePlanningRuntime extends UpdatePreparationRuntime {
       const followReservationId = this.deps.ids.next("reservation_");
       this.budgets?.reserve(
         followReservationId,
-        [{ kind: "turn", key: update.updateId }, { kind: "session", key: sessionId }, { kind: "daily" }],
+        [
+          { kind: "turn", key: update.updateId },
+          { kind: "session", key: sessionId },
+          { kind: "daily" },
+          { kind: "agent", key: BUILT_IN_AGENT },
+        ],
         estimateReservationMicros(followRequest, model),
       );
       for await (const event of this.gateway.call(followRequest, {
         reservationId: followReservationId,
+        attribution: { agentId: BUILT_IN_AGENT, sessionId, purpose: purposeOf(promptName) },
         idempotencyKey: `${update.updateId}:${promptName}:${followManifest.requestIndex}`,
         signal: new AbortController().signal,
       })) {

@@ -4,19 +4,71 @@
   "title": "CallLog",
   "type": "object",
   "properties": {
-    "callId": { "type": "string", "minLength": 1 },
-    "alias": { "type": "string", "minLength": 1 },
-    "model": { "type": "string", "minLength": 1 },
-    "reservationId": { "type": "string", "minLength": 1 },
-    "reservedMicros": { "type": "integer", "minimum": 0 },
-    "settledMicros": { "type": "integer", "minimum": 0 },
-    "usageQuality": { "enum": ["reported", "estimated", "unknown"] },
+    "callId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "alias": {
+      "type": "string",
+      "minLength": 1
+    },
+    "model": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reservationId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reservedMicros": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "settledMicros": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "usageQuality": {
+      "enum": ["reported", "estimated", "unknown"]
+    },
     "finishReason": {
       "enum": ["stop", "length", "tool_calls", "content_filter", "error"]
     },
-    "durationMs": { "type": "integer", "minimum": 0 },
-    "errorCode": { "type": "string" },
-    "createdAt": { "type": "string", "format": "date-time" }
+    "durationMs": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "errorCode": {
+      "type": "string"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "agentId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The agent the call worked for: vibecab, or an SDK agent (W12)."
+    },
+    "sessionId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "purpose": {
+      "enum": ["reply", "update", "plan", "digest", "review"]
+    },
+    "inputTokens": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "outputTokens": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "cachedInputTokens": {
+      "type": "integer",
+      "minimum": 0
+    }
   },
   "required": [
     "callId",

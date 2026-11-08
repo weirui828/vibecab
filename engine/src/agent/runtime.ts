@@ -15,6 +15,7 @@ import type { ModelEvent as GatewayEvent, ModelRequest as GatewayRequest } from 
 import { replyToolNames, replyToolSchemas } from "./tools.js";
 import { AgentExternalRuntime } from "./external-runtime.js";
 import { untrustedMcpResult } from "./tools/external.js";
+import { BUILT_IN_AGENT } from "../gateway/types.js";
 import { sessionPreferences } from "../session-preferences.js";
 
 export abstract class AgentRuntime extends AgentExternalRuntime {
@@ -150,7 +151,12 @@ export abstract class AgentRuntime extends AgentExternalRuntime {
     const amount = estimateReservationMicros(request, model);
     this.budgets?.reserve(
       reservationId,
-      [{ kind: "turn", key: turnId }, { kind: "session", key: turn.sessionId }, { kind: "daily" }],
+      [
+        { kind: "turn", key: turnId },
+        { kind: "session", key: turn.sessionId },
+        { kind: "daily" },
+        { kind: "agent", key: BUILT_IN_AGENT },
+      ],
       amount,
     );
     const abort = new AbortController(),
@@ -185,6 +191,7 @@ export abstract class AgentRuntime extends AgentExternalRuntime {
         );
       for await (const event of this.gateway!.call(request, {
         reservationId,
+        attribution: { agentId: BUILT_IN_AGENT, sessionId: turn.sessionId, purpose: "reply" },
         idempotencyKey: turnId + ":0",
         signal: abort.signal,
         onSent,
@@ -407,11 +414,17 @@ export abstract class AgentRuntime extends AgentExternalRuntime {
         const followReservationId = this.deps.ids.next("reservation_");
         this.budgets?.reserve(
           followReservationId,
-          [{ kind: "turn", key: turnId }, { kind: "session", key: turn.sessionId }, { kind: "daily" }],
+          [
+            { kind: "turn", key: turnId },
+            { kind: "session", key: turn.sessionId },
+            { kind: "daily" },
+            { kind: "agent", key: BUILT_IN_AGENT },
+          ],
           estimateReservationMicros(followRequest, model),
         );
         for await (const ignored of this.gateway!.call(followRequest, {
           reservationId: followReservationId,
+          attribution: { agentId: BUILT_IN_AGENT, sessionId: turn.sessionId, purpose: "reply" },
           idempotencyKey: turnId + ":1",
           signal: abort.signal,
         }))

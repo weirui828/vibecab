@@ -89,7 +89,7 @@ export abstract class CommandOperations extends StorageAccessRuntime {
       case "sys.SetBudget": {
         const p = this.contract.read<{
           account: {
-            kind: "daily" | "session" | "grant" | "run" | "turn";
+            kind: "daily" | "agent" | "session" | "grant" | "run" | "turn";
             key?: string;
           };
           limitMicros: number | null;
