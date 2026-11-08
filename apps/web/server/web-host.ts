@@ -7,6 +7,7 @@ import { dirname, extname, join, normalize, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AddressInfo } from "node:net";
 import { Access, sameHost, sameOrigin } from "./access.js";
+import { providerCatalog, readLiveModels } from "../../../contract/src/provider-catalog.js";
 import { EngineLink } from "./engine.js";
 
 export interface WebHostOptions {
@@ -20,6 +21,8 @@ export interface WebHostOptions {
   version?: string;
   /** Path of the MCP stdio relay for assistant setup; found in the repository when not given. */
   mcpRelayPath?: string;
+  /** For model lists from providers (tests pass a fake; nothing else here reaches the network). */
+  fetch?: typeof fetch;
 }
 
 export interface WebHost {
@@ -126,7 +129,21 @@ export async function startWebHost(options: WebHostOptions): Promise<WebHost> {
     upstream.end(payload);
   }
 
-  async function app(req: IncomingMessage, res: ServerResponse, path: string) {
+  // A provider's live model list. Only addresses written in the built-in catalog are fetched — never one the page
+  // sends — and no key is sent: OpenRouter's list is public and local servers need none.
+  async function providerModels(providerId: string) {
+    const live = providerCatalog.providers.find((p) => p.id === providerId)?.liveModels;
+    if (!live) return { models: [], error: "no_list" };
+    try {
+      const res = await (options.fetch ?? fetch)(live.url, { signal: AbortSignal.timeout(8000) });
+      if (!res.ok) return { models: [], error: "unreachable" };
+      return { models: readLiveModels(live.format, await res.json()) };
+    } catch {
+      return { models: [], error: "unreachable" };
+    }
+  }
+
+  async function app(req: IncomingMessage, res: ServerResponse, path: string, url: URL) {
     const json = (value: unknown) => {
       res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
       res.end(JSON.stringify(value));
@@ -140,6 +157,8 @@ export async function startWebHost(options: WebHostOptions): Promise<WebHost> {
       });
     // A fresh single-use sign-in link, for another browser (asked by a signed-in tab or by `vibecab-web link`).
     if (req.method === "POST" && path === "/app/launch-link") return json({ url: launchUrl() });
+    if (req.method === "GET" && path === "/app/provider-models")
+      return json(await providerModels(url.searchParams.get("provider") ?? ""));
     if (req.method === "POST" && path === "/app/start-engine") {
       try {
         return json({ connection: await engine.start() });
@@ -188,7 +207,7 @@ export async function startWebHost(options: WebHostOptions): Promise<WebHost> {
     if (path.startsWith("/v1/") || path.startsWith("/app/")) {
       if (!(path === "/app/launch-link" && controlled(req)) && !gate.authorized(req))
         return error(res, 401, "unauthenticated", "Open VibeCab from the link printed by the web host");
-      if (path.startsWith("/app/")) return app(req, res, path);
+      if (path.startsWith("/app/")) return app(req, res, path, url);
       sockets.add(res);
       res.on("close", () => sockets.delete(res));
       return forward(req, res);

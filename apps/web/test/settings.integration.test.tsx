@@ -70,6 +70,76 @@ it("saves the model and key; the key never comes back to the page", async () => 
   expect(JSON.stringify(await bridge.query("sys.Settings", {}))).not.toContain(SECRET);
 });
 
+it("picks a built-in provider and model: address, context and price come from the catalog", async () => {
+  type Saved = {
+    baseUrl: string;
+    model: string;
+    keyRef?: string;
+    catalogProvider?: string;
+    pricingSource?: string;
+    pricing: { inputMicrosPerMillion: number; outputMicrosPerMillion: number };
+    capabilities: { maxContextTokens: number };
+  };
+  const saved = async () => (await bridge.query<{ models?: { default?: Saved } }>("sys.Settings", {})).models?.default;
+  await open("/settings/agents");
+  const model = tl.within(await tl.screen.findByRole("region", { name: "Model" }));
+  const save = () => tl.fireEvent.click(model.getByRole("button", { name: "Save" }));
+  tl.fireEvent.change(model.getByLabelText("Provider"), { target: { value: "groq" } });
+  tl.fireEvent.change(model.getByLabelText("Model"), { target: { value: "openai/gpt-oss-120b" } });
+  expect(model.getByText(/\$0\.15 in · \$0\.60 out per million tokens · 131K context/)).toBeTruthy();
+  // Another provider's saved key is not this one's.
+  save();
+  expect((await model.findByRole("alert")).textContent).toBe("Paste the API key for this provider.");
+  tl.fireEvent.change(model.getByLabelText("API key"), { target: { value: "groq-test-key" } });
+  save();
+  await tl.waitFor(async () =>
+    expect(await saved()).toMatchObject({
+      baseUrl: "https://api.groq.com/openai/v1",
+      model: "openai/gpt-oss-120b",
+      catalogProvider: "groq",
+      pricingSource: "catalog",
+      pricing: { inputMicrosPerMillion: 150_000, outputMicrosPerMillion: 600_000 },
+      capabilities: { maxContextTokens: 131_072 },
+    }),
+  );
+  // Saving also stores the key; the form is free again once it says so.
+  await tl.screen.findByText("Model saved");
+  // A price changed by hand is kept as yours.
+  tl.fireEvent.click(model.getByRole("button", { name: "More details" }));
+  tl.fireEvent.change(model.getByLabelText("$ per million tokens in"), { target: { value: "0.2" } });
+  save();
+
+  await tl.waitFor(async () =>
+    expect(await saved()).toMatchObject({ pricingSource: "custom", pricing: { inputMicrosPerMillion: 200_000 } }),
+  );
+});
+
+it("lists a local server's models and needs no key; an address with blanks is refused", async () => {
+  await open("/settings/agents");
+  const model = tl.within(await tl.screen.findByRole("region", { name: "Model" }));
+  tl.fireEvent.change(model.getByLabelText("Provider"), { target: { value: "ollama" } });
+  expect(model.queryByLabelText("API key")).toBeNull();
+  await tl.waitFor(() => expect(model.getByText("1 to choose from, or type any model name.")).toBeTruthy());
+  tl.fireEvent.change(model.getByLabelText("Model"), { target: { value: "llama-local:8b" } });
+  tl.fireEvent.click(model.getByRole("button", { name: "Save" }));
+  await tl.waitFor(async () => {
+    const settings = await bridge.query<{ models?: { default?: { baseUrl: string; model: string; keyRef?: string } } }>(
+      "sys.Settings",
+      {},
+    );
+    expect(settings.models?.default).toMatchObject({
+      baseUrl: "http://localhost:11434/v1",
+      model: "llama-local:8b",
+      keyRef: expect.any(String),
+    });
+  });
+  tl.fireEvent.change(model.getByLabelText("Provider"), { target: { value: "cloudflare-workers-ai" } });
+  tl.fireEvent.change(model.getByLabelText("Model"), { target: { value: "@cf/openai/gpt-oss-20b" } });
+  tl.fireEvent.change(model.getByLabelText("API key"), { target: { value: "cf-token" } });
+  tl.fireEvent.click(model.getByRole("button", { name: "Save" }));
+  expect((await model.findByRole("alert")).textContent).toBe("Fill in Cloudflare account ID.");
+});
+
 it("sets the daily limit and agent limits from Settings", async () => {
   await open("/settings/spending");
   const spending = tl.within(await tl.screen.findByRole("region", { name: "Spending" }));

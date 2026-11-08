@@ -1,5 +1,6 @@
 import type { CommandResult, ContractError, EventEnvelope } from "../../../../contract/src/index.js";
 import type { ContractBridge } from "../../../ui/src/api.js";
+import type { LiveModel } from "../../../../contract/src/provider-catalog.js";
 import type { ConnectionState } from "../../../ui/src/connection.js";
 
 export interface AppState {
@@ -15,6 +16,8 @@ export interface WebAppBridge {
   startEngine(): Promise<ConnectionState>;
   /** A fresh single-use sign-in link for another browser. */
   launchLink(): Promise<string>;
+  /** A built-in provider's live model list (OpenRouter, local servers); empty with a reason when there is none. */
+  providerModels(providerId: string): Promise<{ models: LiveModel[]; error?: string }>;
 }
 
 export type WebBridge = Omit<ContractBridge, "app"> & { app: WebAppBridge };
@@ -171,6 +174,13 @@ export function webBridge(options: { base?: string; fetch?: Fetch; retryMs?: num
         const res = await doFetch(base + "/app/launch-link", { method: "POST", credentials: "same-origin" });
         if (!res.ok) throw new BridgeError(await readError(res));
         return ((await res.json()) as { url: string }).url;
+      },
+      async providerModels(providerId) {
+        const res = await doFetch(base + "/app/provider-models?provider=" + encodeURIComponent(providerId), {
+          credentials: "same-origin",
+        });
+        if (!res.ok) throw new BridgeError(await readError(res));
+        return (await res.json()) as { models: LiveModel[]; error?: string };
       },
       async startEngine() {
         const res = await doFetch(base + "/app/start-engine", { method: "POST", credentials: "same-origin" });

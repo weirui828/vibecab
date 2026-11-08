@@ -4,18 +4,40 @@
   "title": "ProviderModel",
   "type": "object",
   "properties": {
-    "provider": { "const": "openai-compatible" },
-    "baseUrl": { "type": "string", "format": "uri" },
-    "model": { "type": "string", "minLength": 1 },
-    "keyRef": { "type": "string", "minLength": 1 },
+    "provider": {
+      "const": "openai-compatible"
+    },
+    "baseUrl": {
+      "type": "string",
+      "format": "uri"
+    },
+    "model": {
+      "type": "string",
+      "minLength": 1
+    },
+    "keyRef": {
+      "type": "string",
+      "minLength": 1
+    },
     "capabilities": {
       "type": "object",
       "properties": {
-        "tools": { "type": "boolean" },
-        "jsonSchemaOutput": { "type": "boolean" },
-        "streaming": { "type": "boolean" },
-        "maxContextTokens": { "type": "integer", "minimum": 1 },
-        "reportsUsage": { "type": "boolean" }
+        "tools": {
+          "type": "boolean"
+        },
+        "jsonSchemaOutput": {
+          "type": "boolean"
+        },
+        "streaming": {
+          "type": "boolean"
+        },
+        "maxContextTokens": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "reportsUsage": {
+          "type": "boolean"
+        }
       },
       "required": ["tools", "jsonSchemaOutput", "streaming", "maxContextTokens", "reportsUsage"],
       "additionalProperties": false
@@ -23,11 +45,26 @@
     "pricing": {
       "type": "object",
       "properties": {
-        "inputMicrosPerMillion": { "type": "integer", "minimum": 0 },
-        "outputMicrosPerMillion": { "type": "integer", "minimum": 0 }
+        "inputMicrosPerMillion": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "outputMicrosPerMillion": {
+          "type": "integer",
+          "minimum": 0
+        }
       },
       "required": ["inputMicrosPerMillion", "outputMicrosPerMillion"],
       "additionalProperties": false
+    },
+    "catalogProvider": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The built-in provider (catalog id) this model was chosen from, if any."
+    },
+    "pricingSource": {
+      "enum": ["catalog", "live", "custom"],
+      "description": "Where the price came from: the built-in catalog, a provider's live list, or the person."
     }
   },
   "required": ["provider", "baseUrl", "model", "capabilities", "pricing"],
