@@ -18,6 +18,7 @@ const map: Record<string, string[]> = {
   "vc.CommentPosted": ["vc.Threads", "vc.FeedbackItems", "vc.AttentionInbox"],
   "vc.CommentEdited": ["vc.Threads", "vc.FeedbackItems", "vc.AttentionInbox"],
   "vc.CommentDeleted": ["vc.Threads", "vc.FeedbackItems", "vc.AttentionInbox"],
+  "vc.CommentsRead": ["vc.Threads", "vc.AttentionInbox"],
   "vc.FeedbackStateChanged": ["vc.DecisionRecord", "vc.Conflicts", "vc.AttentionInbox", "vc.FeedbackItems"],
   "vc.ConflictDetected": ["vc.DecisionRecord", "vc.Conflicts", "vc.AttentionInbox", "vc.FeedbackItems"],
   "vc.ConflictResolved": ["vc.DecisionRecord", "vc.Conflicts", "vc.AttentionInbox", "vc.FeedbackItems"],

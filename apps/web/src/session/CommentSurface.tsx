@@ -24,6 +24,9 @@ import {
   resolutionOf,
   sortByPosition,
   threadsForDraft,
+  slotFinder,
+  threadsBySlot,
+  unreadReplies,
 } from "./threads.js";
 import type { Thread, ThreadFilter, TurnStatus } from "./threads.js";
 import { useCommentActions } from "./useCommentActions.js";
@@ -98,6 +101,8 @@ export function CommentSurface({
       ),
     [threads, filter, elements, loop],
   );
+  // Threads with replies not looked at yet, in reading order: the bar's "new replies" button walks them.
+  const unreadThreads = shownThreads.filter((t) => unreadReplies(t).length > 0);
   const humanIds = shownThreads.map((t) => latestHuman(t)?.commentId).filter((id): id is string => Boolean(id));
   const delivery = useLiveQuery<VcDeliveryStateOperation["result"]>(
     "vc.DeliveryState",
@@ -309,6 +314,7 @@ export function CommentSurface({
       }
       quote={writing.quote}
       allowSuggestion={writing.quote !== undefined}
+      marks={writing.anchor !== undefined}
       onCancel={() => setWriting(undefined)}
       onSubmit={submit}
     />
@@ -335,28 +341,16 @@ export function CommentSurface({
         onOpenChanges,
       }}
       {...(positioned ? { style: { position: "absolute", top: 0, left: 0, right: 0 } } : {})}
-      onActivate={() => showText(thread)}
+      onActivate={() => {
+        showText(thread);
+        void actions.markRead(unreadReplies(thread).map((c) => c.commentId));
+      }}
     />
   );
 
   // In place: each thread goes under its block (a list item, or the top-level block holding a table cell).
-  const slotOf = useMemo(() => {
-    const byId = new Map(elements.map((e) => [e.elementId, e]));
-    return (elementId: string): string | undefined => {
-      for (let e = byId.get(elementId); e; e = e.parentId === null ? undefined : byId.get(e.parentId))
-        if (e.parentId === null || e.type === "list_item") return e.elementId;
-      return undefined;
-    };
-  }, [elements]);
-  const bySlot = useMemo(() => {
-    const map = new Map<string, Thread[]>();
-    for (const thread of shownThreads) {
-      const anchor = anchorOf(thread),
-        slot = (anchor && resolutionOf(thread)?.state !== "removed" ? slotOf(anchor.elementId) : undefined) ?? GENERAL;
-      map.set(slot, [...(map.get(slot) ?? []), thread]);
-    }
-    return map;
-  }, [shownThreads, slotOf]);
+  const slotOf = useMemo(() => slotFinder(elements), [elements]);
+  const bySlot = useMemo(() => threadsBySlot(shownThreads, slotOf, GENERAL), [shownThreads, slotOf]);
   const writingSlot = writing && ((writing.anchor && slotOf(writing.anchor.elementId)) ?? GENERAL);
   const newCard = (positioned: boolean) =>
     writing && (
@@ -470,6 +464,14 @@ export function CommentSurface({
       <ActionBar
         canComment={!readOnly}
         threadCount={shownThreads.length}
+        unreadCount={unreadThreads.length}
+        onNextUnread={() => {
+          const next = unreadThreads[0];
+          if (!next) return;
+          setShown(true);
+          focusThread(next.threadId, true);
+          void actions.markRead(unreadReplies(next).map((c) => c.commentId));
+        }}
         threadsShown={shown}
         place={wide ? place : undefined}
         onPlace={setPlace}

@@ -125,6 +125,7 @@ describe("MCP server", () => {
         "list_threads",
         "manifest",
         "mark_handled",
+        "mark_read",
         "mark_seen",
         "outline",
         "output_sets",

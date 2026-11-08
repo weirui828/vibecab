@@ -258,3 +258,37 @@ it("an ended session says why it cannot take comments, and carries on in a new s
   expect(drafts.map((d) => [d.artifactId, d.role])).toEqual([[artifactId, "primary"]]);
   await tl.findByRole(container, "button", { name: "Comment on the whole session" }, { timeout: 5000 });
 });
+
+it("marks the agent's new replies until they are looked at, and walks to them from the bar", async () => {
+  const unread = async () =>
+    (await threads()).flatMap((th) => th.comments.filter((c) => c.author.kind === "agent" && !c.read && !c.deleted));
+  // The agent answered "Name the rock." in the first test; nobody has opened that thread since.
+  expect((await unread()).length).toBeGreaterThan(0);
+  const { container } = await openSession();
+  await tl.waitFor(() => expect(container.querySelector(".vc-thread[data-unread]")).not.toBeNull());
+  expect(container.querySelector(".vc-thread[data-unread] .vc-new-tag")?.textContent).toContain("click to mark read");
+  tl.fireEvent.click(await tl.screen.findByRole("button", { name: /new repl(y|ies) ↓$/ }));
+  await tl.waitFor(async () => expect(await unread()).toEqual([]));
+  await tl.waitFor(() => expect(container.querySelector(".vc-thread[data-unread]")).toBeNull());
+  expect(tl.screen.queryByRole("button", { name: /new repl(y|ies) ↓$/ })).toBeNull();
+  // Needs you no longer counts them.
+  const inbox = await bridge.query<Array<{ kind: string; sessionId?: string }>>("vc.AttentionInbox", {});
+  expect(inbox.filter((i) => i.kind === "unread_reply" && i.sessionId === sessionId)).toEqual([]);
+});
+
+it("sends a quick mark in one click, with any words typed after it", async () => {
+  const { container } = await openSession();
+  const paragraph = container.querySelectorAll<HTMLElement>(".vc-doc > p")[1]!;
+  tl.fireEvent.mouseMove(paragraph);
+  tl.fireEvent.click(await tl.screen.findByRole("button", { name: "Comment on this block" }));
+  const form = await tl.screen.findByRole("form", { name: "Comment on this block" });
+  tl.fireEvent.change(tl.within(form).getByLabelText("Comment on this block"), {
+    target: { value: "The second half." },
+  });
+  tl.fireEvent.click(tl.within(form).getByRole("button", { name: "Explain" }));
+  await tl.waitFor(async () =>
+    expect((await threads()).flatMap((th) => th.comments.map((c) => c.body))).toContain(
+      "Explain this in more detail. The second half.",
+    ),
+  );
+});

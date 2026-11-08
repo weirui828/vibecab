@@ -10,6 +10,7 @@ import {
   resolutionOf,
   stateLabel,
   threadState,
+  unreadReplies,
   visibleComments,
 } from "./threads.js";
 import type { Delivery, TurnStatus } from "./threads.js";
@@ -208,7 +209,8 @@ export const ThreadCard = forwardRef<
     comments = visibleComments(thread),
     opening = comments[0],
     last = comments.at(-1),
-    state = threadState(thread);
+    state = threadState(thread),
+    unread = unreadReplies(thread).length;
   const decide = decision.canDecide && !readOnly;
   const where = !anchor
     ? "On the whole session"
@@ -233,6 +235,7 @@ export const ThreadCard = forwardRef<
       data-focused={focused || undefined}
       data-resolution={resolution?.state}
       data-status={status?.tone}
+      data-unread={unread > 0 || undefined}
       tabIndex={0}
       aria-label={`Thread: ${opening?.body.slice(0, 60) ?? ""}`}
       style={style}
@@ -248,6 +251,9 @@ export const ThreadCard = forwardRef<
         }
       }}
     >
+      {unread > 0 && (
+        <p className="vc-new-tag">{unread === 1 ? "New reply" : `${unread} new replies`} · click to mark read</p>
+      )}
       {anchor?.locator && <blockquote className="quote">{anchor.locator.quote}</blockquote>}
       {where && <p className="where">{where}</p>}
       <ul className="comments">

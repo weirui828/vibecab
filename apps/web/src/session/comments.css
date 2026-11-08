@@ -509,3 +509,46 @@ li > .vc-inline {
   flex: 1 1 280px;
   margin: 0;
 }
+
+/* Replies not looked at yet stand out until opened (covibe's rule: read when you tap it). */
+.vc-thread[data-unread] {
+  border-color: var(--color-warning-border);
+  background: var(--color-warning-subtle);
+  cursor: pointer;
+}
+.vc-new-tag {
+  display: inline-block;
+  margin: 0 0 8px;
+  padding: 1px 9px;
+  border-radius: 999px;
+  background: var(--color-warning-default);
+  color: var(--color-fg-inverse);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+.vc-bar-button.vc-unread-jump {
+  background: var(--color-warning-subtle);
+  color: var(--color-warning-fg);
+}
+
+/* Quick marks above a new comment, as in covibe. */
+.vc-marks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.vc-marks button {
+  padding: 3px 11px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 999px;
+  background: var(--color-surface-base);
+  color: var(--color-fg-default);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.vc-marks button:hover {
+  border-color: var(--color-accent-default);
+  color: var(--color-accent-fg);
+}

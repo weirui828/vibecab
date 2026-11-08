@@ -2691,6 +2691,30 @@ export const schemasById: Record<string, AnySchema> = {
     ],
     "additionalProperties": false
   },
+  "https://vibecab.local/schemas/events/vc.CommentsRead.json": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://vibecab.local/schemas/events/vc.CommentsRead.json",
+    "title": "CommentsRead",
+    "type": "object",
+    "properties": {
+      "sessionId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "commentIds": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "required": [
+      "sessionId",
+      "commentIds"
+    ],
+    "additionalProperties": false
+  },
   "https://vibecab.local/schemas/events/vc.ConflictDetected.json": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://vibecab.local/schemas/events/vc.ConflictDetected.json",
@@ -8175,6 +8199,72 @@ export const schemasById: Record<string, AnySchema> = {
       }
     }
   },
+  "https://vibecab.local/schemas/operations/vc.MarkRead.json": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://vibecab.local/schemas/operations/vc.MarkRead.json",
+    "title": "vcMarkReadOperation",
+    "type": "object",
+    "properties": {
+      "payload": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "commentIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "sessionId",
+          "commentIds"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "commentIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "required": [
+          "commentIds"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "required": [
+      "payload",
+      "result"
+    ],
+    "additionalProperties": false,
+    "operation": {
+      "name": "vc.MarkRead",
+      "kind": "command",
+      "meta": {
+        "effect": "collaborate",
+        "irreversible": false,
+        "channels": [
+          "in_process",
+          "http",
+          "cli",
+          "mcp"
+        ]
+      }
+    }
+  },
   "https://vibecab.local/schemas/operations/vc.MarkSeen.json": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://vibecab.local/schemas/operations/vc.MarkSeen.json",
@@ -12557,6 +12647,7 @@ export const schemasByPath: Record<string, string> = {
   "events/vc.CommentDeleted.json": "https://vibecab.local/schemas/events/vc.CommentDeleted.json",
   "events/vc.CommentEdited.json": "https://vibecab.local/schemas/events/vc.CommentEdited.json",
   "events/vc.CommentPosted.json": "https://vibecab.local/schemas/events/vc.CommentPosted.json",
+  "events/vc.CommentsRead.json": "https://vibecab.local/schemas/events/vc.CommentsRead.json",
   "events/vc.ConflictDetected.json": "https://vibecab.local/schemas/events/vc.ConflictDetected.json",
   "events/vc.ConflictResolved.json": "https://vibecab.local/schemas/events/vc.ConflictResolved.json",
   "events/vc.DeliveryStateChanged.json": "https://vibecab.local/schemas/events/vc.DeliveryStateChanged.json",
@@ -12658,6 +12749,7 @@ export const schemasByPath: Record<string, string> = {
   "operations/vc.Labels.json": "https://vibecab.local/schemas/operations/vc.Labels.json",
   "operations/vc.Manifest.json": "https://vibecab.local/schemas/operations/vc.Manifest.json",
   "operations/vc.MarkHandled.json": "https://vibecab.local/schemas/operations/vc.MarkHandled.json",
+  "operations/vc.MarkRead.json": "https://vibecab.local/schemas/operations/vc.MarkRead.json",
   "operations/vc.MarkSeen.json": "https://vibecab.local/schemas/operations/vc.MarkSeen.json",
   "operations/vc.Outline.json": "https://vibecab.local/schemas/operations/vc.Outline.json",
   "operations/vc.OutputSets.json": "https://vibecab.local/schemas/operations/vc.OutputSets.json",

@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { Button } from "@wei/design-system";
 
+/** Covibe's quick marks: one click says it, with any words typed added after. */
+export const quickMarks = [
+  { label: "Like", body: "I like this. Keep it." },
+  { label: "Dislike", body: "I don't like this." },
+  { label: "Explain", body: "Explain this in more detail." },
+  { label: "Delete", body: "Delete this." },
+] as const;
+
 export interface Draft {
   body: string;
   replacement?: string;
@@ -13,9 +21,12 @@ export function Composer({
   quote,
   initial,
   allowSuggestion,
+  marks = false,
   onSubmit,
   onCancel,
 }: {
+  /** Offer the quick marks (new comments on the Document only). */
+  marks?: boolean;
   label: string;
   submitLabel?: string;
   quote?: string | undefined;
@@ -28,10 +39,10 @@ export function Composer({
     [suggest, setSuggest] = useState(initial?.replacement !== undefined),
     [replacement, setReplacement] = useState(initial?.replacement ?? quote ?? ""),
     [busy, setBusy] = useState(false);
-  async function send() {
-    if (!body.trim() || busy) return;
+  async function send(text = body.trim()) {
+    if (!text || busy) return;
     setBusy(true);
-    const ok = await onSubmit({ body: body.trim(), ...(suggest ? { replacement } : {}) });
+    const ok = await onSubmit({ body: text, ...(suggest ? { replacement } : {}) });
     setBusy(false);
     if (ok) {
       setBody("");
@@ -56,6 +67,21 @@ export function Composer({
         }
       }}
     >
+      {marks && (
+        <div className="vc-marks" role="group" aria-label="Quick marks">
+          {quickMarks.map((mark) => (
+            <button
+              key={mark.label}
+              type="button"
+              disabled={busy}
+              title={mark.body}
+              onClick={() => void send(body.trim() ? `${mark.body} ${body.trim()}` : mark.body)}
+            >
+              {mark.label}
+            </button>
+          ))}
+        </div>
+      )}
       <textarea
         autoFocus
         rows={3}

@@ -159,6 +159,8 @@ function FilterPanel({
 export function ActionBar({
   canComment,
   threadCount,
+  unreadCount,
+  onNextUnread,
   threadsShown,
   filter,
   onComment,
@@ -184,6 +186,9 @@ export function ActionBar({
   onAsk(): void;
   canComment: boolean;
   threadCount: number;
+  /** Threads with agent replies not looked at yet. */
+  unreadCount: number;
+  onNextUnread(): void;
   threadsShown: boolean;
   filter: ThreadFilter;
   onComment(): void;
@@ -237,6 +242,11 @@ export function ActionBar({
           <Glyph d={margin} />
           {threadCount > 0 && <span className="count">{threadCount}</span>}
         </BarButton>
+        {unreadCount > 0 && (
+          <button type="button" className="vc-bar-button labelled vc-unread-jump" onClick={onNextUnread}>
+            {unreadCount === 1 ? "1 new reply" : `${unreadCount} new replies`} ↓
+          </button>
+        )}
         <span className="vc-bar-sep" aria-hidden="true" />
         <BarButton label="History" onClick={onHistory}>
           <Icon name="clock" size={20} />

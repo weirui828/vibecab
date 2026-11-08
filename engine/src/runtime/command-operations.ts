@@ -20,6 +20,7 @@ import { renameArtifact } from "./artifact-commands.js";
 import { createGrant, revokeGrant } from "../agent/grants.js";
 import type { SettingsDocument } from "../gateway/types.js";
 import { StorageAccessRuntime } from "./storage-access.js";
+import { feedbackCommands } from "../feedback/module.js";
 
 export abstract class CommandOperations extends StorageAccessRuntime {
   protected dispatchOperationCommand(ctx: CallContext, cmd: CommandEnvelope): unknown {
@@ -331,25 +332,6 @@ export abstract class CommandOperations extends StorageAccessRuntime {
         }
         return { artifactId: r.artifactId, version: r.version };
       }
-      case "vc.CaptureIdea":
-      case "vc.EditIdea":
-      case "vc.CreateProject":
-      case "vc.AttachProjectItem":
-      case "vc.DetachProjectItem":
-      case "vc.RenameSession":
-      case "vc.AttachArtifact":
-      case "vc.ResumeSession":
-      case "vc.EndSession":
-      case "vc.Comment":
-      case "vc.EditComment":
-      case "vc.DeleteComment":
-      case "vc.Agree":
-      case "vc.Decline":
-      case "vc.ResolveConflict":
-      case "vc.SetReplyTrigger":
-      case "vc.MarkHandled":
-        if (!this.feedback) fail("unavailable", "Engine is stopped");
-        return this.feedback.command(cmd.type, cmd.payload, ctx.principal, ctx.channel);
       case "vc.StartSession": {
         if (!this.feedback) fail("unavailable", "Engine is stopped");
         const result = this.feedback.command(cmd.type, cmd.payload, ctx.principal, ctx.channel),
@@ -494,6 +476,11 @@ export abstract class CommandOperations extends StorageAccessRuntime {
         if (ctx.principal.kind !== "human") fail("forbidden", "ApprovePlan requires a human principal");
         return this.approvePlan(cmd.payload, cmd.commandId);
       default:
+        // Every other feedback command goes straight to its module, so a new one cannot be left unrouted.
+        if (feedbackCommands.includes(cmd.type)) {
+          if (!this.feedback) fail("unavailable", "Engine is stopped");
+          return this.feedback.command(cmd.type, cmd.payload, ctx.principal, ctx.channel);
+        }
         return this.dispatchLifecycleCommand(cmd.type, cmd.payload, ctx);
     }
   }
