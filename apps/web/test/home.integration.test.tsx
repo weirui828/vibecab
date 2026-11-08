@@ -30,11 +30,11 @@ async function command<T>(type: string, payload: unknown): Promise<T> {
   return result.result as T;
 }
 
-async function renderApp(shell: "sidebar" | "top" = "sidebar") {
+async function renderApp() {
   tl.cleanup();
   window.location.hash = "/";
   const { App } = await import("../src/App.js");
-  return tl.render(<App bridge={bridge} shell={shell} />);
+  return tl.render(<App bridge={bridge} />);
 }
 
 it("shows the empty Home with one way forward on a new workspace", async () => {
@@ -43,7 +43,7 @@ it("shows the empty Home with one way forward on a new workspace", async () => {
   expect(tl.screen.getAllByRole("button", { name: /New draft/ })).toHaveLength(1);
 });
 
-it("lists Sessions and Drafts from the engine, newest activity live, in both shells", async () => {
+it("lists Sessions and Drafts from the engine, and keeps them live", async () => {
   const draft = await command<{ artifactId: string }>("vc.ImportContent", {
     title: "Field notes",
     format: "markdown",
@@ -51,16 +51,15 @@ it("lists Sessions and Drafts from the engine, newest activity live, in both she
   });
   const session = await command<{ sessionId: string }>("vc.StartSession", { title: "Tundra walk" });
   await command("vc.AttachArtifact", { sessionId: session.sessionId, artifactId: draft.artifactId, role: "primary" });
-  for (const shell of ["sidebar", "top"] as const) {
-    await renderApp(shell);
-    await tl.screen.findByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)\.|Working late\./ });
-    expect(await tl.screen.findAllByText("Tundra walk")).not.toHaveLength(0);
-    expect(tl.screen.getAllByText("Field notes").length).toBeGreaterThan(0);
-    expect(tl.screen.getByText(/1 session · 1 Draft · nothing waiting/)).toBeTruthy();
-  }
+  await renderApp();
+  await tl.screen.findByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)\.|Working late\./ });
+  expect(await tl.screen.findAllByText("Tundra walk")).not.toHaveLength(0);
+  expect(tl.screen.getAllByText("Field notes").length).toBeGreaterThan(0);
+  expect(tl.screen.getByText(/1 session · 1 Draft · nothing waiting/)).toBeTruthy();
   // Live: a session started elsewhere appears without a reload.
   await command("vc.StartSession", { title: "Started from the CLI" });
-  expect(await tl.screen.findByText("Started from the CLI", undefined, { timeout: 5000 })).toBeTruthy();
+  // It shows up on Home and in the sidebar.
+  expect(await tl.screen.findAllByText("Started from the CLI", undefined, { timeout: 5000 })).not.toHaveLength(0);
 });
 
 it("creates a blank Draft in a new Session and opens it", async () => {

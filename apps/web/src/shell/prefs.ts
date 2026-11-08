@@ -39,17 +39,6 @@ export function useTheme(): [ThemeChoice, (choice: ThemeChoice) => void] {
   return [choice, set];
 }
 
-/** Two shell designs for review: "sidebar" (A) and "top" (B). `?shell=top` switches and remembers. */
-export type ShellChoice = "sidebar" | "top";
-export function initialShell(): ShellChoice {
-  const param = new URLSearchParams(window.location.search).get("shell");
-  if (param === "sidebar" || param === "top") {
-    write("vc-shell", param);
-    return param;
-  }
-  return read("vc-shell") === "top" ? "top" : "sidebar";
-}
-
 function subscribeHash(listener: () => void) {
   window.addEventListener("hashchange", listener);
   return () => window.removeEventListener("hashchange", listener);

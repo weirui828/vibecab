@@ -71,7 +71,7 @@ export function ThemeSwitch({
 
 const isCurrent = (route: string, path: string) => (path === "/" ? route === "/" : route.startsWith(path));
 
-/** Version A: a quiet sidebar for navigation only. */
+/** A quiet sidebar for navigation only. */
 export function Sidebar(props: NavProps) {
   const { route, sessions, attention, needsYou, connection, theme, setTheme, version, onNavigate } = props;
   const open = sortSessions(sessions ?? [], attention).filter((s) => s.state !== "ended");
