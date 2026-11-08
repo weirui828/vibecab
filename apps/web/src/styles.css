@@ -990,6 +990,66 @@
   animation: vc-flash 1.6s var(--vc-ease);
 }
 
+/* The sidebar folded to a rail by choice: the same rail as on mid-size screens. */
+.vc-app[data-rail] {
+  grid-template-columns: var(--vc-rail) minmax(0, 1fr);
+}
+.vc-app[data-rail] > .vc-sidebar {
+  align-items: center;
+  padding: 18px 10px 14px;
+}
+.vc-app[data-rail] > .vc-sidebar .collapsible {
+  display: none;
+}
+.vc-app[data-rail] > .vc-sidebar .rail-only {
+  display: flex;
+}
+.vc-app[data-rail] > .vc-sidebar .vc-nav-link {
+  justify-content: center;
+  width: 44px;
+  padding: 0;
+}
+.vc-app[data-rail] > .vc-sidebar .vc-nav-link .label,
+.vc-app[data-rail] > .vc-sidebar .vc-nav-link .count {
+  display: none;
+}
+.vc-app[data-rail] > .vc-sidebar .vc-sidebar-foot {
+  align-items: center;
+  padding: 14px 0 0;
+}
+.vc-app[data-rail] > .vc-sidebar .vc-rail-mark {
+  display: block;
+}
+.vc-rail-toggle {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: var(--vc-radius-sm);
+  background: none;
+  color: var(--color-fg-muted);
+  cursor: pointer;
+}
+.vc-rail-toggle:hover,
+.vc-rail-expand:hover {
+  background: var(--color-surface-raised);
+  color: var(--color-fg-default);
+}
+.vc-rail-expand {
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+/* Below 1024px the rail is forced, so there is nothing to expand into. */
+@media (max-width: 1023px) {
+  .vc-rail-expand {
+    display: none;
+  }
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 1023px) {
   .vc-app {
