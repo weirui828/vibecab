@@ -57,9 +57,38 @@ describe("browser access", () => {
       expect(() => parseArgs(["--seed"])).toThrow(/VIBECAB_DEV=1/);
       expect(() => parseArgs(["--temp-workspace"])).toThrow(/VIBECAB_DEV=1/);
       expect(parseArgs(["--port", "5000", "--no-open"])).toMatchObject({ port: 5000, open: false });
+      expect(parseArgs([])).toMatchObject({ port: 5163, open: true });
     } finally {
       process.env.VIBECAB_DEV = before;
     }
+  });
+});
+
+describe("sign-in links for another browser", () => {
+  it("makes a fresh link for a signed-in tab, and for the workspace owner's terminal, but not for anyone else", async () => {
+    const fromTab = await raw(t.host.port, "POST", "/app/launch-link", { headers: { Cookie: t.cookie } });
+    expect(fromTab.status).toBe(200);
+    expect((JSON.parse(fromTab.body) as { url: string }).url).toMatch(/\/\?launch=[\w-]{43}$/);
+    const runtime = JSON.parse(await readFile(join(t.workspace, ".vibecab", "web.json"), "utf8")) as {
+      url: string;
+      control: string;
+    };
+    expect(runtime.url).toBe(t.host.url);
+    const fromTerminal = await raw(t.host.port, "POST", "/app/launch-link", {
+      headers: { "x-vibecab-control": runtime.control },
+    });
+    expect(fromTerminal.status).toBe(200);
+    const link = new URL((JSON.parse(fromTerminal.body) as { url: string }).url);
+    const signIn = await raw(t.host.port, "GET", link.pathname + link.search);
+    expect(signIn.headers["set-cookie"]?.[0]).toMatch(/HttpOnly/);
+    expect((await raw(t.host.port, "POST", "/app/launch-link")).status).toBe(401);
+    expect(
+      (await raw(t.host.port, "POST", "/app/launch-link", { headers: { "x-vibecab-control": "A".repeat(43) } })).status,
+    ).toBe(401);
+    // The control secret only opens the link endpoint, nothing else.
+    expect(
+      (await raw(t.host.port, "GET", "/app/state", { headers: { "x-vibecab-control": runtime.control } })).status,
+    ).toBe(401);
   });
 });
 

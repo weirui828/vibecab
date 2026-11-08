@@ -224,10 +224,10 @@ export function AssistantSection({ workspace, relayPath }: { workspace: string; 
         </div>
       ) : (
         <div className="vc-form-actions start">
-          <Button variant="secondary" onClick={() => void create("collaborate")}>
+          <Button variant="secondary" disabled={!workspace} onClick={() => void create("collaborate")}>
             Give access to comment and agree
           </Button>
-          <Button variant="ghost" onClick={() => void create("read")}>
+          <Button variant="ghost" disabled={!workspace} onClick={() => void create("read")}>
             Read only
           </Button>
         </div>

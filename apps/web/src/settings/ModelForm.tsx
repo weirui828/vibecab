@@ -16,7 +16,7 @@ interface ProviderModel {
     maxContextTokens: number;
     reportsUsage: boolean;
   };
-  pricing?: { inputMicrosPerMillion: number; outputMicrosPerMillion: number };
+  pricing: { inputMicrosPerMillion: number; outputMicrosPerMillion: number };
 }
 export interface SettingsShape {
   models?: Record<string, ProviderModel>;
@@ -71,29 +71,27 @@ export function ModelForm({ onSaved, submitLabel = "Save" }: { onSaved?(): void;
     if (!current?.keyRef && !key.trim()) return setError("Paste the API key for this provider.");
     const tokens = Number(context);
     setBusy(true);
-    let keyRef = current?.keyRef;
-    if (key.trim()) {
-      const saved = await run<{ keyRef: string }>("sys.SetProviderKey", { alias: "default", secret: key.trim() });
-      keyRef = saved?.keyRef;
-    }
     const inMicros = priceIn ? toMicros(priceIn) : undefined,
       outMicros = priceOut ? toMicros(priceOut) : undefined;
     const next: ProviderModel = {
       provider: "openai-compatible",
       baseUrl,
       model: model.trim(),
-      ...(keyRef ? { keyRef } : {}),
+      ...(current?.keyRef ? { keyRef: current.keyRef } : {}),
       capabilities: {
         ...(current?.capabilities ?? defaults),
         maxContextTokens: Number.isInteger(tokens) && tokens > 0 ? tokens : 128_000,
       },
-      ...(inMicros !== undefined && outMicros !== undefined
-        ? { pricing: { inputMicrosPerMillion: inMicros, outputMicrosPerMillion: outMicros } }
-        : current?.pricing
-          ? { pricing: current.pricing }
-          : {}),
+      // Pricing is required by the contract; 0 / 0 means "unknown", so spending shows reservations only.
+      pricing:
+        inMicros !== undefined && outMicros !== undefined
+          ? { inputMicrosPerMillion: inMicros, outputMicrosPerMillion: outMicros }
+          : (current?.pricing ?? { inputMicrosPerMillion: 0, outputMicrosPerMillion: 0 }),
     };
-    const ok = keyRef !== undefined && (await run("sys.SetSettings", { patch: { models: { default: next } } }));
+    // The model first: the engine stores a key only for a model alias that exists.
+    let ok = (await run("sys.SetSettings", { patch: { models: { default: next } } })) !== undefined;
+    if (ok && key.trim())
+      ok = (await run("sys.SetProviderKey", { alias: "default", secret: key.trim() })) !== undefined;
     setBusy(false);
     if (ok) {
       setKey("");
