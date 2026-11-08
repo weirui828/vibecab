@@ -55,4 +55,4 @@ A browser app that replaces the Electron renderer as the main way to use VibeCab
 | W3 | Comments and margin threads | W2 |
 | W4 | Agreement, agent replies, conflicts, Updates and diffs | W3 |
 | W5 | History, Snapshots, export, Trash, Ideas and Projects | W4 |
-| W6 | Settings, first run, accessibility and visual review; retire `apps/ui` | W5 |
+| W6 | Settings, first run, accessibility and visual review (`W6-settings-first-run-review.md`); `apps/ui` decision in W7 | W5 |
