@@ -77,7 +77,7 @@ export function CommentSurface({
     [focused, setFocused] = useState<string>(),
     [writing, setWriting] = useState<Writing>(),
     [picked, setPicked] = useState<{ selection: TextSelection; x: number; y: number }>(),
-    [gutter, setGutter] = useState<{ elementId: string; top: number }>(),
+    [gutter, setGutter] = useState<{ elementId: string; top: number; height: number }>(),
     [why, setWhy] = useState<string>();
 
   const all = useLiveQuery<Thread[]>("vc.Threads", { sessionId });
@@ -337,14 +337,22 @@ export function CommentSurface({
           const block = (event.target as HTMLElement).closest<HTMLElement>(blockSelector),
             host = surface.current;
           if (!block?.dataset.elementId || !host) return;
-          const top = block.getBoundingClientRect().top - host.getBoundingClientRect().top;
-          if (gutter?.elementId !== block.dataset.elementId) setGutter({ elementId: block.dataset.elementId, top });
+          const box = block.getBoundingClientRect(),
+            top = box.top - host.getBoundingClientRect().top;
+          if (gutter?.elementId !== block.dataset.elementId)
+            setGutter({ elementId: block.dataset.elementId, top, height: box.height });
         }}
         onMouseLeave={() => setGutter(undefined)}
       >
         {children}
         {gutter && (
           <>
+            {/* Bridges the gap between the block and its buttons, so the pointer never leaves on its way there. */}
+            <div
+              className="vc-gutter-rail"
+              aria-hidden="true"
+              style={{ top: gutter.top, height: Math.max(gutter.height, readOnly ? 32 : 66) }}
+            />
             {!readOnly && (
               <button
                 type="button"

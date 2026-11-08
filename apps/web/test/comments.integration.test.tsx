@@ -136,6 +136,23 @@ it("comments on a whole block and on the whole session", async () => {
   await tl.waitFor(() => expect(container.querySelector(".vc-margin")?.textContent).toContain("On the whole session"));
 });
 
+it("keeps a block's buttons reachable: a rail inside the Document spans the gap and the block's height", async () => {
+  const { container } = await openSession();
+  const paragraph = container.querySelectorAll<HTMLElement>(".vc-doc > p")[1]!;
+  // jsdom has no layout: give the block a tall box, as a long paragraph would have.
+  paragraph.getBoundingClientRect = () =>
+    ({ top: 100, bottom: 340, left: 0, right: 600, width: 600, height: 240, x: 0, y: 100 }) as DOMRect;
+  tl.fireEvent.mouseMove(paragraph);
+  const rail = container.querySelector<HTMLElement>(".vc-gutter-rail");
+  // Inside the element that hides the buttons on mouse leave, so crossing to them never counts as leaving.
+  expect(rail?.closest(".vc-surface-doc")).not.toBeNull();
+  expect(rail?.style.height).toBe("240px");
+  // Moving over the rail itself keeps the buttons up.
+  tl.fireEvent.mouseMove(rail!);
+  expect(tl.screen.getByRole("button", { name: "Comment on this block" })).toBeTruthy();
+  expect(tl.screen.getByRole("button", { name: "Why is this here?" })).toBeTruthy();
+});
+
 it("replies, edits and deletes in a thread", async () => {
   const { container } = await openSession();
   const card = await tl.waitFor(() => {
