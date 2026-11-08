@@ -4724,7 +4724,7 @@ export const schemasById: Record<string, AnySchema> = {
             "properties": {
               "models": {
                 "type": "object",
-                "description": "Models to add or replace; null removes that alias (\"default\" cannot be removed).",
+                "description": "Pool agents to add or replace; null removes that agent (W13).",
                 "additionalProperties": {
                   "oneOf": [
                     {

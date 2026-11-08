@@ -4,7 +4,7 @@ export interface SysSetSettingsOperation {
   payload: {
     patch: {
       /**
-       * Models to add or replace; null removes that alias ("default" cannot be removed).
+       * Pool agents to add or replace; null removes that agent (W13).
        */
       models?: {
         [k: string]: ProviderModel | null;
