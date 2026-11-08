@@ -11,6 +11,7 @@ import type {
   ReplyTrigger,
   VcCaptureIdeaOperation,
   VcEditIdeaOperation,
+  VcMarkReadOperation,
   VcCreateProjectOperation,
   VcStartSessionOperation,
   VcAttachArtifactOperation,
@@ -55,6 +56,30 @@ export abstract class FeedbackCommandRuntime extends FeedbackCoreRuntime {
         this.save<Idea>("idea", "idea", p.ideaId, { ...idea, text: p.text });
         this.event("vc.IdeaEdited", { kind: "idea", id: p.ideaId }, { ideaId: p.ideaId });
         return { ideaId: p.ideaId };
+      }
+      case "vc.MarkRead": {
+        const p = this.contract.read<VcMarkReadOperation["payload"]>(
+          "operations/vc.MarkRead",
+          raw,
+          "#/properties/payload",
+        );
+        this.session(p.sessionId);
+        const comments = p.commentIds.map((id) => this.comment(id));
+        if (comments.some((c) => c.sessionId !== p.sessionId)) fail("not_found", "Comment not found in this session");
+        // A reply is read once the person has looked at it (covibe's rule), not when the session is opened.
+        const marked = comments
+          .filter((c) => !c.read)
+          .map((c) => {
+            this.save<FeedbackComment>("comment", "feedback-comment", c.commentId, { ...c, read: true });
+            return c.commentId;
+          });
+        if (marked.length)
+          this.event(
+            "vc.CommentsRead",
+            { kind: "session", id: p.sessionId },
+            { sessionId: p.sessionId, commentIds: marked },
+          );
+        return { commentIds: p.commentIds };
       }
       case "vc.CreateProject": {
         const p = this.contract.read<VcCreateProjectOperation["payload"]>(

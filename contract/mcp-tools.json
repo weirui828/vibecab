@@ -169,6 +169,10 @@
     "toolName": "mark_handled",
     "description": "Perform mark handled."
   },
+  "vc.MarkRead": {
+    "toolName": "mark_read",
+    "description": "Mark the agent's replies as read."
+  },
   "vc.MarkSeen": {
     "toolName": "mark_seen",
     "description": "Perform mark seen."

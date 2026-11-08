@@ -191,6 +191,30 @@ export function contractSuite(
       expect(hash).toMatch(/^[a-f0-9]{64}$/);
       expect(await client.getBlob(hash)).toEqual(bytes);
     });
+    it("marks comments read, only within their own session", async () => {
+      const read = <T>(op: string, result: unknown) =>
+        schema.read<T>("operations/" + op, result, "#/properties/result");
+      const one = await cmd("vc.StartSession", { title: "Reading" }),
+        other = await cmd("vc.StartSession", { title: "Elsewhere" });
+      if (!one.ok || !other.ok) throw Error("setup failed");
+      const sessionId = read<{ sessionId: string }>("vc.StartSession", one.result).sessionId,
+        otherId = read<{ sessionId: string }>("vc.StartSession", other.result).sessionId;
+      const posted = await cmd("vc.Comment", { sessionId, body: "Read me." });
+      if (!posted.ok) throw Error("setup failed");
+      const { commentId } = read<{ commentId: string }>("vc.Comment", posted.result);
+      expect(await cmd("vc.MarkRead", { sessionId, commentIds: [commentId] })).toMatchObject({
+        ok: true,
+        result: { commentIds: [commentId] },
+      });
+      expect(await cmd("vc.MarkRead", { sessionId: otherId, commentIds: [commentId] })).toMatchObject({
+        ok: false,
+        error: { code: "not_found" },
+      });
+      expect(await cmd("vc.MarkRead", { sessionId, commentIds: [] })).toMatchObject({
+        ok: false,
+        error: { code: "invalid" },
+      });
+    });
     it("edits an Idea's text and keeps everything else", async () => {
       const idea = await cmd("vc.CaptureIdea", { text: "A rough thught", links: ["https://example.test/a"] });
       if (!idea.ok) throw Error("setup failed");

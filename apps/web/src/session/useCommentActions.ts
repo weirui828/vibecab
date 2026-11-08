@@ -31,6 +31,8 @@ export function useCommentActions(sessionId: string) {
         ...(anchor ? { anchor } : {}),
         ...(replacement !== undefined ? { suggestion: { replacement } } : {}),
       }),
+    markRead: (commentIds: string[]) =>
+      commentIds.length ? run("vc.MarkRead", { sessionId, commentIds }) : Promise.resolve(true),
     reply: (replyTo: string, body: string) => run("vc.Comment", { sessionId, body, replyTo }),
     edit: (commentId: string, body: string, replacement?: string) =>
       run("vc.EditComment", {

@@ -18,6 +18,9 @@ export const anchorOf = (thread: Thread) => thread.comments[0]?.anchor;
 export const resolutionOf = (thread: Thread): AnchorResolution | undefined => thread.anchorResolutions[0];
 // System notices the card already says in words (its status line), written by the engine with internal ids.
 const restated = [/^Conflict conflict_/, /^Agreed item applied in version \d+\.?$/];
+/** The agent's replies in a thread that the person has not looked at yet. */
+export const unreadReplies = (thread: Thread) =>
+  thread.comments.filter((c) => c.author.kind === "agent" && !c.read && !c.deleted);
 export const visibleComments = (thread: Thread) =>
   thread.comments.filter((c) => !c.deleted && !(c.author.kind === "system" && restated.some((r) => r.test(c.body))));
 
@@ -129,4 +132,32 @@ export function sortByPosition(threads: Thread[], elements: Element[]): Thread[]
     .map((thread, index) => ({ thread, index, key: key(thread) }))
     .sort((a, b) => a.key[0] - b.key[0] || a.key[1] - b.key[1] || a.index - b.index)
     .map(({ thread }) => thread);
+}
+
+/**
+ * Where a thread shows in place: under its top-level block, or under its list item (a table cell's thread goes
+ * under its table). Undefined for an element no longer in the Document.
+ */
+export function slotFinder(elements: Element[]): (elementId: string) => string | undefined {
+  const byId = new Map(elements.map((e) => [e.elementId, e]));
+  return (elementId) => {
+    for (let e = byId.get(elementId); e; e = e.parentId === null ? undefined : byId.get(e.parentId))
+      if (e.parentId === null || e.type === "list_item") return e.elementId;
+    return undefined;
+  };
+}
+
+/** Threads grouped by the place they show; those tied to no block (or to removed text) go under `general`. */
+export function threadsBySlot(
+  threads: Thread[],
+  slotOf: (elementId: string) => string | undefined,
+  general: string,
+): Map<string, Thread[]> {
+  const map = new Map<string, Thread[]>();
+  for (const thread of threads) {
+    const anchor = anchorOf(thread),
+      slot = (anchor && resolutionOf(thread)?.state !== "removed" ? slotOf(anchor.elementId) : undefined) ?? general;
+    map.set(slot, [...(map.get(slot) ?? []), thread]);
+  }
+  return map;
 }
