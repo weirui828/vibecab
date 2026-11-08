@@ -19,6 +19,7 @@ Implement in order. Each task assumes every earlier task is merged with `pnpm ge
 | 10 | TMR engine (standalone) + `tmr` CLI | §12 | 03, 07 |
 | 10b | TMR: run-state races, budget bound, report source, missing tests (from review) | §12 | 10 |
 | 11 | TMR integration with covibe | §13, §14 (purge cascade) | 05, 06, 10b |
+| 12 | Subscription agents: Claude Agent SDK main agent, Codex for TMR (draft, spike first) | §9, §10, §12 | 03, 04, 05, 10b, 11 |
 
 ## macOS app tasks
 
