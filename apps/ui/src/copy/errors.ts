@@ -1,13 +1,13 @@
 const messages: Record<string, string> = {
-  unauthenticated: "Reconnect to VibeCab to continue.",
+  unauthenticated: "Sign in to VibeCab again to continue.",
   forbidden: "You do not have permission to do that.",
-  not_found: "That item is no longer available.",
-  conflict: "This changed while you were working.",
-  stale_base: "This changed while you were editing.",
-  budget_exceeded: "Spending limit reached for today.",
-  unavailable: "The engine is unavailable.",
+  not_found: "This item is not available.",
+  conflict: "VibeCab cannot do this now. The item changed, or its state does not allow it.",
+  stale_base: "This text changed after you started to edit it.",
+  budget_exceeded: "You reached the spending limit for today.",
+  unavailable: "The engine is not available.",
 };
 
 export function errorMessage(code: string): string {
-  return messages[code] ?? "Something went wrong. Try again.";
+  return messages[code] ?? "VibeCab could not do this. Try again.";
 }

@@ -8,7 +8,7 @@ import { relativeTime } from "../ui/time.js";
 import { Section, useRun } from "./common.js";
 
 const capabilityWords: Record<string, string> = {
-  auto_agree_own_proposals: "Its own proposals count as agreed",
+  auto_agree_own_proposals: "Its proposals count as agreed",
   start_review: "Start reviews",
   create_output_set: `Save ${terms.snapshot.toLowerCase()}s`,
   use_tool: "Use connected tools",
@@ -24,7 +24,7 @@ export function GrantsSection({ sessions }: { sessions: SessionRow[] }) {
       id="permissions"
       level={3}
       title="What it may do"
-      lede="Permissions you have given the agent. Taking one back is immediate."
+      lede="Permissions that you gave the agent. When you revoke a permission, it stops immediately."
     >
       {live.length === 0 ? (
         <p className="vc-muted">Nothing beyond replying and writing what you agree to.</p>
@@ -42,7 +42,7 @@ export function GrantsSection({ sessions }: { sessions: SessionRow[] }) {
                 </span>
               </span>
               <Button size="sm" variant="ghost" onClick={() => void run("vc.RevokeGrant", { grantId: g.grantId })}>
-                Take back
+                Revoke
               </Button>
             </li>
           ))}
@@ -85,7 +85,7 @@ export function ToolsSection() {
       id="tools"
       level={3}
       title="Its tools"
-      lede="MCP servers the agent connects to — VibeCab as an MCP client — and what it may do with each tool."
+      lede="The MCP servers that the agent connects to, and what it can do with each tool. Here, VibeCab is the MCP client."
     >
       {live.map((server) => (
         <div key={server.serverId} className="vc-tool-server">
@@ -237,11 +237,11 @@ export function AssistantSection({ workspace, relayPath }: { workspace: string; 
         id="assistant"
         level={3}
         title="Connect an assistant"
-        lede="It gets its own access key. Paste the setup into the assistant's MCP settings."
+        lede="Each assistant gets its own access key. Copy the setup into the MCP settings of the assistant."
       >
         {config ? (
           <div className="vc-secret">
-            <p className="vc-muted">The access key is shown only now.</p>
+            <p className="vc-muted">You can see this access key only now. Copy it.</p>
             <pre>{config}</pre>
             <div className="vc-form-actions">
               <Button
@@ -289,7 +289,7 @@ export function DataSection({ workspace, retention }: { workspace: string; reten
       </p>
       <div className="vc-form-actions start">
         <Button variant="secondary" onClick={() => void run("sys.Backup", {}).then(() => backups.refresh())}>
-          Back up now
+          Make a backup
         </Button>
       </div>
       {list.length > 0 && (
@@ -297,7 +297,7 @@ export function DataSection({ workspace, retention }: { workspace: string; reten
           {list.map((b) => (
             <li key={b.backupId}>
               <span className="what">
-                {b.status === "completed" ? "Backup" : b.status === "failed" ? "Backup failed" : "Backing up…"}
+                {b.status === "completed" ? "Backup" : b.status === "failed" ? "Backup failed" : "Backup in progress"}
                 <span className="vc-facts">
                   {relativeTime(b.createdAt)}
                   {b.archivePath ? ` · ${b.archivePath}` : ""}
@@ -316,7 +316,7 @@ export function DataSection({ workspace, retention }: { workspace: string; reten
             void run("sys.SetSettings", { patch: { trashRetentionDays: value } });
         }}
       >
-        <Field label="Keep things in Trash for (days)">
+        <Field label="Delete from Trash after (days)">
           <Input
             inputMode="numeric"
             value={days ?? String(retention ?? 30)}
@@ -328,7 +328,7 @@ export function DataSection({ workspace, retention }: { workspace: string; reten
         </Button>
       </form>
       <p className="vc-muted small">
-        Restoring a backup replaces this workspace; run <code>vibecab-host restore</code> while VibeCab is stopped.
+        A restore replaces this workspace. Stop VibeCab. Then run <code>vibecab-host restore</code>.
       </p>
     </Section>
   );

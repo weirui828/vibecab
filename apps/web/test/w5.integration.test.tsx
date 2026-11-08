@@ -102,7 +102,7 @@ it("keeps a Snapshot's versions while the Draft moves on, labels it, and exports
   expect(new TextDecoder().decode(bytes)).toContain("Moss on basalt.");
 });
 
-it("restores from Trash, and deletes for good after showing what goes", async () => {
+it("restores from Trash, and deletes permanently after showing what goes", async () => {
   const doomed = (
     await command<{ artifactId: string }>("vc.ImportContent", {
       title: "Old list",
@@ -129,16 +129,16 @@ it("restores from Trash, and deletes for good after showing what goes", async ()
     expect((await query<Array<{ artifactId: string }>>("vc.Artifacts", {})).map((a) => a.artifactId)).toContain(spare),
   );
   const row = [...container.querySelectorAll<HTMLElement>(".vc-row")].find((r) => r.textContent?.includes("Old list"))!;
-  tl.fireEvent.click(tl.within(row).getByRole("button", { name: "Delete for good" }));
+  tl.fireEvent.click(tl.within(row).getByRole("button", { name: "Delete permanently" }));
   const preview = await query<{ revisionHashes: string[] }>("vc.PurgePreview", {
     target: { kind: "artifact", id: doomed },
   });
   await tl.screen.findByText(
-    `This removes ${preview.revisionHashes.length} piece of text history. It cannot be undone.`,
+    `This deletes ${preview.revisionHashes.length} piece of text history. You cannot undo this.`,
   );
   tl.fireEvent.change(tl.screen.getByLabelText("Type the title to confirm"), { target: { value: "Old list" } });
   const dialog = container.ownerDocument.querySelector("dialog.vc-dialog") as HTMLElement;
-  tl.fireEvent.click(tl.within(dialog).getByRole("button", { name: "Delete for good" }));
+  tl.fireEvent.click(tl.within(dialog).getByRole("button", { name: "Delete permanently" }));
   await tl.waitFor(
     async () => {
       const all = await query<Array<{ artifactId: string }>>("vc.Artifacts", { includeTrashed: true });

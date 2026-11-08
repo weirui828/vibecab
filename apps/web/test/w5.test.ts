@@ -22,9 +22,9 @@ const preview = (counts: Record<string, number>) =>
 it("says what a purge removes in one sentence, summed over everything", () => {
   expect(
     purgeSentence([preview({ revisionHashes: 14, blobHashes: 3 }), preview({ commentIds: 22, digestIds: 2 })]),
-  ).toBe("This removes 14 pieces of text history, 22 comments, 3 images and 2 summaries. It cannot be undone.");
-  expect(purgeSentence([preview({ outputSetIds: 1 })])).toBe("This removes 1 snapshot. It cannot be undone.");
-  expect(purgeSentence([preview({})])).toBe("This removes it for good. It cannot be undone.");
+  ).toBe("This deletes 14 pieces of text history, 22 comments, 3 images and 2 summaries. You cannot undo this.");
+  expect(purgeSentence([preview({ outputSetIds: 1 })])).toBe("This deletes 1 snapshot. You cannot undo this.");
+  expect(purgeSentence([preview({})])).toBe("This deletes it permanently. You cannot undo this.");
 });
 
 it("says how each version came to be", () => {

@@ -14,17 +14,17 @@ const agents: Record<
     kind: "claude-agent-sdk",
     name: "Claude Code",
     about:
-      "Claude Code on this computer, through its SDK and your own Claude sign-in (your subscription pays, not VibeCab). It replies in threads; VibeCab runs every action itself, as the agent.",
-    setup: "Install Claude Code and sign in once by running claude in a terminal.",
-    modelHint: "Empty uses Claude Code's own default, for example claude-sonnet-5-5.",
+      "Claude Code runs on this computer with your Claude sign-in. Your subscription pays for it. It replies in threads. VibeCab does each action itself, as the agent.",
+    setup: "Install Claude Code. To sign in, run claude in a terminal.",
+    modelHint: "If you do not type a model, Claude Code uses its default model, for example claude-sonnet-5-5.",
   },
   codex: {
     kind: "codex-sdk",
     name: "Codex",
     about:
-      "Codex on this computer, through its SDK and your own ChatGPT or OpenAI sign-in, read-only and offline. It replies in threads; VibeCab runs every action itself, as the agent.",
-    setup: "Install Codex and sign in once with codex login.",
-    modelHint: "Empty uses Codex's own default, for example gpt-6.1-sol.",
+      "Codex runs on this computer with your ChatGPT or OpenAI sign-in. It cannot change files or use the network. It replies in threads. VibeCab does each action itself, as the agent.",
+    setup: "Install Codex. To sign in, run codex login in a terminal.",
+    modelHint: "If you do not type a model, Codex uses its default model, for example gpt-6.1-sol.",
   },
 };
 type Stats = {
@@ -75,9 +75,9 @@ function SdkAgent({
       facts={
         current
           ? usage
-            ? `On · ${usage.calls} calls in 30 days · ${Math.round((usage.inputTokens + usage.outputTokens) / 1000)}K tokens` +
-              (usage.errors ? ` · ${usage.errors} failed` : "")
-            : `On · not used yet — choose it in a ${terms.session.toLowerCase()}'s Agent panel`
+            ? `On. ${usage.calls} calls in 30 days, ${Math.round((usage.inputTokens + usage.outputTokens) / 1000)}K tokens` +
+              (usage.errors ? `, ${usage.errors} failed.` : ".")
+            : `On. Not used. Choose it in the Agent panel of a ${terms.session.toLowerCase()}.`
           : "Off"
       }
     >

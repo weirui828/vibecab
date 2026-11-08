@@ -90,10 +90,10 @@ export type TurnStatus = "queued" | "running" | "completed" | "failed" | "cancel
  * finished without replying, so the turn's own status decides between "replying" and nothing.
  */
 export function deliveryLabel(state: Delivery | undefined, turn: TurnStatus | undefined): string | undefined {
-  if (state === "queued") return "Waiting for the agent";
+  if (state === "queued") return "The agent has not replied";
   if (state !== "delivered") return undefined;
   if (turn === "failed" || turn === "uncertain") return "The agent could not reply";
-  if (turn === undefined || turn === "queued" || turn === "running") return "The agent is replying…";
+  if (turn === undefined || turn === "queued" || turn === "running") return "The agent writes a reply…";
   return undefined;
 }
 

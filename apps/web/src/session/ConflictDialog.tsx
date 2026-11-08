@@ -73,9 +73,7 @@ export function ConflictDialog({
     >
       <div className="inner">
         <h2 id="vc-conflict-title">Which one should the next {terms.update} follow?</h2>
-        <p className="lede">
-          These agreed changes pull the same text in different directions. Keep one; the other is set aside.
-        </p>
+        <p className="lede">These agreed changes conflict. Choose one. VibeCab does not apply the other.</p>
         {note && <p className="vc-judge">{note}</p>}
         <div className="options">
           {conflict.itemIds.map((id) => {
@@ -91,7 +89,7 @@ export function ConflictDialog({
                   {comment?.body ?? "Agreed change"}
                 </p>
                 <Button size="sm" variant="secondary" onClick={() => void keep(id)}>
-                  Keep this one
+                  Choose this one
                 </Button>
               </section>
             );

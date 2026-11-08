@@ -178,7 +178,7 @@ function Shell({
         <Alert
           className="vc-banner"
           tone="warning"
-          title={connection === "Engine stopped" ? "The engine is stopped." : "Can’t reach the engine."}
+          title={connection === "Engine stopped" ? "The engine is stopped." : "VibeCab cannot connect to the engine."}
           actions={
             <Button size="sm" variant="secondary" onClick={onRestart}>
               {connection === "Engine stopped" ? "Start engine" : "Try again"}
@@ -230,15 +230,15 @@ function SignedOut() {
           Sign in this browser
         </h1>
         <p className="vc-muted" style={{ margin: 0 }}>
-          This browser isn't signed in yet. For your safety, each browser signs in once with a one-time link, so nothing
-          else on this computer can use VibeCab as you.
+          This browser is not signed in. Each browser signs in one time with a one-time link. This stops other programs
+          on this computer from using VibeCab as you.
         </p>
         <p className="vc-muted" style={{ margin: 0 }}>
-          Open the link printed where VibeCab started, or get a new one while it runs:
+          Open the link that VibeCab showed when it started. To get a new link while VibeCab runs, use this command:
         </p>
         <code>node apps/web/bin/vibecab-web.mjs link</code>
         <p className="vc-muted small" style={{ margin: 0 }}>
-          Not running? Start it with <code>pnpm web</code>.
+          If VibeCab does not run, start it with <code>pnpm web</code>.
         </p>
       </div>
     </div>

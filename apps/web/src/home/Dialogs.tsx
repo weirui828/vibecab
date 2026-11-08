@@ -58,8 +58,8 @@ export function NewDraftDialog({
       title={fixedSession ? `Add a ${terms.draft.toLowerCase()}` : `New ${terms.draft.toLowerCase()}`}
       lede={
         fixedSession
-          ? `To “${fixedSession.title}”${fixedSession.state === "paused" ? `, which resumes` : ""}. Start from a blank page or bring in a Markdown file.`
-          : "Start from a blank page or bring in a Markdown file."
+          ? `To “${fixedSession.title}”${fixedSession.state === "paused" ? `, which resumes` : ""}. Start from a blank page or import a Markdown file.`
+          : "Start from a blank page or import a Markdown file."
       }
       onClose={onClose}
       onSubmit={() => void submit()}
@@ -240,7 +240,7 @@ export function AttachDialog({
   return (
     <Dialog
       open={open}
-      title={`Bring in a ${terms.draft.toLowerCase()}`}
+      title={`Add an existing ${terms.draft.toLowerCase()}`}
       lede={
         session
           ? `It stays where it is and also joins “${session.title}”${session.state === "paused" ? ", which resumes" : ""}.`
@@ -254,7 +254,7 @@ export function AttachDialog({
             Cancel
           </Button>
           <Button type="submit" variant="primary" loading={busy} disabled={!choice}>
-            Bring in
+            Add
           </Button>
         </>
       }

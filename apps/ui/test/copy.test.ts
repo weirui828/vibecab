@@ -20,9 +20,9 @@ it("centralizes the visible domain labels and maps contract errors", () => {
     declined: "Declined",
     superseded: "Superseded",
   });
-  expect(errorMessage("budget_exceeded")).toBe("Spending limit reached for today.");
-  expect(errorMessage("stale_base")).toBe("This changed while you were editing.");
-  expect(errorMessage("unknown_code")).toBe("Something went wrong. Try again.");
+  expect(errorMessage("budget_exceeded")).toBe("You reached the spending limit for today.");
+  expect(errorMessage("stale_base")).toBe("This text changed after you started to edit it.");
+  expect(errorMessage("unknown_code")).toBe("VibeCab could not do this. Try again.");
 });
 
 it("does not render engine names as literal JSX text", () => {

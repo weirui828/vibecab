@@ -141,7 +141,7 @@ function CommentItem({
             Delete
           </button>
           <button type="button" onClick={() => setConfirming(false)}>
-            Keep
+            Cancel
           </button>
         </div>
       )}

@@ -54,7 +54,7 @@ it("lists Sessions and Drafts from the engine, and keeps them live", async () =>
   const session = await command<{ sessionId: string }>("vc.StartSession", { title: "Tundra walk" });
   await command("vc.AttachArtifact", { sessionId: session.sessionId, artifactId: draft.artifactId, role: "primary" });
   await renderApp();
-  await tl.screen.findByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)\.|Working late\./ });
+  await tl.screen.findByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)\./ });
   expect(await tl.screen.findAllByText("Tundra walk")).not.toHaveLength(0);
   expect(tl.screen.getAllByText("Field notes").length).toBeGreaterThan(0);
   expect(tl.screen.getByText(/1 session · 1 Draft · nothing waiting/)).toBeTruthy();
@@ -105,11 +105,11 @@ it("brings a Draft into a paused session by resuming it, and says so first", asy
   const { App } = await import("../src/App.js");
   tl.render(<App bridge={bridge} />);
   tl.fireEvent.click(await tl.screen.findByRole("button", { name: "Session actions" }));
-  tl.fireEvent.click(await tl.screen.findByRole("menuitem", { name: "Bring in a draft" }));
-  const dialog = await tl.screen.findByRole("dialog", { name: "Bring in a draft" });
+  tl.fireEvent.click(await tl.screen.findByRole("menuitem", { name: "Add an existing draft" }));
+  const dialog = await tl.screen.findByRole("dialog", { name: "Add an existing draft" });
   expect(dialog.textContent).toContain("joins “On hold”, which resumes.");
   tl.fireEvent.change(tl.within(dialog).getByRole("combobox"), { target: { value: extra } });
-  tl.fireEvent.click(tl.within(dialog).getByRole("button", { name: "Bring in" }));
+  tl.fireEvent.click(tl.within(dialog).getByRole("button", { name: "Add" }));
   await tl.waitFor(async () => {
     const [session] = await bridge.query<Array<{ state: string; artifactIds: string[] }>>("vc.Sessions", {
       sessionId,

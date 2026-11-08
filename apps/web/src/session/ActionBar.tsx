@@ -52,7 +52,7 @@ function AgentPanel({
 }) {
   const options: Array<[ReplyMode, string, string]> = [
     ["realtime", "Realtime", "The agent replies a moment after each comment."],
-    ["batch", "Batch", "The agent replies after a few comments or a quiet spell."],
+    ["batch", "Batch", "The agent replies after some comments, or when there are no new comments for some minutes."],
     ["manual", "Manual", "The agent replies when you ask."],
   ];
   return (

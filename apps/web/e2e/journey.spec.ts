@@ -84,7 +84,7 @@ test("Settings: the key is saved and never shown; the agent replies quickly", as
   await expect(page.getByText(/Key saved/)).toBeVisible();
   expect(await page.content()).not.toContain("e2e-test-key");
   const agent = page.getByRole("region", { name: "How it replies" });
-  await agent.getByLabel("Wait before replying (seconds)").fill("1");
+  await agent.getByLabel("Delay before a reply (seconds)").fill("1");
   await agent.getByRole("button", { name: "Save", exact: true }).click();
   await accessible("Settings");
   await screens("settings");
@@ -135,7 +135,7 @@ test("comment on words, the agent answers with options, agree, and an Update wri
   await page.getByRole("button", { name: "Update now" }).click();
   await expect(page.locator(".vc-strip")).toContainText("Version 2", { timeout: 20_000 });
   await expect(page.locator(".vc-doc h1")).toHaveText("Covibe: shaping one piece of work together");
-  await page.locator(".vc-strip").getByRole("button", { name: "Changes" }).click();
+  await page.locator(".vc-strip").getByRole("button", { name: "Show changes" }).click();
   await expect(page.locator(".vc-changes .vc-changed")).toHaveCount(1);
   await expect(page.locator(".vc-changes ins")).toContainText("shaping");
   await accessible("changes view");
@@ -143,7 +143,7 @@ test("comment on words, the agent answers with options, agree, and an Update wri
 });
 
 test("save a Snapshot and find it in history", async () => {
-  await page.locator(".vc-strip").getByRole("button", { name: "Clean" }).click();
+  await page.locator(".vc-strip").getByRole("button", { name: "Hide changes" }).click();
   await page.getByRole("button", { name: "Save a snapshot" }).click();
   await page.getByLabel("Label (optional)").fill("First draft");
   await page.getByRole("button", { name: "Save", exact: true }).click();
@@ -157,7 +157,7 @@ test("save a Snapshot and find it in history", async () => {
 
 test("the other screens are accessible", async () => {
   for (const [path, heading] of [
-    ["/#/", /^Good (morning|afternoon|evening)\.|Working late\./],
+    ["/#/", /^Good (morning|afternoon|evening)\./],
     ["/#/drafts", "Drafts"],
     ["/#/sessions", "Sessions"],
     ["/#/ideas", "Ideas"],

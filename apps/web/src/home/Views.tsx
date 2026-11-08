@@ -115,7 +115,7 @@ export function EmptyHome() {
             <b>1</b>Start a {terms.draft.toLowerCase()}
           </li>
           <li>
-            <b>2</b>Comment where it feels off
+            <b>2</b>Comment on text that is not correct
           </li>
           <li>
             <b>3</b>

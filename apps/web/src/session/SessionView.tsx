@@ -91,7 +91,7 @@ function SessionHeader({
     artifact.data ? `version ${artifact.data.headVersion}` : undefined,
     blocks !== undefined ? plural(blocks, "block") : undefined,
     artifact.data ? `updated ${relativeTime(artifact.data.updatedAt)}` : undefined,
-    loop.autoAgree ? "Agent proposals count as agreed" : undefined,
+    loop.autoAgree ? "VibeCab agent's proposals count as agreed" : undefined,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -100,7 +100,7 @@ function SessionHeader({
       ? [
           { label: `Add a ${terms.draft.toLowerCase()}`, onSelect: () => dialogs.newDraft(session.sessionId) },
           {
-            label: `Bring in a ${terms.draft.toLowerCase()}`,
+            label: `Add an existing ${terms.draft.toLowerCase()}`,
             onSelect: () => dialogs.attachDraft(session.sessionId),
           },
         ]
@@ -207,7 +207,7 @@ function EmptySession({ session }: { session: SessionRow }) {
   return (
     <div className="vc-session-empty">
       <p className="vc-doc-empty">No {terms.draft.toLowerCase()} here yet.</p>
-      <p className="vc-muted">Add one to start working on it with the agent.</p>
+      <p className="vc-muted">Add a draft. Then you and the agent can work on it.</p>
       {session.state !== "ended" && (
         <div className="vc-actions">
           <Button
@@ -218,7 +218,7 @@ function EmptySession({ session }: { session: SessionRow }) {
             Add a {terms.draft.toLowerCase()}
           </Button>
           <Button variant="ghost" onClick={() => dialogs.attachDraft(session.sessionId)}>
-            Bring one in
+            Add an existing one
           </Button>
         </div>
       )}

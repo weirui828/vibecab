@@ -36,9 +36,9 @@ export function purgeSentence(previews: Preview[]): string {
     sum("outputSetIds") ? plural(sum("outputSetIds"), terms.snapshot.toLowerCase()) : undefined,
     sum("digestIds") ? plural(sum("digestIds"), "summary") : undefined,
   ].filter((p): p is string => Boolean(p));
-  if (!parts.length) return "This removes it for good. It cannot be undone.";
+  if (!parts.length) return "This deletes it permanently. You cannot undo this.";
   const list = parts.length === 1 ? parts[0] : parts.slice(0, -1).join(", ") + " and " + parts.at(-1);
-  return `This removes ${list}. It cannot be undone.`;
+  return `This deletes ${list}. You cannot undo this.`;
 }
 
 function missing<T>(all: T[] | undefined, live: T[] | undefined, id: (item: T) => string): T[] {
@@ -121,8 +121,8 @@ function PurgeDialog({ items, all, onClose }: { items: Item[]; all: boolean; onC
   return (
     <Dialog
       open={open}
-      title={all ? "Empty Trash" : `Delete “${items[0]?.title ?? ""}” for good`}
-      lede={previews ? purgeSentence(previews) : "Working out what this removes…"}
+      title={all ? "Empty Trash" : `Delete “${items[0]?.title ?? ""}” permanently`}
+      lede={previews ? purgeSentence(previews) : "Finding what this deletes…"}
       onClose={onClose}
       onSubmit={() => void submit()}
       buttons={
@@ -136,7 +136,7 @@ function PurgeDialog({ items, all, onClose }: { items: Item[]; all: boolean; onC
             loading={busy}
             disabled={typed.trim() !== expected.trim() || !previews}
           >
-            Delete for good
+            Delete permanently
           </Button>
         </>
       }
@@ -177,7 +177,7 @@ export function TrashView() {
           {loading
             ? "…"
             : items.length
-              ? `${plural(items.length, "item")} · removed for good after ${days} days`
+              ? `${plural(items.length, "item")} · deleted permanently after ${days} days`
               : "Empty"}
         </p>
         {items.length > 0 && (
@@ -212,7 +212,7 @@ export function TrashView() {
                     Restore
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => setPurging({ items: [item], all: false })}>
-                    Delete for good
+                    Delete permanently
                   </Button>
                 </span>
               </li>

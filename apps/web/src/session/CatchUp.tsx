@@ -121,7 +121,7 @@ export function CatchUp({
           {open ? "Hide" : "Show"}
         </button>
         <Button size="sm" variant="ghost" onClick={onDismiss}>
-          Got it
+          Close
         </Button>
       </span>
       {open && (

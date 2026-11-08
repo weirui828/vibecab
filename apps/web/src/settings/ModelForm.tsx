@@ -139,12 +139,11 @@ export function ModelForm({ onSaved, submitLabel = "Save" }: { onSaved?(): void;
 
   async function save() {
     setError(undefined);
-    if (/\{[a-zA-Z]+\}/.test(baseUrl))
-      return setError(`Fill in ${provider?.placeholders?.[0]?.label ?? "the address"}.`);
+    if (/\{[a-zA-Z]+\}/.test(baseUrl)) return setError(`Type the ${provider?.placeholders?.[0]?.label ?? "address"}.`);
     try {
       new URL(baseUrl);
     } catch {
-      return setError("Enter the full address, starting with https://");
+      return setError("Type the full address. It must start with https://.");
     }
     if (!model.trim()) return setError("Choose or type a model.");
     if (!local && !keySaved && !key.trim()) return setError("Paste the API key for this provider.");
@@ -211,11 +210,11 @@ export function ModelForm({ onSaved, submitLabel = "Save" }: { onSaved?(): void;
               {p.name}
             </option>
           ))}
-          <option value={CUSTOM}>Another OpenAI-compatible service</option>
+          <option value={CUSTOM}>Another OpenAI-compatible provider</option>
         </select>
       </Field>
       {!provider && (
-        <Field label="Provider address" hint="Any service that speaks the OpenAI API.">
+        <Field label="Provider address" hint="Any provider that uses the OpenAI API.">
           <Input inputSize="lg" value={customUrl} onChange={(e) => setCustomUrl(e.target.value)} />
         </Field>
       )}
@@ -237,7 +236,7 @@ export function ModelForm({ onSaved, submitLabel = "Save" }: { onSaved?(): void;
                   ? `${price(chosen.price.inputMicrosPerMillion)} in · ${price(chosen.price.outputMicrosPerMillion)} out per million tokens`
                   : local
                     ? "Free, on this computer"
-                    : "Price unknown — enter it under More details",
+                    : "The price is not known. Type it in More details.",
                 chosen.contextTokens ? `${Math.round(chosen.contextTokens / 1000)}K context` : undefined,
                 chosen.note,
               ]
@@ -245,8 +244,8 @@ export function ModelForm({ onSaved, submitLabel = "Save" }: { onSaved?(): void;
                 .join(" · ")
             : live?.provider === providerId && live.error === "unreachable"
               ? local
-                ? "Not running? Start it, then come back. You can still type a model name."
-                : "The model list could not be loaded; type a model name."
+                ? "Start the local server, then open this page again. You can also type a model name."
+                : "VibeCab could not get the model list. Type a model name."
               : choices.length
                 ? `${choices.length} to choose from, or type any model name.`
                 : "Type the model's name as the provider writes it."
@@ -274,7 +273,7 @@ export function ModelForm({ onSaved, submitLabel = "Save" }: { onSaved?(): void;
           hint={
             keySaved
               ? "Key saved. Paste a new one only to replace it."
-              : "Stored by VibeCab on this computer; never shown again."
+              : "VibeCab keeps the key on this computer. You cannot see it again."
           }
         >
           <Input
@@ -297,7 +296,7 @@ export function ModelForm({ onSaved, submitLabel = "Save" }: { onSaved?(): void;
             <Field label="Context window (tokens)">
               <Input inputMode="numeric" value={context} onChange={(e) => setContext(e.target.value)} />
             </Field>
-            <Field label="$ per million tokens in">
+            <Field label="Input price ($ per 1 million tokens)">
               <Input
                 inputMode="decimal"
                 value={priceIn}
@@ -307,7 +306,7 @@ export function ModelForm({ onSaved, submitLabel = "Save" }: { onSaved?(): void;
                 }}
               />
             </Field>
-            <Field label="$ per million tokens out">
+            <Field label="Output price ($ per 1 million tokens)">
               <Input
                 inputMode="decimal"
                 value={priceOut}

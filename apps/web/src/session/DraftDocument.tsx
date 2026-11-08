@@ -83,7 +83,7 @@ export function DraftDocument({
   useEffect(() => {
     const version = artifact.data?.headVersion;
     if (version === undefined) return;
-    if (seenVersion.current !== undefined && version > seenVersion.current) toast(`Updated to version ${version}`);
+    if (seenVersion.current !== undefined && version > seenVersion.current) toast(`Version ${version} is ready`);
     seenVersion.current = version;
   }, [artifact.data?.headVersion, toast]);
 
