@@ -323,7 +323,42 @@
   font-size: 11px;
 }
 
-/* Below the wide breakpoint: threads in a sheet from the right; writing in a sheet from the bottom. */
+/* Threads in place: right under their block, in the UI face, set in a little from the text they answer. */
+.vc-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: -0.35em 0 1.6em;
+  padding-left: 14px;
+  border-left: 2px solid var(--color-border-subtle);
+  color: var(--color-fg-default);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: normal;
+  animation: vc-rise var(--vc-fast) var(--vc-ease);
+}
+.vc-inline:first-child {
+  margin-top: 0;
+}
+li > .vc-inline {
+  margin: 6px 0 12px;
+}
+.vc-inline .vc-thread {
+  padding: 12px 14px;
+}
+/* Under its block, "On this block" says nothing the place does not. */
+.vc-inline[data-inline-for] .vc-thread .where {
+  display: none;
+}
+.vc-inline .vc-thread-new {
+  border-color: var(--color-border-default);
+  background: var(--color-surface-base);
+}
+
+/* A sheet from the right (History). */
 .vc-sheet-threads {
   position: fixed;
   top: 0;
@@ -358,30 +393,6 @@
     opacity: 0;
   }
 }
-.vc-write-sheet {
-  position: fixed;
-  left: 50%;
-  bottom: 16px;
-  z-index: 45;
-  width: min(560px, calc(100vw - 24px));
-  padding: 16px;
-  transform: translateX(-50%);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: 18px;
-  background: var(--color-surface-base);
-  box-shadow: var(--vc-shadow-pop);
-  font-size: 14px;
-  animation: vc-rise var(--vc-base) var(--vc-ease);
-}
-.vc-write-sheet .quote {
-  margin: 0 0 8px;
-  padding-left: 10px;
-  border-left: 2px solid var(--color-warning-border);
-  color: var(--color-fg-muted);
-  font-family: var(--font-display);
-  font-style: italic;
-}
-
 /* The floating bar: one quiet row of icons at the bottom of the Document. */
 .vc-bar-dock {
   position: sticky;
@@ -476,4 +487,25 @@
   .vc-pick .vc-facts {
     display: none;
   }
+}
+
+/* An ended session: one quiet line above the Document, with the way to carry on. */
+.vc-ended {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 20px;
+  max-width: 68ch;
+  margin: 0 auto 32px;
+  padding: 14px 18px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 14px;
+  background: var(--color-surface-raised);
+  color: var(--color-fg-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.vc-ended p {
+  flex: 1 1 280px;
+  margin: 0;
 }

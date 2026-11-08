@@ -125,7 +125,7 @@ test("comment on words, the agent answers with options, agree, and an Update wri
   await page.locator(".vc-pick").click();
   await page.getByRole("textbox", { name: "Comment on the selected words" }).fill("Name the rock.");
   await page.keyboard.press("Control+Enter");
-  const thread = page.locator(".vc-margin .vc-thread", { hasText: "Name the rock." });
+  const thread = page.locator(".vc-inline .vc-thread", { hasText: "Name the rock." });
   await expect(thread).toBeVisible();
   await expect(thread.getByText("Covibe: two ways to make the title carry the idea.")).toBeVisible({ timeout: 20_000 });
   await thread.getByRole("button", { name: "Agree with option: Name the idea" }).click();

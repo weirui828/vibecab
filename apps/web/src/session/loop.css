@@ -230,6 +230,7 @@
   color: var(--color-accent-fg);
   font-size: 13px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 /* Conflict dialog: the options side by side. */

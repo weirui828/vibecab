@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { Icon, IconButton } from "@wei/design-system";
+import { Icon } from "@wei/design-system";
 import type { Element, VcDeliveryStateOperation } from "../../../../contract/generated/index.js";
 import { locatorForTextSelection } from "../../../ui/src/document/anchors.js";
+import { AfterBlock } from "../document/DocumentView.js";
 import { useLiveQuery } from "../live/LiveStore.js";
+import { useCommentPlace } from "../shell/prefs.js";
 import { ActionBar } from "./ActionBar.js";
 import { WhyDialog } from "./WhyDialog.js";
 import type { ReplyMode } from "./ActionBar.js";
@@ -30,6 +32,7 @@ import { useHighlights } from "./useHighlights.js";
 
 const WIDE = 1060; // surface width at which the margin fits beside a 68ch Document
 const DRAFT = "__draft__";
+const GENERAL = "__general__"; // threads shown in place but tied to no block: the whole session, or removed text
 
 interface Writing {
   anchor?: NewAnchor;
@@ -72,13 +75,14 @@ export function CommentSurface({
     actions = useCommentActions(sessionId);
   const [wide, setWide] = useState(true),
     [shown, setShown] = useState(true),
-    [sheet, setSheet] = useState(false),
+    [place, setPlace] = useCommentPlace(),
     [filter, setFilter] = useState<ThreadFilter>(defaultFilter),
     [focused, setFocused] = useState<string>(),
     [writing, setWriting] = useState<Writing>(),
     [picked, setPicked] = useState<{ selection: TextSelection; x: number; y: number }>(),
     [gutter, setGutter] = useState<{ elementId: string; top: number; height: number }>(),
-    [why, setWhy] = useState<string>();
+    [why, setWhy] = useState<string>(),
+    clickTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const all = useLiveQuery<Thread[]>("vc.Threads", { sessionId });
   const threads = useMemo(() => threadsForDraft(all.data ?? [], artifactId), [all.data, artifactId]);
@@ -104,7 +108,9 @@ export function CommentSurface({
   const deliveryOf = (thread: Thread) => delivery.data?.find((d) => d.commentId === latestHuman(thread)?.commentId);
   const turnOf = (turnId: string | undefined) => turns.data?.find((t) => t.turnId === turnId)?.status;
   const ranges = useHighlights(doc, shownThreads, elements, focused, writing?.anchor);
-  const margin = wide && shown;
+  // Under each block (covibe's way) on narrow screens always, and on wide ones unless the margin is chosen.
+  const inline = !wide || place === "below",
+    margin = !inline && shown;
 
   // Wide enough for a margin? Measured on the surface itself, so the sidebar and window both count.
   useLayoutEffect(() => {
@@ -120,9 +126,9 @@ export function CommentSurface({
       if (readOnly) return;
       setPicked(undefined);
       setWriting(next);
-      if (!wide) setSheet(false);
+      if (!inline) setShown(true);
     },
-    [readOnly, wide],
+    [readOnly, inline],
   );
 
   const writeOnSelection = useCallback(
@@ -229,15 +235,11 @@ export function CommentSurface({
     return () => observer?.disconnect();
   }, [margin, shownThreads, writing, focused, anchorTop, elements]);
 
-  const focusThread = useCallback(
-    (threadId: string, scrollCard: boolean) => {
-      setFocused(threadId);
-      if (!margin) setSheet(true);
-      if (scrollCard)
-        nextFrame(() => cards.current.get(threadId)?.scrollIntoView?.({ block: "nearest", behavior: "smooth" }));
-    },
-    [margin],
-  );
+  const focusThread = useCallback((threadId: string, scrollCard: boolean) => {
+    setFocused(threadId);
+    if (scrollCard)
+      nextFrame(() => cards.current.get(threadId)?.scrollIntoView?.({ block: "nearest", behavior: "smooth" }));
+  }, []);
   const showText = (thread: Thread) => {
     setFocused(thread.threadId);
     const anchor = anchorOf(thread);
@@ -246,12 +248,12 @@ export function CommentSurface({
       box = doc.current?.querySelector(byElementId(anchor.elementId));
     const target = range?.startContainer.parentElement ?? box;
     target?.scrollIntoView?.({ block: "center", behavior: "smooth" });
-    if (!margin) setSheet(false);
   };
 
-  // A click on highlighted text focuses its thread.
+  // A click on highlighted text focuses its thread; a click elsewhere on a block opens a comment on it (as in covibe).
   const onDocClick = (event: React.MouseEvent) => {
-    if (window.getSelection()?.isCollapsed === false) return;
+    const target = event.target as HTMLElement;
+    if (target.closest(".vc-inline") || window.getSelection()?.isCollapsed === false) return;
     const doc_ = event.currentTarget.ownerDocument as Document & {
       caretRangeFromPoint?(x: number, y: number): Range | null;
     };
@@ -259,11 +261,22 @@ export function CommentSurface({
     if (caret)
       for (const [threadId, range] of ranges.current)
         if (range.isPointInRange(caret.startContainer, caret.startOffset)) return focusThread(threadId, true);
-    const marked = (event.target as HTMLElement).closest<HTMLElement>("[data-mark]");
+    // In the margin, a click on a commented block finds its card; in place, the threads are already right below.
+    const marked = inline ? null : target.closest<HTMLElement>("[data-mark]");
     const id = marked?.dataset.elementId,
       thread = id ? shownThreads.find((t) => anchorOf(t)?.elementId === id) : undefined;
-    if (thread) focusThread(thread.threadId, true);
+    if (thread) return focusThread(thread.threadId, true);
+    if (readOnly || writing || event.detail > 1 || target.closest("a, button, input, textarea, summary")) return;
+    const block = target.closest<HTMLElement>(blockSelector)?.dataset.elementId;
+    if (!block) return;
+    // Wait out a double click, which selects a word to comment on instead.
+    clearTimeout(clickTimer.current);
+    clickTimer.current = setTimeout(() => {
+      if (window.getSelection()?.isCollapsed === false) return;
+      startWriting({ anchor: { artifactId, elementId: block, seenVersion: version } });
+    }, 250);
   };
+  useEffect(() => () => clearTimeout(clickTimer.current), []);
 
   // ↑/↓ move between cards.
   const onMarginKey = (event: React.KeyboardEvent) => {
@@ -304,28 +317,74 @@ export function CommentSurface({
     if (node) cards.current.set(id, node);
     else cards.current.delete(id);
   };
-  const cardList = (positioned: boolean) =>
-    shownThreads.map((thread) => (
-      <ThreadCard
-        key={thread.threadId}
-        ref={cardRef(thread.threadId)}
-        thread={thread}
-        focused={thread.threadId === focused}
-        delivery={deliveryOf(thread)?.state}
-        turn={turnOf(deliveryOf(thread)?.turnId)}
-        readOnly={readOnly}
-        actions={actions}
-        decision={{
-          status: threadStatus(thread, loop),
-          canDecide: canDecide(thread, loop),
-          manual: replyMode === "manual",
-          modelReady: loop.modelReady,
-          onOpenChanges,
-        }}
+  const card = (thread: Thread, positioned: boolean) => (
+    <ThreadCard
+      key={thread.threadId}
+      ref={cardRef(thread.threadId)}
+      thread={thread}
+      focused={thread.threadId === focused}
+      delivery={deliveryOf(thread)?.state}
+      turn={turnOf(deliveryOf(thread)?.turnId)}
+      readOnly={readOnly}
+      actions={actions}
+      decision={{
+        status: threadStatus(thread, loop),
+        canDecide: canDecide(thread, loop),
+        manual: replyMode === "manual",
+        modelReady: loop.modelReady,
+        onOpenChanges,
+      }}
+      {...(positioned ? { style: { position: "absolute", top: 0, left: 0, right: 0 } } : {})}
+      onActivate={() => showText(thread)}
+    />
+  );
+
+  // In place: each thread goes under its block (a list item, or the top-level block holding a table cell).
+  const slotOf = useMemo(() => {
+    const byId = new Map(elements.map((e) => [e.elementId, e]));
+    return (elementId: string): string | undefined => {
+      for (let e = byId.get(elementId); e; e = e.parentId === null ? undefined : byId.get(e.parentId))
+        if (e.parentId === null || e.type === "list_item") return e.elementId;
+      return undefined;
+    };
+  }, [elements]);
+  const bySlot = useMemo(() => {
+    const map = new Map<string, Thread[]>();
+    for (const thread of shownThreads) {
+      const anchor = anchorOf(thread),
+        slot = (anchor && resolutionOf(thread)?.state !== "removed" ? slotOf(anchor.elementId) : undefined) ?? GENERAL;
+      map.set(slot, [...(map.get(slot) ?? []), thread]);
+    }
+    return map;
+  }, [shownThreads, slotOf]);
+  const writingSlot = writing && ((writing.anchor && slotOf(writing.anchor.elementId)) ?? GENERAL);
+  const newCard = (positioned: boolean) =>
+    writing && (
+      <div
+        className="vc-thread vc-thread-new"
+        ref={cardRef(DRAFT)}
         {...(positioned ? { style: { position: "absolute", top: 0, left: 0, right: 0 } } : {})}
-        onActivate={() => showText(thread)}
-      />
-    ));
+      >
+        {writing.quote && <blockquote className="quote">{writing.quote}</blockquote>}
+        {composer}
+      </div>
+    );
+  const inPlace = (slot: string) => {
+    const list = shown ? (bySlot.get(slot) ?? []) : [],
+      composing = writingSlot === slot;
+    if (!list.length && !composing) return null;
+    return (
+      <div className="vc-inline" data-inline-for={slot === GENERAL ? undefined : slot}>
+        {list.map((thread) => card(thread, false))}
+        {composing && newCard(false)}
+      </div>
+    );
+  };
+  // A new comment opened from afar (the bar, a whole-session comment) scrolls into view.
+  useEffect(() => {
+    if (inline && writing)
+      nextFrame(() => cards.current.get(DRAFT)?.scrollIntoView?.({ block: "nearest", behavior: "smooth" }));
+  }, [inline, writing]);
 
   return (
     <div className="vc-surface" ref={surface} data-margin={margin || undefined}>
@@ -343,8 +402,11 @@ export function CommentSurface({
             setGutter({ elementId: block.dataset.elementId, top, height: box.height });
         }}
         onMouseLeave={() => setGutter(undefined)}
+        onDoubleClick={() => clearTimeout(clickTimer.current)}
+        onKeyDown={inline ? onMarginKey : undefined}
       >
-        {children}
+        {inline && inPlace(GENERAL)}
+        <AfterBlock.Provider value={inline ? inPlace : undefined}>{children}</AfterBlock.Provider>
         {gutter && (
           <>
             {/* Bridges the gap between the block and its buttons, so the pointer never leaves on its way there. */}
@@ -394,48 +456,9 @@ export function CommentSurface({
       )}
       {margin && (
         <aside className="vc-margin" aria-label="Threads" onKeyDown={onMarginKey}>
-          {cardList(true)}
-          {writing && (
-            <div
-              className="vc-thread vc-thread-new"
-              ref={cardRef(DRAFT)}
-              style={{ position: "absolute", top: 0, left: 0, right: 0 }}
-            >
-              {writing.quote && <blockquote className="quote">{writing.quote}</blockquote>}
-              {composer}
-            </div>
-          )}
+          {shownThreads.map((thread) => card(thread, true))}
+          {newCard(true)}
         </aside>
-      )}
-      {!margin && sheet && (
-        <aside
-          className="vc-sheet-threads"
-          aria-label="Threads"
-          onKeyDown={(event) => {
-            if (event.key === "Escape") setSheet(false);
-            else onMarginKey(event);
-          }}
-        >
-          <header>
-            <h2 className="vc-label">Threads</h2>
-            <IconButton
-              variant="ghost"
-              size="md"
-              label="Close threads"
-              icon={<Icon name="x-mark" />}
-              onClick={() => setSheet(false)}
-            />
-          </header>
-          <div className="list">
-            {shownThreads.length ? cardList(false) : <p className="vc-muted">No threads here.</p>}
-          </div>
-        </aside>
-      )}
-      {!margin && writing && (
-        <div className="vc-write-sheet" role="dialog" aria-label="Write a comment">
-          {writing.quote && <blockquote className="quote">{writing.quote}</blockquote>}
-          {composer}
-        </div>
       )}
       <WhyDialog
         artifactId={artifactId}
@@ -447,10 +470,12 @@ export function CommentSurface({
       <ActionBar
         canComment={!readOnly}
         threadCount={shownThreads.length}
-        threadsShown={margin || sheet}
+        threadsShown={shown}
+        place={wide ? place : undefined}
+        onPlace={setPlace}
         filter={filter}
         onComment={() => startWriting({})}
-        onToggleThreads={() => (wide ? setShown((v) => !v) : setSheet((v) => !v))}
+        onToggleThreads={() => setShown((v) => !v)}
         onFilter={setFilter}
         replyMode={replyMode}
         modelReady={loop.modelReady}

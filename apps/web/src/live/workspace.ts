@@ -14,11 +14,7 @@ export function useWorkspace(enabled = true) {
   const sessions = useLiveQuery<VcSessionsOperation["result"]>("vc.Sessions", {}, enabled),
     drafts = useLiveQuery<VcArtifactsOperation["result"]>("vc.Artifacts", {}, enabled),
     inbox = useLiveQuery<AttentionItem[]>("vc.AttentionInbox", {}, enabled);
-  const attention = new Map<string, AttentionItem[]>();
-  for (const item of inbox.data ?? []) {
-    if (!item.sessionId) continue;
-    attention.set(item.sessionId, [...(attention.get(item.sessionId) ?? []), item]);
-  }
+  const attention = attentionBySession(inbox.data ?? [], sessions.data ?? []);
   return {
     sessions: sessions.data,
     drafts: drafts.data,
@@ -32,6 +28,17 @@ export function useWorkspace(enabled = true) {
       inbox.refresh();
     },
   };
+}
+
+/** The inbox by session. An ended session is read-only, so nothing in it can be acted on: it never asks for you. */
+export function attentionBySession(items: AttentionItem[], sessions: SessionRow[]): Map<string, AttentionItem[]> {
+  const attention = new Map<string, AttentionItem[]>(),
+    ended = new Set(sessions.filter((s) => s.state === "ended").map((s) => s.sessionId));
+  for (const item of items) {
+    if (!item.sessionId || ended.has(item.sessionId)) continue;
+    attention.set(item.sessionId, [...(attention.get(item.sessionId) ?? []), item]);
+  }
+  return attention;
 }
 
 const stateRank = { active: 0, paused: 1, ended: 2 } as const;

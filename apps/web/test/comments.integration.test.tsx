@@ -23,6 +23,8 @@ beforeAll(async () => {
   t = await startTestHost();
   dom = new JSDOM("<!doctype html><html><body></body></html>", { url: "http://127.0.0.1/" });
   for (const key of globals) Object.defineProperty(globalThis, key, { value: dom.window[key], configurable: true });
+  // These tests cover threads in the margin beside the text; threads under each block have their own tests.
+  localStorage.setItem("vc-comments", "beside");
   tl = await import("@testing-library/react");
   bridge = webBridge({ base: t.host.url, fetch: t.fetch, retryMs: 50 });
   const model = {
@@ -186,9 +188,73 @@ it("replies, edits and deletes in a thread", async () => {
 it("filters threads to those the agent answered", async () => {
   const { container } = await openSession();
   await tl.waitFor(() => expect(container.querySelectorAll(".vc-margin .vc-thread").length).toBe(3));
-  tl.fireEvent.click(tl.screen.getByRole("button", { name: "Filter threads" }));
-  const filter = await tl.screen.findByRole("dialog", { name: "Filter threads" });
+  tl.fireEvent.click(tl.screen.getByRole("button", { name: "Thread options" }));
+  const filter = await tl.screen.findByRole("dialog", { name: "Thread options" });
   tl.fireEvent.click(tl.within(filter).getByRole("button", { name: "Agent" }));
   await tl.waitFor(() => expect(container.querySelectorAll(".vc-margin .vc-thread").length).toBe(1));
   expect(container.querySelector(".vc-margin .vc-thread")?.textContent).toContain("Name the rock.");
+});
+
+it("shows threads under each block, as covibe does: a click on a block opens a comment right below it", async () => {
+  localStorage.setItem("vc-comments", "below");
+  try {
+    const { container } = await openSession();
+    expect(container.querySelector(".vc-margin")).toBeNull();
+    const paragraph = container.querySelectorAll<HTMLElement>(".vc-doc > p")[1]!,
+      id = paragraph.dataset.elementId!;
+    // Existing threads sit right after the block they are about.
+    await tl.waitFor(() => {
+      const below = paragraph.nextElementSibling as HTMLElement | null;
+      expect(below?.classList.contains("vc-inline")).toBe(true);
+      expect(below?.dataset.inlineFor).toBe(id);
+      expect(below?.textContent).toContain("Cut this paragraph entirely.");
+    });
+    // A plain click on the block opens the composer in that same place.
+    tl.fireEvent.click(paragraph.querySelector(".vc-text")!, { detail: 1 });
+    const form = await tl.waitFor(() => {
+      const found = paragraph.nextElementSibling?.querySelector<HTMLFormElement>(
+        'form[aria-label="Comment on this block"]',
+      );
+      if (!found) throw new Error("no composer under the block");
+      return found;
+    });
+    await send(form.parentElement!, "Comment on this block", "Say where the lake is.");
+    await tl.waitFor(() => expect(paragraph.nextElementSibling?.textContent).toContain("Say where the lake is."));
+    // A comment on the whole session shows above the Document.
+    tl.fireEvent.click(tl.screen.getByRole("button", { name: "Comment on the whole session" }));
+    const first = container.querySelector(".vc-surface-doc")!.firstElementChild as HTMLElement;
+    expect(first.classList.contains("vc-inline")).toBe(true);
+    expect(first.querySelector('form[aria-label="Comment on the whole session"]')).not.toBeNull();
+    // The margin is one choice away, and remembered.
+    tl.fireEvent.click(tl.screen.getByRole("button", { name: "Thread options" }));
+    const options = await tl.screen.findByRole("dialog", { name: "Thread options" });
+    tl.fireEvent.click(tl.within(options).getByRole("button", { name: "Beside the text" }));
+    await tl.waitFor(() =>
+      expect(container.querySelector(".vc-margin")?.textContent).toContain("Say where the lake is."),
+    );
+    expect(container.querySelector(".vc-inline .vc-comment")).toBeNull();
+    expect(localStorage.getItem("vc-comments")).toBe("beside");
+  } finally {
+    localStorage.setItem("vc-comments", "beside");
+  }
+});
+
+it("an ended session says why it cannot take comments, and carries on in a new session", async () => {
+  const ended = (await command<{ sessionId: string }>("vc.StartSession", { title: "Last summer" })).sessionId;
+  await command("vc.AttachArtifact", { sessionId: ended, artifactId, role: "primary" });
+  await command("vc.EndSession", { sessionId: ended });
+  tl.cleanup();
+  window.location.hash = "/s/" + ended;
+  const { App } = await import("../src/App.js");
+  const { container } = tl.render(<App bridge={bridge} />);
+  const note = await tl.screen.findByRole("note");
+  expect(note.textContent).toContain("has ended");
+  expect(tl.screen.queryByRole("button", { name: "Comment on the whole session" })).toBeNull();
+  tl.fireEvent.click(tl.within(note).getByRole("button", { name: "Continue in a new session" }));
+  await tl.waitFor(() => expect(window.location.hash).toMatch(new RegExp(`^#/s/session_\\w+/d/${artifactId}$`)));
+  const next = window.location.hash.split("/")[2]!;
+  expect(next).not.toBe(ended);
+  const drafts = await bridge.query<Array<{ artifactId: string; role?: string }>>("vc.Artifacts", { sessionId: next });
+  expect(drafts.map((d) => [d.artifactId, d.role])).toEqual([[artifactId, "primary"]]);
+  await tl.findByRole(container, "button", { name: "Comment on the whole session" }, { timeout: 5000 });
 });

@@ -25,6 +25,8 @@ beforeAll(async () => {
   t = await startTestHost();
   dom = new JSDOM("<!doctype html><html><body></body></html>", { url: "http://127.0.0.1/" });
   for (const key of globals) Object.defineProperty(globalThis, key, { value: dom.window[key], configurable: true });
+  // These tests cover threads in the margin beside the text; threads under each block have their own tests.
+  localStorage.setItem("vc-comments", "beside");
   tl = await import("@testing-library/react");
   bridge = webBridge({ base: t.host.url, fetch: t.fetch, retryMs: 50 });
   const model = {

@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Element, VcArtifactOperation } from "../../../../contract/generated/index.js";
+import { Button } from "@wei/design-system";
+import { terms } from "../../../ui/src/copy/terms.js";
+import { useActions } from "../home/actions.js";
 import { useBridge, useLiveQuery } from "../live/LiveStore.js";
 import type { DraftRow, SessionRow } from "../live/workspace.js";
 import { DocumentView } from "../document/DocumentView.js";
@@ -40,6 +43,7 @@ export function DraftDocument({
 }) {
   const bridge = useBridge(),
     toast = useToast(),
+    actions = useActions(),
     elements = useLiveQuery<Element[]>("vc.Elements", { artifactId }),
     artifact = useLiveQuery<VcArtifactOperation["result"]>("vc.Artifact", { artifactId }),
     threads = useLiveQuery<Thread[]>("vc.Threads", { sessionId: session.sessionId }),
@@ -120,6 +124,22 @@ export function DraftDocument({
           }}
           onConflicts={() => setChoosing(true)}
         />
+      )}
+      {session.state === "ended" && (
+        <div className="vc-ended" role="note">
+          <p>
+            This {terms.session.toLowerCase()} has ended, so its threads stay as they were. To keep commenting, carry on
+            in a new {terms.session.toLowerCase()} with the same {terms.draft.toLowerCase()}
+            {drafts.length === 1 ? "" : "s"}.
+          </p>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={() => void actions.continueSession(session.title, drafts, artifactId)}
+          >
+            Continue in a new {terms.session.toLowerCase()}
+          </Button>
+        </div>
       )}
       {viewing && artifact.data && viewing < artifact.data.headVersion ? (
         <VersionView

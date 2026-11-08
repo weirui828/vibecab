@@ -1,229 +1,232 @@
 /* The Document: the loudest thing on screen. Tokens only. */
 
-.vc-doc {
-  color: var(--color-fg-default);
-  font-size: 17px;
-  line-height: 1.7;
-  overflow-wrap: break-word;
-  font-feature-settings: "kern", "liga";
-}
-.vc-doc > :first-child {
-  margin-top: 0;
-}
-.vc-doc p {
-  margin: 0 0 1.05em;
-}
+/* Scoped so the Document styles stop at comments shown inside it (.vc-inline). */
+@scope (.vc-doc) to (.vc-inline) {
+  :scope {
+    color: var(--color-fg-default);
+    font-size: 17px;
+    line-height: 1.7;
+    overflow-wrap: break-word;
+    font-feature-settings: "kern", "liga";
+  }
+  :scope > :first-child {
+    margin-top: 0;
+  }
+  :scope p {
+    margin: 0 0 1.05em;
+  }
 
-/* Headings: Fraunces for the top three levels, the UI face below. */
-.vc-doc .vc-h {
-  margin: 2.4em 0 0.55em;
-  color: var(--color-fg-default);
-  font-weight: 600;
-  line-height: 1.25;
-  text-wrap: balance;
-}
-.vc-doc .vc-h1,
-.vc-doc .vc-h2,
-.vc-doc .vc-h3 {
-  font-family: var(--font-display);
-  font-optical-sizing: auto;
-  letter-spacing: -0.015em;
-}
-.vc-doc .vc-h1 {
-  margin: 0 0 0.7em;
-  font-size: clamp(34px, 4.6vw, 46px);
-  font-weight: 400;
-  line-height: 1.1;
-  letter-spacing: -0.022em;
-}
-.vc-doc .vc-h2 {
-  font-size: 28px;
-  font-weight: 450;
-}
-.vc-doc .vc-h3 {
-  margin-top: 2em;
-  font-size: 22px;
-  font-weight: 500;
-}
-.vc-doc .vc-h4 {
-  margin-top: 1.8em;
-  font-size: 17px;
-}
-.vc-doc .vc-h5,
-.vc-doc .vc-h6 {
-  margin-top: 1.6em;
-  color: var(--color-fg-muted);
-  font-size: 13px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
+  /* Headings: Fraunces for the top three levels, the UI face below. */
+  :scope .vc-h {
+    margin: 2.4em 0 0.55em;
+    color: var(--color-fg-default);
+    font-weight: 600;
+    line-height: 1.25;
+    text-wrap: balance;
+  }
+  :scope .vc-h1,
+  :scope .vc-h2,
+  :scope .vc-h3 {
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    letter-spacing: -0.015em;
+  }
+  :scope .vc-h1 {
+    margin: 0 0 0.7em;
+    font-size: clamp(34px, 4.6vw, 46px);
+    font-weight: 400;
+    line-height: 1.1;
+    letter-spacing: -0.022em;
+  }
+  :scope .vc-h2 {
+    font-size: 28px;
+    font-weight: 450;
+  }
+  :scope .vc-h3 {
+    margin-top: 2em;
+    font-size: 22px;
+    font-weight: 500;
+  }
+  :scope .vc-h4 {
+    margin-top: 1.8em;
+    font-size: 17px;
+  }
+  :scope .vc-h5,
+  :scope .vc-h6 {
+    margin-top: 1.6em;
+    color: var(--color-fg-muted);
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
 
-.vc-doc a {
-  color: var(--color-accent-fg);
-  text-decoration: underline;
-  text-decoration-color: var(--color-accent-muted);
-  text-decoration-thickness: 1px;
-  text-underline-offset: 3px;
-}
-.vc-doc a:hover {
-  text-decoration-color: currentColor;
-}
-.vc-doc strong {
-  font-weight: 600;
-}
-.vc-doc code {
-  padding: 0.1em 0.35em;
-  border-radius: 4px;
-  background: var(--color-surface-raised);
-  font-family: var(--font-mono);
-  font-size: 0.86em;
-}
+  :scope a {
+    color: var(--color-accent-fg);
+    text-decoration: underline;
+    text-decoration-color: var(--color-accent-muted);
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+  :scope a:hover {
+    text-decoration-color: currentColor;
+  }
+  :scope strong {
+    font-weight: 600;
+  }
+  :scope code {
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+    background: var(--color-surface-raised);
+    font-family: var(--font-mono);
+    font-size: 0.86em;
+  }
 
-/* Lists */
-.vc-doc ul,
-.vc-doc ol {
-  margin: 0 0 1.1em;
-  padding-left: 1.35em;
-  list-style: disc;
-}
-.vc-doc ol {
-  list-style: decimal;
-}
-.vc-doc li > ul {
-  list-style: circle;
-}
-.vc-doc li {
-  margin: 0.3em 0;
-  padding-left: 0.2em;
-}
-.vc-doc li::marker {
-  color: var(--color-fg-muted);
-}
-.vc-doc ol > li::marker {
-  font-family: var(--font-mono);
-  font-size: 0.85em;
-}
-.vc-doc li > ul,
-.vc-doc li > ol {
-  margin: 0.3em 0 0.2em;
-}
+  /* Lists */
+  :scope ul,
+  :scope ol {
+    margin: 0 0 1.1em;
+    padding-left: 1.35em;
+    list-style: disc;
+  }
+  :scope ol {
+    list-style: decimal;
+  }
+  :scope li > ul {
+    list-style: circle;
+  }
+  :scope li {
+    margin: 0.3em 0;
+    padding-left: 0.2em;
+  }
+  :scope li::marker {
+    color: var(--color-fg-muted);
+  }
+  :scope ol > li::marker {
+    font-family: var(--font-mono);
+    font-size: 0.85em;
+  }
+  :scope li > ul,
+  :scope li > ol {
+    margin: 0.3em 0 0.2em;
+  }
 
-/* Quote: a quiet pull-quote, not a box. */
-.vc-doc blockquote {
-  margin: 1.8em 0;
-  padding: 0.1em 0 0.1em 1.2em;
-  border-left: 2px solid var(--color-accent-muted);
-  font-family: var(--font-display);
-  font-size: 20px;
-  font-style: italic;
-  line-height: 1.55;
-}
+  /* Quote: a quiet pull-quote, not a box. */
+  :scope blockquote {
+    margin: 1.8em 0;
+    padding: 0.1em 0 0.1em 1.2em;
+    border-left: 2px solid var(--color-accent-muted);
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-style: italic;
+    line-height: 1.55;
+  }
 
-/* Code */
-.vc-doc .vc-code {
-  margin: 1.8em 0;
-  padding: 16px 20px 18px;
-  border-radius: 12px;
-  background: var(--color-surface-raised);
-}
-.vc-doc .vc-code figcaption {
-  margin-bottom: 8px;
-  color: var(--color-fg-muted);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.vc-doc .vc-code pre {
-  margin: 0;
-  overflow-x: auto;
-  font-family: var(--font-mono);
-  font-size: 14px;
-  line-height: 1.6;
-}
-.vc-doc .vc-code code {
-  padding: 0;
-  background: none;
-  font-size: inherit;
-}
+  /* Code */
+  :scope .vc-code {
+    margin: 1.8em 0;
+    padding: 16px 20px 18px;
+    border-radius: 12px;
+    background: var(--color-surface-raised);
+  }
+  :scope .vc-code figcaption {
+    margin-bottom: 8px;
+    color: var(--color-fg-muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  :scope .vc-code pre {
+    margin: 0;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  :scope .vc-code code {
+    padding: 0;
+    background: none;
+    font-size: inherit;
+  }
 
-/* Table: hairlines only. */
-.vc-doc .vc-table {
-  margin: 1.8em 0;
-  overflow-x: auto;
-}
-.vc-doc table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 15px;
-  line-height: 1.5;
-}
-.vc-doc th,
-.vc-doc td {
-  padding: 10px 16px 10px 0;
-  border-bottom: 1px solid var(--color-border-subtle);
-  text-align: left;
-  vertical-align: top;
-}
-.vc-doc th {
-  border-bottom-color: var(--color-border-default);
-  font-weight: 600;
-}
+  /* Table: hairlines only. */
+  :scope .vc-table {
+    margin: 1.8em 0;
+    overflow-x: auto;
+  }
+  :scope table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  :scope th,
+  :scope td {
+    padding: 10px 16px 10px 0;
+    border-bottom: 1px solid var(--color-border-subtle);
+    text-align: left;
+    vertical-align: top;
+  }
+  :scope th {
+    border-bottom-color: var(--color-border-default);
+    font-weight: 600;
+  }
 
-/* Image */
-.vc-doc .vc-image {
-  margin: 2.2em 0;
-}
-.vc-doc .vc-image img {
-  display: block;
-  max-width: 100%;
-  height: auto;
-  margin: 0 auto;
-  border-radius: 12px;
-}
-.vc-doc .vc-image figcaption {
-  margin-top: 10px;
-  color: var(--color-fg-muted);
-  font-size: 14px;
-  text-align: center;
-}
+  /* Image */
+  :scope .vc-image {
+    margin: 2.2em 0;
+  }
+  :scope .vc-image img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto;
+    border-radius: 12px;
+  }
+  :scope .vc-image figcaption {
+    margin-top: 10px;
+    color: var(--color-fg-muted);
+    font-size: 14px;
+    text-align: center;
+  }
 
-/* Divider: a short centred rule, a pause rather than a wall. */
-.vc-doc hr {
-  width: 72px;
-  height: 1px;
-  margin: 3em auto;
-  border: 0;
-  background: var(--color-border-strong);
-}
+  /* Divider: a short centred rule, a pause rather than a wall. */
+  :scope hr {
+    width: 72px;
+    height: 1px;
+    margin: 3em auto;
+    border: 0;
+    background: var(--color-border-strong);
+  }
 
-/* Callout: tinted, with an icon so tone never rests on colour alone. */
-.vc-doc .vc-callout {
-  display: grid;
-  grid-template-columns: 20px minmax(0, 1fr);
-  gap: 14px;
-  margin: 1.8em 0;
-  padding: 16px 20px;
-  border-radius: 12px;
-  background: var(--color-info-subtle);
-  font-size: 16px;
-  line-height: 1.6;
-}
-.vc-doc .vc-callout > svg {
-  margin-top: 3px;
-  color: var(--color-info-fg);
-}
-.vc-doc .vc-callout[data-tone="note"] {
-  background: var(--color-accent-subtle);
-}
-.vc-doc .vc-callout[data-tone="note"] > svg {
-  color: var(--color-accent-fg);
-}
-.vc-doc .vc-callout[data-tone="warning"] {
-  background: var(--color-warning-subtle);
-}
-.vc-doc .vc-callout[data-tone="warning"] > svg {
-  color: var(--color-warning-fg);
+  /* Callout: tinted, with an icon so tone never rests on colour alone. */
+  :scope .vc-callout {
+    display: grid;
+    grid-template-columns: 20px minmax(0, 1fr);
+    gap: 14px;
+    margin: 1.8em 0;
+    padding: 16px 20px;
+    border-radius: 12px;
+    background: var(--color-info-subtle);
+    font-size: 16px;
+    line-height: 1.6;
+  }
+  :scope .vc-callout > svg {
+    margin-top: 3px;
+    color: var(--color-info-fg);
+  }
+  :scope .vc-callout[data-tone="note"] {
+    background: var(--color-accent-subtle);
+  }
+  :scope .vc-callout[data-tone="note"] > svg {
+    color: var(--color-accent-fg);
+  }
+  :scope .vc-callout[data-tone="warning"] {
+    background: var(--color-warning-subtle);
+  }
+  :scope .vc-callout[data-tone="warning"] > svg {
+    color: var(--color-warning-fg);
+  }
 }
 
 .vc-doc-empty {
@@ -238,16 +241,18 @@
 }
 
 @media (max-width: 719px) {
-  .vc-doc {
-    font-size: 16.5px;
-  }
-  .vc-doc .vc-h2 {
-    font-size: 24px;
-  }
-  .vc-doc .vc-h3 {
-    font-size: 20px;
-  }
-  .vc-doc blockquote {
-    font-size: 18px;
+  @scope (.vc-doc) to (.vc-inline) {
+    :scope {
+      font-size: 16.5px;
+    }
+    :scope .vc-h2 {
+      font-size: 24px;
+    }
+    :scope .vc-h3 {
+      font-size: 20px;
+    }
+    :scope blockquote {
+      font-size: 18px;
+    }
   }
 }

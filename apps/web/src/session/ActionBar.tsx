@@ -4,6 +4,7 @@ import { Button, Icon } from "@wei/design-system";
 import type { ThreadFilter } from "./threads.js";
 import { defaultFilter } from "./threads.js";
 import { plural } from "../ui/time.js";
+import type { CommentPlace } from "../shell/prefs.js";
 
 // Outline glyphs in the design system's style (24px grid, 1.5 stroke, currentColor) for what it does not ship.
 function Glyph({ d }: { d: string }) {
@@ -92,7 +93,17 @@ function BarButton(props: {
   );
 }
 
-function FilterPanel({ filter, onChange }: { filter: ThreadFilter; onChange(f: ThreadFilter): void }) {
+function FilterPanel({
+  filter,
+  onChange,
+  place,
+  onPlace,
+}: {
+  filter: ThreadFilter;
+  onChange(f: ThreadFilter): void;
+  place: CommentPlace | undefined;
+  onPlace(place: CommentPlace): void;
+}) {
   const seg = <K extends keyof ThreadFilter>(key: K, options: Array<[ThreadFilter[K], string]>) => (
     <div className="vc-segmented small" role="group">
       {options.map(([value, label]) => (
@@ -108,7 +119,25 @@ function FilterPanel({ filter, onChange }: { filter: ThreadFilter; onChange(f: T
     </div>
   );
   return (
-    <div className="vc-filter" role="dialog" aria-label="Filter threads">
+    <div className="vc-filter" role="dialog" aria-label="Thread options">
+      {place && (
+        <>
+          <p className="vc-label">Show threads</p>
+          <div className="vc-segmented small" role="group" aria-label="Show threads">
+            {(
+              [
+                ["below", "Under each block"],
+                ["beside", "Beside the text"],
+              ] as const
+            ).map(([value, label]) => (
+              <button key={value} type="button" aria-pressed={place === value} onClick={() => onPlace(value)}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className="vc-label">Which threads</p>
+        </>
+      )}
       {seg("status", [
         ["open", "Open"],
         ["all", "All"],
@@ -141,7 +170,12 @@ export function ActionBar({
   onAsk,
   onHistory,
   onSnapshot,
+  place,
+  onPlace,
 }: {
+  /** Where threads show; undefined when the screen is too narrow for a choice. */
+  place: CommentPlace | undefined;
+  onPlace(place: CommentPlace): void;
   onHistory(): void;
   onSnapshot(): void;
   replyMode: ReplyMode;
@@ -213,11 +247,11 @@ export function ActionBar({
           </BarButton>
         )}
         <span className="vc-bar-sep" aria-hidden="true" />
-        <BarButton label="Filter threads" pressed={filtering || filtered} onClick={() => setFiltering((v) => !v)}>
+        <BarButton label="Thread options" pressed={filtering || filtered} onClick={() => setFiltering((v) => !v)}>
           <Icon name="funnel" size={20} />
           {filtered && <span className="dot" aria-hidden="true" />}
         </BarButton>
-        {filtering && <FilterPanel filter={filter} onChange={onFilter} />}
+        {filtering && <FilterPanel filter={filter} onChange={onFilter} place={place} onPlace={onPlace} />}
         {panel === "agent" && (
           <AgentPanel
             mode={replyMode}
