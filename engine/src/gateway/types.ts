@@ -50,6 +50,14 @@ export type ProviderModel = ContractProviderModel;
 export type ModelCapabilities = ProviderModel["capabilities"];
 /** The built-in agent's id in budgets and call records; SDK agents (W12) have their own. */
 export const BUILT_IN_AGENT = "vibecab";
+/** The agent a model works for: an SDK agent's own id (W12), else the built-in agent. */
+export function agentFor(model: { provider: string }): string {
+  return model.provider === "claude-agent-sdk"
+    ? "claude-code"
+    : model.provider === "codex-sdk"
+      ? "codex"
+      : BUILT_IN_AGENT;
+}
 /** Who a model call works for, recorded with the call. */
 export interface CallAttribution {
   agentId: string;

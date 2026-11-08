@@ -11,6 +11,12 @@ import type { Thread } from "./threads.js";
 import { visibleComments } from "./threads.js";
 
 export type { Agreement, FeedbackConflict, Update };
+export type SessionAgent = "vibecab" | "claude-code" | "codex";
+export const agentWords: Record<SessionAgent, string> = {
+  vibecab: "VibeCab agent",
+  "claude-code": "Claude Code",
+  codex: "Codex",
+};
 
 const running = new Set(["queued", "planning", "awaiting_plan_review", "writing", "checking"]);
 export const isRunning = (update: Update) => running.has(update.status);
@@ -20,10 +26,10 @@ export function useLoop(sessionId: string, artifactId: string, enabled = true) {
   const agreements = useLiveQuery<Agreement[]>("vc.DecisionRecord", { artifactId }, enabled),
     updates = useLiveQuery<VcUpdatesOperation["result"]>("vc.Updates", { artifactId }, enabled),
     conflicts = useLiveQuery<FeedbackConflict[]>("vc.Conflicts", { sessionId, artifactId }, enabled),
-    settings = useLiveQuery<{ models?: Record<string, unknown>; sessions?: Record<string, { planReview?: boolean }> }>(
-      "sys.Settings",
-      {},
-    ),
+    settings = useLiveQuery<{
+      models?: Record<string, unknown>;
+      sessions?: Record<string, { planReview?: boolean; agent?: SessionAgent }>;
+    }>("sys.Settings", {}),
     grants = useLiveQuery<Grant[]>("vc.Grants", {});
   const list = [...(updates.data?.updates ?? [])].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   return {
@@ -35,6 +41,14 @@ export function useLoop(sessionId: string, artifactId: string, enabled = true) {
     conflicts: (conflicts.data ?? []).filter((c) => c.state === "open"),
     modelReady: settings.data ? Boolean(settings.data.models?.default) : true,
     planReview: settings.data?.sessions?.[sessionId]?.planReview === true,
+    // Who replies here (W12): the session's choice while that agent is set up, else the VibeCab agent.
+    agents: (["vibecab", "claude-code", "codex"] as const).filter(
+      (id) => id === "vibecab" || Boolean(settings.data?.models?.[id]),
+    ) as SessionAgent[],
+    agent: ((): SessionAgent => {
+      const chosen = settings.data?.sessions?.[sessionId]?.agent;
+      return chosen && chosen !== "vibecab" && settings.data?.models?.[chosen] ? chosen : "vibecab";
+    })(),
     autoAgree: (grants.data ?? []).some(
       (g) =>
         !g.revokedAt &&

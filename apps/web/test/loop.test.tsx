@@ -15,6 +15,8 @@ const loop = (over: Partial<Loop> = {}): Loop => ({
   modelReady: true,
   planReview: false,
   autoAgree: false,
+  agents: ["vibecab"],
+  agent: "vibecab",
   ...over,
 });
 const thread = (comments: Array<Partial<Thread["comments"][number]>>): Thread =>

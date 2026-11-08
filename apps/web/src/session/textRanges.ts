@@ -77,3 +77,7 @@ export function rectOf(range: Range): { top: number; left: number; width: number
     ? range.getBoundingClientRect()
     : { top: 0, left: 0, width: 0 };
 }
+
+/** Runs after the next paint (or soon, where there is no paint, as in tests). */
+export const nextFrame = (run: () => void) =>
+  typeof requestAnimationFrame === "function" ? requestAnimationFrame(run) : setTimeout(run, 0);

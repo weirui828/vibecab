@@ -4724,8 +4724,16 @@ export const schemasById: Record<string, AnySchema> = {
             "properties": {
               "models": {
                 "type": "object",
+                "description": "Models to add or replace; null removes that alias (\"default\" cannot be removed).",
                 "additionalProperties": {
-                  "$ref": "https://vibecab.local/schemas/provider-model.json"
+                  "oneOf": [
+                    {
+                      "$ref": "https://vibecab.local/schemas/provider-model.json"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
                 }
               },
               "budgets": {
@@ -11191,7 +11199,12 @@ export const schemasById: Record<string, AnySchema> = {
     "type": "object",
     "properties": {
       "provider": {
-        "const": "openai-compatible"
+        "enum": [
+          "openai-compatible",
+          "claude-agent-sdk",
+          "codex-sdk"
+        ],
+        "description": "openai-compatible: an HTTP model API. claude-agent-sdk / codex-sdk: Claude Code or Codex on this computer, through its SDK and its own sign-in; such models are priced 0 here."
       },
       "baseUrl": {
         "type": "string",
@@ -11568,6 +11581,14 @@ export const schemasById: Record<string, AnySchema> = {
       "updateIdleMinutes": {
         "type": "number",
         "exclusiveMinimum": 0
+      },
+      "agent": {
+        "enum": [
+          "vibecab",
+          "claude-code",
+          "codex"
+        ],
+        "description": "Which agent replies in this session's threads. Claude Code and Codex run through their SDKs with this computer's sign-in (W12)."
       }
     },
     "additionalProperties": false

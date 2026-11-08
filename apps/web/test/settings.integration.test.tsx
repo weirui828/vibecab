@@ -254,3 +254,41 @@ it("makes a sign-in link for another browser", async () => {
   tl.fireEvent.click(await tl.screen.findByRole("button", { name: "Make a sign-in link" }));
   await tl.waitFor(() => expect(document.querySelector("#browser pre")?.textContent).toMatch(/\?launch=/));
 });
+
+it("turns Claude Code on and off, and a session can choose who replies", async () => {
+  const models = async () =>
+    (await bridge.query<{ models: Record<string, { provider: string; model: string }> }>("sys.Settings", {})).models;
+  await open("/settings/agents");
+  const claude = tl.within(await tl.screen.findByRole("region", { name: "Claude Code" }));
+  expect(claude.getByText("Off")).toBeTruthy();
+  tl.fireEvent.click(claude.getByRole("button", { name: "Use Claude Code" }));
+  await tl.waitFor(async () =>
+    expect((await models())["claude-code"]).toMatchObject({ provider: "claude-agent-sdk", model: "default" }),
+  );
+  await tl.waitFor(() => expect(claude.getByText(/^On · /)).toBeTruthy());
+  // A session can now pick it in its Agent panel.
+  const started = await bridge.command("vc.StartSession", { title: "Pick an agent" });
+  if (!started.ok) throw Error(started.error.message);
+  const { sessionId } = started.result as { sessionId: string };
+  const artifact = await bridge.command("vc.CreateArtifact", { title: "Agent draft", mediaKind: "doc" });
+  if (!artifact.ok) throw Error(artifact.error.message);
+  await bridge.command("vc.AttachArtifact", {
+    sessionId,
+    artifactId: (artifact.result as { artifactId: string }).artifactId,
+    role: "primary",
+  });
+  await open("/s/" + sessionId);
+  tl.fireEvent.click(await tl.screen.findByRole("button", { name: "Agent" }));
+  const who = await tl.screen.findByRole("group", { name: "Who replies" });
+  tl.fireEvent.click(tl.within(who).getByRole("button", { name: "Claude Code" }));
+  await tl.waitFor(async () => {
+    const settings = await bridge.query<{ sessions: Record<string, { agent?: string }> }>("sys.Settings", {});
+    expect(settings.sessions[sessionId]?.agent).toBe("claude-code");
+  });
+  expect(await tl.screen.findByText("Claude Code replies")).toBeTruthy();
+  // Turned off, it leaves the settings; the session falls back to the VibeCab agent.
+  await open("/settings/agents");
+  const again = tl.within(await tl.screen.findByRole("region", { name: "Claude Code" }));
+  tl.fireEvent.click(await again.findByRole("button", { name: "Turn Claude Code off" }));
+  await tl.waitFor(async () => expect((await models())["claude-code"]).toBeUndefined());
+});

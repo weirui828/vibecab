@@ -14,7 +14,7 @@ import type { Loop } from "./loop.js";
 import { Composer } from "./Composer.js";
 import { ThreadCard } from "./ThreadCard.js";
 import { layoutMargin } from "./marginLayout.js";
-import { byElementId, rectOf, selectionInElement } from "./textRanges.js";
+import { byElementId, nextFrame, rectOf, selectionInElement } from "./textRanges.js";
 import type { TextSelection } from "./textRanges.js";
 import {
   anchorOf,
@@ -42,9 +42,6 @@ interface Writing {
   anchor?: NewAnchor;
   quote?: string;
 }
-
-const nextFrame = (run: () => void) =>
-  typeof requestAnimationFrame === "function" ? requestAnimationFrame(run) : setTimeout(run, 0);
 
 const blockSelector = ".vc-doc > [data-element-id], .vc-doc li[data-element-id]";
 
@@ -490,6 +487,9 @@ export function CommentSurface({
         replyMode={replyMode}
         modelReady={loop.modelReady}
         onReplyMode={(mode) => void actions.setReplyMode(mode)}
+        agents={loop.agents}
+        agent={loop.agent}
+        onAgent={(agent) => void actions.setAgent(agent)}
         onAsk={() => void actions.ask()}
         onHistory={onHistory}
         onSnapshot={onSnapshot}
