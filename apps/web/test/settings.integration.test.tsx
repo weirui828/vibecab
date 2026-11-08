@@ -74,7 +74,7 @@ it("sets the daily limit and agent limits from Settings", async () => {
   await open("/settings/spending");
   const spending = tl.within(await tl.screen.findByRole("region", { name: "Spending" }));
   tl.fireEvent.change(spending.getByLabelText("Daily limit in dollars"), { target: { value: "7.5" } });
-  tl.fireEvent.click(spending.getByRole("button", { name: "Save" }));
+  tl.fireEvent.click(spending.getAllByRole("button", { name: "Save" })[0]!);
   await tl.waitFor(async () => {
     const usage = await bridge.query<{ accounts: Array<{ account: { kind: string }; limitMicros: number }> }>(
       "sys.Usage",
@@ -82,19 +82,30 @@ it("sets the daily limit and agent limits from Settings", async () => {
     );
     expect(usage.accounts.find((a) => a.account.kind === "daily")?.limitMicros).toBe(7_500_000);
   });
-  tl.fireEvent.click(tl.screen.getByRole("tab", { name: "Agent" }));
-  const agent = tl.within(await tl.screen.findByRole("region", { name: "The agent" }));
+  // What one reply may cost is with the rest of the money.
+  tl.fireEvent.change(spending.getByLabelText("Most one reply may cost ($)"), { target: { value: "0.4" } });
+  tl.fireEvent.click(spending.getAllByRole("button", { name: "Save" })[1]!);
+  await tl.waitFor(async () => {
+    const settings = await bridge.query<{ budgets?: { defaultTurnLimitMicros?: number } }>("sys.Settings", {});
+    expect(settings.budgets?.defaultTurnLimitMicros).toBe(400_000);
+  });
+  tl.fireEvent.click(tl.screen.getByRole("tab", { name: "Agents" }));
+  const agent = tl.within(await tl.screen.findByRole("region", { name: "How it replies" }));
   tl.fireEvent.change(agent.getByLabelText("Wait before replying (seconds)"), { target: { value: "4" } });
   tl.fireEvent.click(agent.getByRole("button", { name: "Save" }));
   await tl.waitFor(async () => {
-    const settings = await bridge.query<{ budgets?: { realtimeDebounceSeconds?: number } }>("sys.Settings", {});
+    const settings = await bridge.query<{
+      budgets?: { realtimeDebounceSeconds?: number; defaultTurnLimitMicros?: number };
+    }>("sys.Settings", {});
     expect(settings.budgets?.realtimeDebounceSeconds).toBe(4);
+    // Saving one part of the agent's settings keeps the others.
+    expect(settings.budgets?.defaultTurnLimitMicros).toBe(400_000);
   });
 });
 
 it("gives the assistant access once, lists it without the secret, and revokes it", async () => {
-  const { container } = await open("/settings/assistant");
-  const assistant = tl.within(await tl.screen.findByRole("region", { name: "Your AI assistant" }));
+  const { container } = await open("/settings/agents");
+  const assistant = tl.within(await tl.screen.findByRole("region", { name: "Your AI assistants" }));
   await tl.waitFor(() =>
     expect(assistant.getByRole("button", { name: "Read only" })).not.toHaveProperty("disabled", true),
   );
@@ -120,23 +131,40 @@ it("gives the assistant access once, lists it without the secret, and revokes it
   });
 });
 
-it("shows one tab at a time, marks the current one, and moves with the arrow keys", async () => {
+it("groups Settings in three tabs: each agent with its own parts, then Spending and General", async () => {
   await open("/settings");
-  const model = await tl.screen.findByRole("tab", { name: "Model" });
-  expect(model.getAttribute("aria-selected")).toBe("true");
-  expect(await tl.screen.findByRole("region", { name: "Model" })).toBeTruthy();
+  const agents = await tl.screen.findByRole("tab", { name: "Agents" });
+  expect(agents.getAttribute("aria-selected")).toBe("true");
+  const vibecab = await tl.screen.findByRole("region", { name: "VibeCab agent" });
+  for (const part of ["Model", "How it replies", "What it may do", "Its tools"])
+    expect(tl.within(vibecab).getByRole("region", { name: part })).toBeTruthy();
+  const assistants = tl.screen.getByRole("region", { name: "Your AI assistants" });
+  expect(tl.within(assistants).getByRole("region", { name: "Connect an assistant" })).toBeTruthy();
   expect(tl.screen.queryByRole("region", { name: "Spending" })).toBeNull();
-  tl.fireEvent.keyDown(model, { key: "ArrowRight" });
+  tl.fireEvent.keyDown(agents, { key: "ArrowRight" });
   await tl.waitFor(() => expect(window.location.hash).toBe("#/settings/spending"));
   expect((await tl.screen.findByRole("tab", { name: "Spending" })).getAttribute("aria-selected")).toBe("true");
   expect(await tl.screen.findByRole("region", { name: "Spending" })).toBeTruthy();
-  expect(tl.screen.queryByRole("region", { name: "Model" })).toBeNull();
   tl.fireEvent.keyDown(tl.screen.getByRole("tab", { name: "Spending" }), { key: "End" });
-  await tl.waitFor(() => expect(window.location.hash).toBe("#/settings/about"));
+  await tl.waitFor(() => expect(window.location.hash).toBe("#/settings/general"));
+  for (const part of ["Your data", "Appearance", "Open on another browser", "About"])
+    expect(await tl.screen.findByRole("region", { name: part })).toBeTruthy();
+});
+
+it("sends addresses from before the three tabs to where each part now lives", async () => {
+  for (const [old, now, part] of [
+    ["tools", "agents", "Its tools"],
+    ["permissions", "agents", "What it may do"],
+    ["about", "general", "About"],
+  ] as const) {
+    await open("/settings/" + old);
+    await tl.waitFor(() => expect(window.location.hash).toBe("#/settings/" + now));
+    expect(await tl.screen.findByRole("region", { name: part })).toBeTruthy();
+  }
 });
 
 it("makes a sign-in link for another browser", async () => {
-  await open("/settings/about");
+  await open("/settings/general");
   tl.fireEvent.click(await tl.screen.findByRole("button", { name: "Make a sign-in link" }));
   await tl.waitFor(() => expect(document.querySelector("#browser pre")?.textContent).toMatch(/\?launch=/));
 });

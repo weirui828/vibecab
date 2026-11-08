@@ -22,7 +22,8 @@ export function GrantsSection({ sessions }: { sessions: SessionRow[] }) {
   return (
     <Section
       id="permissions"
-      title="What the agent may do"
+      level={3}
+      title="What it may do"
       lede="Permissions you have given the agent. Taking one back is immediate."
     >
       {live.length === 0 ? (
@@ -82,8 +83,9 @@ export function ToolsSection() {
   return (
     <Section
       id="tools"
-      title="Connected tools"
-      lede="Tools the agent can reach through MCP servers you trust, and what it may do with each."
+      level={3}
+      title="Its tools"
+      lede="MCP servers the agent connects to — VibeCab as an MCP client — and what it may do with each tool."
     >
       {live.map((server) => (
         <div key={server.serverId} className="vc-tool-server">
@@ -167,7 +169,10 @@ interface AccessToken {
   revokedAt?: string;
 }
 
-/** Lets the person's own AI assistant work with VibeCab as them, through MCP. The token shows once. */
+/**
+ * Outside AI assistants working in VibeCab as the person, through VibeCab's MCP server: one row each with what it
+ * may do and Revoke, then the way to connect another (its access key shows once).
+ */
 export function AssistantSection({ workspace, relayPath }: { workspace: string; relayPath: string | undefined }) {
   const tokens = useLiveQuery<AccessToken[]>("sys.AccessTokens", {}),
     run = useRun(),
@@ -201,59 +206,67 @@ export function AssistantSection({ workspace, relayPath }: { workspace: string; 
       2,
     );
   return (
-    <Section
-      id="assistant"
-      title="Your AI assistant"
-      lede="Claude Desktop, Codex or another MCP client can read, comment and agree here as you. It can never change settings, keys or permissions."
-    >
-      {config ? (
-        <div className="vc-secret">
-          <p className="vc-muted">Paste this into your assistant's MCP settings. The access key is shown only now.</p>
-          <pre>{config}</pre>
-          <div className="vc-form-actions">
-            <Button
-              variant="secondary"
-              onClick={() => void navigator.clipboard?.writeText(config).then(() => setCopied(true))}
-            >
-              {copied ? "Copied" : "Copy"}
+    <>
+      <Section id="assistants" level={3} title="Connected">
+        {mcp.length === 0 ? (
+          <p className="vc-muted">None yet.</p>
+        ) : (
+          <ul className="vc-plain-list">
+            {mcp.map((t) => (
+              <li key={t.tokenId}>
+                <span className="what">
+                  {t.name}
+                  <span className="vc-facts">
+                    {t.scope === "read" ? "may read" : "may read, comment and agree"} · connected{" "}
+                    {relativeTime(t.createdAt)}
+                  </span>
+                </span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => void run("sys.RevokeAccessToken", { tokenId: t.tokenId })}
+                >
+                  Revoke
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Section>
+      <Section
+        id="assistant"
+        level={3}
+        title="Connect an assistant"
+        lede="It gets its own access key. Paste the setup into the assistant's MCP settings."
+      >
+        {config ? (
+          <div className="vc-secret">
+            <p className="vc-muted">The access key is shown only now.</p>
+            <pre>{config}</pre>
+            <div className="vc-form-actions">
+              <Button
+                variant="secondary"
+                onClick={() => void navigator.clipboard?.writeText(config).then(() => setCopied(true))}
+              >
+                {copied ? "Copied" : "Copy"}
+              </Button>
+              <Button variant="ghost" onClick={() => setCreated(undefined)}>
+                Done
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="vc-form-actions start">
+            <Button variant="secondary" disabled={!workspace} onClick={() => void create("collaborate")}>
+              Give access to comment and agree
             </Button>
-            <Button variant="ghost" onClick={() => setCreated(undefined)}>
-              Done
+            <Button variant="ghost" disabled={!workspace} onClick={() => void create("read")}>
+              Read only
             </Button>
           </div>
-        </div>
-      ) : (
-        <div className="vc-form-actions start">
-          <Button variant="secondary" disabled={!workspace} onClick={() => void create("collaborate")}>
-            Give access to comment and agree
-          </Button>
-          <Button variant="ghost" disabled={!workspace} onClick={() => void create("read")}>
-            Read only
-          </Button>
-        </div>
-      )}
-      {mcp.length > 0 && (
-        <ul className="vc-plain-list">
-          {mcp.map((t) => (
-            <li key={t.tokenId}>
-              <span className="what">
-                {t.name}
-                <span className="vc-facts">
-                  {t.scope === "read" ? "read only" : "comment and agree"} · {relativeTime(t.createdAt)}
-                </span>
-              </span>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => void run("sys.RevokeAccessToken", { tokenId: t.tokenId })}
-              >
-                Revoke
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Section>
+        )}
+      </Section>
+    </>
   );
 }
 
