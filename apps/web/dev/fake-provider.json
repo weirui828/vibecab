@@ -1,0 +1,62 @@
+{
+  "defaultSequence": [
+    [
+      {
+        "type": "tool_call",
+        "call": {
+          "id": "r1",
+          "name": "reply",
+          "arguments": {
+            "threadId": "$first_thread",
+            "body": "Covibe: two ways to make the title carry the idea.",
+            "proposal": [
+              { "label": "Name the idea", "text": "Covibe: shaping one piece of work together" },
+              { "label": "Keep it short", "text": "Covibe, in one page" }
+            ]
+          }
+        }
+      },
+      { "type": "done", "finishReason": "tool_calls" }
+    ],
+    [
+      { "type": "text_delta", "text": "Reply recorded." },
+      { "type": "done", "finishReason": "stop" }
+    ],
+    [
+      {
+        "type": "output",
+        "json": {
+          "items": [
+            {
+              "itemId": "$first_item",
+              "action": "edit",
+              "elementIds": ["$first_element"],
+              "note": "Apply the agreed title."
+            }
+          ]
+        }
+      },
+      { "type": "done", "finishReason": "stop" }
+    ],
+    [
+      {
+        "type": "output",
+        "json": {
+          "changes": [
+            {
+              "op": "update",
+              "elementId": "$first_element",
+              "element": {
+                "type": "heading",
+                "props": { "level": 1 },
+                "text": "Covibe: shaping one piece of work together"
+              }
+            }
+          ],
+          "itemResults": [{ "itemId": "$first_item", "status": "addressed", "elementIds": ["$first_element"] }]
+        }
+      },
+      { "type": "done", "finishReason": "stop" }
+    ]
+  ]
+}

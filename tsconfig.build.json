@@ -15,6 +15,7 @@
     "apps/macos/src/**/*.ts",
     "apps/macos/src/**/*.cts",
     "apps/ui/src/**/*.ts",
-    "apps/ui/src/**/*.tsx"
+    "apps/ui/src/**/*.tsx",
+    "apps/web/server/**/*.ts"
   ]
 }
