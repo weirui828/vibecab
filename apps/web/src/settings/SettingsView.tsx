@@ -10,6 +10,8 @@ import { relativeTime } from "../ui/time.js";
 import { AssistantSection, DataSection, GrantsSection, ToolsSection } from "./AccessSections.js";
 import { AgentGroup, Section, agentNames, dollars, toMicros, useRun } from "./common.js";
 import { UsageSection } from "./UsageSection.js";
+import { EngineFacts } from "./EngineFacts.js";
+import type { AppState } from "../bridge/webBridge.js";
 import { SdkAgents } from "./SdkAgents.js";
 import { ModelForm } from "./ModelForm.js";
 import type { SettingsShape } from "./ModelForm.js";
@@ -330,7 +332,7 @@ export function SettingsView({
   const bridge = useBridge(),
     settings = useLiveQuery<SettingsShape>("sys.Settings", {}),
     caps = useLiveQuery<{ contractVersion: string }>("sys.Capabilities", {}),
-    [state, setState] = useState<{ workspacePath: string; version: string; mcpRelayPath?: string }>(),
+    [state, setState] = useState<AppState>(),
     list = useRef<HTMLDivElement>(null);
   useEffect(() => {
     void bridge.app.state().then(setState, () => undefined);
@@ -437,6 +439,13 @@ export function SettingsView({
               <p className="vc-facts">
                 VibeCab {state?.version ?? ""} · contract {caps.data?.contractVersion ?? "…"}
               </p>
+              <EngineFacts
+                engine={state?.engine}
+                onRestart={async () => {
+                  await bridge.app.restartEngine();
+                  setState(await bridge.app.state());
+                }}
+              />
             </Section>
           </>
         )}

@@ -417,3 +417,35 @@
   border-radius: 3px;
   background: var(--color-accent-default);
 }
+
+/* About: the engine's facts as a short definition list, and a plain warning when it runs older code. */
+.vc-engine-facts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+.vc-engine-facts dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 16px;
+  margin: 0;
+  font-size: 13.5px;
+}
+.vc-engine-facts dl div {
+  display: contents;
+}
+.vc-engine-facts dt {
+  color: var(--color-fg-muted);
+}
+.vc-engine-facts dd {
+  margin: 0;
+}
+.vc-warning {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--color-warning-subtle);
+  color: var(--color-warning-fg);
+  font-size: 13.5px;
+}

@@ -152,6 +152,7 @@ export async function startWebHost(options: WebHostOptions): Promise<WebHost> {
       return json({
         connection: await engine.state(),
         version: options.version ?? "0.1.0",
+        engine: (await engine.info().catch(() => undefined)) ?? null,
         workspacePath: options.workspace,
         mcpRelayPath: relayPath(),
       });
@@ -159,6 +160,13 @@ export async function startWebHost(options: WebHostOptions): Promise<WebHost> {
     if (req.method === "POST" && path === "/app/launch-link") return json({ url: launchUrl() });
     if (req.method === "GET" && path === "/app/provider-models")
       return json(await providerModels(url.searchParams.get("provider") ?? ""));
+    if (req.method === "POST" && path === "/app/restart-engine") {
+      try {
+        return json({ connection: await engine.restart() });
+      } catch {
+        return json({ connection: "Engine unreachable" });
+      }
+    }
     if (req.method === "POST" && path === "/app/start-engine") {
       try {
         return json({ connection: await engine.start() });

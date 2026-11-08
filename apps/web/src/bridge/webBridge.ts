@@ -8,12 +8,16 @@ export interface AppState {
   version: string;
   workspacePath: string;
   mcpRelayPath?: string;
+  /** The running engine: when it started, when its code was built, and whether it runs older code. */
+  engine?: { startedAt: string; builtAt?: string; outdated: boolean } | null;
 }
 
 /** What only the web host can do; the Electron-only members of `ContractBridge.app` do not exist here. */
 export interface WebAppBridge {
   state(): Promise<AppState>;
   startEngine(): Promise<ConnectionState>;
+  /** Stops the engine and starts it again with the current code. */
+  restartEngine(): Promise<ConnectionState>;
   /** A fresh single-use sign-in link for another browser. */
   launchLink(): Promise<string>;
   /** A built-in provider's live model list (OpenRouter, local servers); empty with a reason when there is none. */
@@ -181,6 +185,11 @@ export function webBridge(options: { base?: string; fetch?: Fetch; retryMs?: num
         });
         if (!res.ok) throw new BridgeError(await readError(res));
         return (await res.json()) as { models: LiveModel[]; error?: string };
+      },
+      async restartEngine() {
+        const res = await doFetch(base + "/app/restart-engine", { method: "POST", credentials: "same-origin" });
+        if (!res.ok) throw new BridgeError(await readError(res));
+        return ((await res.json()) as { connection: ConnectionState }).connection;
       },
       async startEngine() {
         const res = await doFetch(base + "/app/start-engine", { method: "POST", credentials: "same-origin" });

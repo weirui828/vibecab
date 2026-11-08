@@ -249,6 +249,13 @@ it("sends addresses from before the three tabs to where each part now lives", as
   }
 });
 
+it("shows when the engine started in General → About, with a way to restart it", async () => {
+  await open("/settings/general");
+  const about = tl.within(await tl.screen.findByRole("region", { name: "About" }));
+  expect(await about.findByText("Engine started")).toBeTruthy();
+  expect(about.getByRole("button", { name: "Restart engine" })).toBeTruthy();
+});
+
 it("makes a sign-in link for another browser", async () => {
   await open("/settings/general");
   tl.fireEvent.click(await tl.screen.findByRole("button", { name: "Make a sign-in link" }));
