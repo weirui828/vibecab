@@ -1,0 +1,285 @@
+import { useEffect, useState } from "react";
+import { Button, Field, Input } from "@wei/design-system";
+import { terms } from "../../../ui/src/copy/terms.js";
+import { useBridge, useLiveQuery } from "../live/LiveStore.js";
+import type { SessionRow } from "../live/workspace.js";
+import { ThemeSwitch } from "../shell/Navigation.js";
+import type { ThemeChoice } from "../shell/prefs.js";
+import { relativeTime } from "../ui/time.js";
+import { AssistantSection, DataSection, GrantsSection, ToolsSection } from "./AccessSections.js";
+import { Section, dollars, toMicros, useRun } from "./common.js";
+import { ModelForm } from "./ModelForm.js";
+import type { SettingsShape } from "./ModelForm.js";
+
+interface BudgetState {
+  account: { kind: string; key?: string };
+  limitMicros: number | null;
+  usedMicros: number;
+  reservedMicros: number;
+}
+interface CallLog {
+  callId: string;
+  alias: string;
+  model: string;
+  settledMicros?: number;
+  reservedMicros: number;
+  usageQuality: "reported" | "estimated" | "unknown";
+  finishReason?: string;
+  errorCode?: string;
+  createdAt: string;
+}
+
+function SpendingSection() {
+  const usage = useLiveQuery<{ accounts: BudgetState[]; calls: CallLog[] }>("sys.Usage", {}),
+    run = useRun(),
+    [limit, setLimit] = useState<string>();
+  const daily = usage.data?.accounts.find((a) => a.account.kind === "daily");
+  const calls = [...(usage.data?.calls ?? [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 8);
+  async function save() {
+    const value = limit?.trim() ? toMicros(limit) : null;
+    if (value === undefined) return;
+    if (await run("sys.SetBudget", { account: { kind: "daily" }, limitMicros: value })) setLimit(undefined);
+  }
+  return (
+    <Section
+      id="spending"
+      title="Spending"
+      lede="VibeCab reserves the most a call could cost before making it, and stops at your daily limit."
+    >
+      <p className="vc-stat">
+        <span className="big">${dollars(daily?.usedMicros ?? 0)}</span>
+        <span className="vc-facts">
+          spent today{daily?.limitMicros != null ? ` of $${dollars(daily.limitMicros)}` : " · no limit"}
+          {daily?.reservedMicros ? ` · $${dollars(daily.reservedMicros)} reserved` : ""}
+        </span>
+      </p>
+      <form
+        className="vc-inline-setting"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void save();
+        }}
+      >
+        <Field label="Daily limit in dollars" hint="Leave empty for no limit.">
+          <Input
+            inputMode="decimal"
+            value={limit ?? (daily?.limitMicros != null ? dollars(daily.limitMicros) : "")}
+            onChange={(e) => setLimit(e.target.value)}
+          />
+        </Field>
+        <Button type="submit" variant="ghost" disabled={limit === undefined}>
+          Save
+        </Button>
+      </form>
+      {calls.length > 0 && (
+        <table className="vc-calls">
+          <caption className="vc-label">Recent model calls</caption>
+          <thead>
+            <tr>
+              <th scope="col">When</th>
+              <th scope="col">For</th>
+              <th scope="col">Model</th>
+              <th scope="col">Cost</th>
+            </tr>
+          </thead>
+          <tbody>
+            {calls.map((c) => (
+              <tr key={c.callId} data-uncertain={c.usageQuality !== "reported" || undefined}>
+                <td>{relativeTime(c.createdAt)}</td>
+                <td>{c.alias}</td>
+                <td>{c.model}</td>
+                <td>
+                  ${dollars(c.settledMicros ?? c.reservedMicros)}
+                  {c.usageQuality !== "reported" && <span className="vc-muted"> (estimated)</span>}
+                  {c.errorCode && <span className="vc-muted"> · {c.errorCode}</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </Section>
+  );
+}
+
+function AgentSection({ budgets }: { budgets: SettingsShape["budgets"] }) {
+  const run = useRun(),
+    [delay, setDelay] = useState<string>(),
+    [turn, setTurn] = useState<string>(),
+    [tools, setTools] = useState<string>();
+  async function save() {
+    const patch: Record<string, number> = {};
+    if (delay !== undefined && Number.isInteger(Number(delay)) && Number(delay) >= 1)
+      patch.realtimeDebounceSeconds = Number(delay);
+    if (turn !== undefined && toMicros(turn) !== undefined) patch.defaultTurnLimitMicros = toMicros(turn)!;
+    if (tools !== undefined && Number.isInteger(Number(tools)) && Number(tools) >= 1)
+      patch.toolCallLimit = Number(tools);
+    if (!Object.keys(patch).length) return;
+    if (await run("sys.SetSettings", { patch: { budgets: { ...budgets, ...patch } } })) {
+      setDelay(undefined);
+      setTurn(undefined);
+      setTools(undefined);
+    }
+  }
+  return (
+    <Section
+      id="agent"
+      title="The agent"
+      lede={`How quickly it answers in Realtime ${terms.session.toLowerCase()}s, and how much one answer may cost. Reply modes are set per ${terms.session.toLowerCase()}.`}
+    >
+      <form
+        className="vc-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void save();
+        }}
+      >
+        <div className="vc-form-row">
+          <Field label="Wait before replying (seconds)">
+            <Input
+              inputMode="numeric"
+              value={delay ?? String(budgets?.realtimeDebounceSeconds ?? 10)}
+              onChange={(e) => setDelay(e.target.value)}
+            />
+          </Field>
+          <Field label="Most one reply may cost ($)">
+            <Input
+              inputMode="decimal"
+              value={turn ?? (budgets?.defaultTurnLimitMicros != null ? dollars(budgets.defaultTurnLimitMicros) : "")}
+              onChange={(e) => setTurn(e.target.value)}
+            />
+          </Field>
+          <Field label="Tool uses per reply">
+            <Input
+              inputMode="numeric"
+              value={tools ?? String(budgets?.toolCallLimit ?? 8)}
+              onChange={(e) => setTools(e.target.value)}
+            />
+          </Field>
+        </div>
+        <div className="vc-form-actions start">
+          <Button
+            type="submit"
+            variant="secondary"
+            disabled={delay === undefined && turn === undefined && tools === undefined}
+          >
+            Save
+          </Button>
+        </div>
+      </form>
+    </Section>
+  );
+}
+
+function AnotherBrowser() {
+  const bridge = useBridge(),
+    [link, setLink] = useState<string>(),
+    [copied, setCopied] = useState(false);
+  return (
+    <Section
+      id="browser"
+      title="Open on another browser"
+      lede="Each browser signs in once with its own link. The link works one time."
+    >
+      {link ? (
+        <div className="vc-secret">
+          <pre>{link}</pre>
+          <div className="vc-form-actions start">
+            <Button
+              variant="secondary"
+              onClick={() => void navigator.clipboard?.writeText(link).then(() => setCopied(true))}
+            >
+              {copied ? "Copied" : "Copy link"}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Button
+          variant="secondary"
+          onClick={() =>
+            void bridge.app.launchLink().then((url) => {
+              setLink(url);
+              setCopied(false);
+            })
+          }
+        >
+          Make a sign-in link
+        </Button>
+      )}
+      <p className="vc-muted small">
+        From a terminal: <code>node apps/web/bin/vibecab-web.mjs link</code>
+      </p>
+    </Section>
+  );
+}
+
+export function SettingsView({
+  sessions,
+  theme,
+  setTheme,
+}: {
+  sessions: SessionRow[];
+  theme: ThemeChoice;
+  setTheme(choice: ThemeChoice): void;
+}) {
+  const bridge = useBridge(),
+    settings = useLiveQuery<SettingsShape>("sys.Settings", {}),
+    caps = useLiveQuery<{ contractVersion: string }>("sys.Capabilities", {}),
+    [state, setState] = useState<{ workspacePath: string; version: string; mcpRelayPath?: string }>();
+  useEffect(() => {
+    void bridge.app.state().then(setState, () => undefined);
+  }, [bridge]);
+  const sections: Array<[string, string]> = [
+    ["model", "Model"],
+    ["spending", "Spending"],
+    ["agent", "Agent"],
+    ["permissions", "Permissions"],
+    ["tools", "Tools"],
+    ["assistant", "Assistant"],
+    ["data", "Data"],
+    ["appearance", "Appearance"],
+  ];
+  return (
+    <div className="vc-page vc-settings">
+      <header className="vc-header">
+        <h1 className="vc-display">Settings</h1>
+        <nav className="vc-toc" aria-label="Sections">
+          {sections.map(([id, label]) => (
+            <a
+              key={id}
+              href={"#/settings"}
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }}
+            >
+              {label}
+            </a>
+          ))}
+        </nav>
+      </header>
+      <Section
+        id="model"
+        title="Model"
+        lede="The model the agent thinks with. VibeCab sends it only what a reply or an Update needs."
+      >
+        <ModelForm />
+      </Section>
+      <SpendingSection />
+      <AgentSection budgets={settings.data?.budgets} />
+      <GrantsSection sessions={sessions} />
+      <ToolsSection />
+      <AssistantSection workspace={state?.workspacePath ?? ""} relayPath={state?.mcpRelayPath} />
+      <DataSection workspace={state?.workspacePath ?? ""} retention={settings.data?.trashRetentionDays} />
+      <AnotherBrowser />
+      <Section id="appearance" title="Appearance" lede="Auto follows this computer's light and dark setting.">
+        <ThemeSwitch theme={theme} setTheme={setTheme} />
+      </Section>
+      <Section id="about" title="About">
+        <p className="vc-facts">
+          VibeCab {state?.version ?? ""} · contract {caps.data?.contractVersion ?? "…"}
+        </p>
+      </Section>
+    </div>
+  );
+}

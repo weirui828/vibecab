@@ -6,12 +6,15 @@ export interface AppState {
   connection: ConnectionState;
   version: string;
   workspacePath: string;
+  mcpRelayPath?: string;
 }
 
 /** What only the web host can do; the Electron-only members of `ContractBridge.app` do not exist here. */
 export interface WebAppBridge {
   state(): Promise<AppState>;
   startEngine(): Promise<ConnectionState>;
+  /** A fresh single-use sign-in link for another browser. */
+  launchLink(): Promise<string>;
 }
 
 export type WebBridge = Omit<ContractBridge, "app"> & { app: WebAppBridge };
@@ -163,6 +166,11 @@ export function webBridge(options: { base?: string; fetch?: Fetch; retryMs?: num
         const res = await doFetch(base + "/app/state", { credentials: "same-origin" });
         if (!res.ok) throw new BridgeError(await readError(res));
         return (await res.json()) as AppState;
+      },
+      async launchLink() {
+        const res = await doFetch(base + "/app/launch-link", { method: "POST", credentials: "same-origin" });
+        if (!res.ok) throw new BridgeError(await readError(res));
+        return ((await res.json()) as { url: string }).url;
       },
       async startEngine() {
         const res = await doFetch(base + "/app/start-engine", { method: "POST", credentials: "same-origin" });

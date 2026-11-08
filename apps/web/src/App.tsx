@@ -14,10 +14,30 @@ import type { NavProps } from "./shell/Navigation.js";
 import { DialogHost } from "./home/DialogHost.js";
 import { DraftsView, HomeView, LaterView, NeedsYouView, PageSkeleton } from "./home/Views.js";
 import { SessionView, parseSessionRoute } from "./session/SessionView.js";
+import { SettingsView } from "./settings/SettingsView.js";
+import { FirstRun } from "./settings/FirstRun.js";
+import type { SettingsShape } from "./settings/ModelForm.js";
+import { useLiveQuery } from "./live/LiveStore.js";
 import { TrashView } from "./home/TrashView.js";
 import { IdeasView, ProjectView, ProjectsView } from "./home/IdeasProjects.js";
 
 type Access = "checking" | "signed-out" | "ready";
+
+// Per-browser flags; storage can be unavailable (private windows), and everything still works without it.
+function readFlag(key: string): boolean {
+  try {
+    return localStorage.getItem(key) === "1";
+  } catch {
+    return false;
+  }
+}
+function writeFlag(key: string) {
+  try {
+    localStorage.setItem(key, "1");
+  } catch {
+    // ignore
+  }
+}
 
 // One bridge for the page's lifetime: a new one per render would reset every live query and the event stream.
 let pageBridge: WebBridge | undefined;
@@ -87,6 +107,12 @@ function Shell({
 }) {
   const route = useRoute(),
     workspace = useWorkspace(ready),
+    settings = useLiveQuery<SettingsShape>("sys.Settings", {}, ready),
+    [firstRunDone, setFirstRunDone] = useState(() => readFlag("vc-first-run-done")),
+    finishFirstRun = useCallback(() => {
+      writeFlag("vc-first-run-done");
+      setFirstRunDone(true);
+    }, []),
     sheet = useRef<HTMLDialogElement>(null);
   const needsYou = useMemo(
     () => [...workspace.attention.values()].filter((items) => items.length > 0).length,
@@ -117,7 +143,8 @@ function Shell({
     ) : (
       <PageSkeleton />
     );
-  else if (route === "/settings") page = <LaterView title="Settings" line="Settings arrive in a later step." />;
+  else if (route === "/settings")
+    page = <SettingsView sessions={workspace.sessions ?? []} theme={theme} setTheme={setTheme} />;
   else if (route === "/trash") page = <TrashView />;
   else if (route === "/ideas") page = <IdeasView sessions={workspace.sessions ?? []} />;
   else if (route === "/projects") page = <ProjectsView />;
@@ -125,6 +152,14 @@ function Shell({
     page = (
       <ProjectView projectId={route.slice(3)} sessions={workspace.sessions ?? []} drafts={workspace.drafts ?? []} />
     );
+  else if (
+    !firstRunDone &&
+    settings.data &&
+    !settings.data.models?.default &&
+    workspace.sessions?.length === 0 &&
+    workspace.drafts?.length === 0
+  )
+    page = <FirstRun onDone={finishFirstRun} />;
   else page = <HomeView workspace={workspace} />;
   const banner =
     connection === "Engine stopped" || connection === "Engine unreachable" ? (
