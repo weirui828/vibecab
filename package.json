@@ -21,7 +21,7 @@
     "app:package": "node apps/macos/scripts/package-macos.mjs",
     "app:smoke": "node apps/macos/scripts/smoke-packaged.mjs",
     "web": "pnpm build && node apps/web/bin/vibecab-web.mjs",
-    "web:dev": "tsc -p tsconfig.build.json && VIBECAB_DEV=1 node apps/web/bin/vibecab-web.mjs --dev --temp-workspace --fake-provider apps/web/dev/fake-provider.json --seed"
+    "web:dev": "tsc -p tsconfig.build.json && VIBECAB_DEV=1 VIBECAB_KEYSTORE=memory node apps/web/bin/vibecab-web.mjs --dev --temp-workspace --fake-provider apps/web/dev/fake-provider.json --seed"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^9.6.0",
