@@ -159,6 +159,7 @@ test("the other screens are accessible", async () => {
   for (const [path, heading] of [
     ["/#/", /^Good (morning|afternoon|evening)\.|Working late\./],
     ["/#/drafts", "Drafts"],
+    ["/#/sessions", "Sessions"],
     ["/#/ideas", "Ideas"],
     ["/#/projects", "Projects"],
     ["/#/trash", "Trash"],
