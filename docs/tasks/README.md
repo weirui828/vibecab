@@ -56,3 +56,9 @@ A browser app that replaces the Electron renderer as the main way to use VibeCab
 | W4 | Agreement, agent replies, conflicts, Updates and diffs | W3 |
 | W5 | History, Snapshots, export, Trash, Ideas and Projects | W4 |
 | W6 | Settings, first run, accessibility and visual review (`W6-settings-first-run-review.md`); `apps/ui` decision in W7 | W5 |
+| W7 | Proposal: what to do with the Electron app (`W7-electron-proposal.md`) — Wei to decide | W6 |
+| W8 | Settings: Agents · Spending · General | W6 |
+| W9 | Built-in model providers, model lists and prices | W8 |
+| W10 | Per-agent limits, and calls recorded with tokens and who made them | W8 |
+| W11 | Usage stats | W10 |
+| W12 | Claude Code and Codex as agents, through their SDKs | W8, W10 |
