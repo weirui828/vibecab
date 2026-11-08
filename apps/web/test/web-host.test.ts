@@ -214,3 +214,13 @@ describe("model lists", () => {
     expect((await raw(t.host.port, "GET", "/app/provider-models?provider=openrouter")).status).toBe(401);
   });
 });
+
+describe("engine facts", () => {
+  it("reports when the running engine started and whether its code is older than the build", async () => {
+    const state = (await (await t.fetch(t.host.url + "/app/state")).json()) as {
+      engine: { startedAt: string; builtAt?: string; outdated: boolean } | null;
+    };
+    expect(state.engine?.startedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(typeof state.engine?.outdated).toBe("boolean");
+  });
+});
