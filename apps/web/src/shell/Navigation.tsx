@@ -1,5 +1,6 @@
 import { Icon } from "@wei/design-system";
 import type { IconName } from "@wei/design-system";
+import { plural } from "../ui/time.js";
 import { terms } from "../../../ui/src/copy/terms.js";
 import type { ConnectionState } from "../../../ui/src/connection.js";
 import { sortSessions } from "../live/workspace.js";
@@ -77,7 +78,8 @@ const isCurrent = (route: string, path: string) =>
 /** A quiet sidebar for navigation only. */
 export function Sidebar(props: NavProps) {
   const { route, sessions, attention, needsYou, connection, theme, setTheme, version, onNavigate } = props;
-  const open = sortSessions(sessions ?? [], attention).filter((s) => s.state !== "ended");
+  const open = sortSessions(sessions ?? [], attention).filter((s) => s.state !== "ended"),
+    ended = (sessions ?? []).length - open.length;
   return (
     <aside className="vc-sidebar" aria-label="Navigation">
       <a className="vc-rail-mark" href="#/" aria-label="Home">
@@ -107,10 +109,17 @@ export function Sidebar(props: NavProps) {
           );
         })}
       </nav>
-      {open.length > 0 && (
+      {(sessions ?? []).length > 0 && (
         <div className="collapsible">
           <div className="vc-nav-section">
-            <p className="vc-label">{terms.session}s</p>
+            <a
+              className="vc-label vc-nav-heading"
+              href="#/sessions"
+              onClick={onNavigate}
+              aria-current={route === "/sessions" ? "page" : undefined}
+            >
+              {terms.session}s
+            </a>
           </div>
           <nav className="vc-nav" aria-label={`${terms.session}s`}>
             {open.map((session) => {
@@ -135,6 +144,11 @@ export function Sidebar(props: NavProps) {
               );
             })}
           </nav>
+          {ended > 0 && (
+            <a className="vc-nav-more" href="#/sessions/ended" onClick={onNavigate}>
+              {plural(ended, terms.ended.toLowerCase())}
+            </a>
+          )}
         </div>
       )}
       <div className="vc-sidebar-foot">

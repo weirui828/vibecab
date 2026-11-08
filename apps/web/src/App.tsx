@@ -20,6 +20,7 @@ import type { SettingsShape } from "./settings/ModelForm.js";
 import { useLiveQuery } from "./live/LiveStore.js";
 import { TrashView } from "./home/TrashView.js";
 import { IdeasView, ProjectView, ProjectsView } from "./home/IdeasProjects.js";
+import { SessionsView } from "./home/SessionsView.js";
 
 type Access = "checking" | "signed-out" | "ready";
 
@@ -142,6 +143,8 @@ function Shell({
   if (!ready) page = <PageSkeleton />;
   else if (route === "/needs-you") page = <NeedsYouView workspace={workspace} />;
   else if (route === "/drafts") page = <DraftsView workspace={workspace} />;
+  else if (route === "/sessions") page = <SessionsView workspace={workspace} />;
+  else if (route === "/sessions/ended") page = <SessionsView workspace={workspace} show="ended" key="ended" />;
   else if (sessionRoute)
     page = session ? (
       <SessionView session={session} {...(sessionRoute.artifactId ? { artifactId: sessionRoute.artifactId } : {})} />

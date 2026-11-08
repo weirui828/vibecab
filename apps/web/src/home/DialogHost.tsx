@@ -4,6 +4,8 @@ import { terms } from "../../../ui/src/copy/terms.js";
 import type { DraftRow, SessionRow } from "../live/workspace.js";
 import { useActions } from "./actions.js";
 import type { TrashKind } from "./actions.js";
+import { Button } from "@wei/design-system";
+import { Dialog } from "../ui/Dialog.js";
 import { AttachDialog, NewDraftDialog, TitleDialog } from "./Dialogs.js";
 
 interface Dialogs {
@@ -11,15 +13,24 @@ interface Dialogs {
   attachDraft(sessionId: string): void;
   newSession(): void;
   rename(kind: TrashKind, id: string, title: string): void;
+  /** Ending cannot be undone, so it is always confirmed. */
+  endSession(session: SessionRow): void;
 }
-const DialogContext = createContext<Dialogs>({ newDraft() {}, attachDraft() {}, newSession() {}, rename() {} });
+const DialogContext = createContext<Dialogs>({
+  newDraft() {},
+  attachDraft() {},
+  newSession() {},
+  rename() {},
+  endSession() {},
+});
 export const useDialogs = () => useContext(DialogContext);
 
 type Open =
   | { kind: "draft"; sessionId?: string }
   | { kind: "attach"; sessionId: string }
   | { kind: "session" }
-  | { kind: "rename"; target: TrashKind; id: string; title: string };
+  | { kind: "rename"; target: TrashKind; id: string; title: string }
+  | { kind: "end"; session: SessionRow };
 
 export function DialogHost({
   sessions,
@@ -38,6 +49,7 @@ export function DialogHost({
       newDraft: (sessionId?: string) => setOpen(sessionId ? { kind: "draft", sessionId } : { kind: "draft" }),
       attachDraft: (sessionId: string) => setOpen({ kind: "attach", sessionId }),
       newSession: () => setOpen({ kind: "session" }),
+      endSession: (session: SessionRow) => setOpen({ kind: "end", session }),
       rename: (target, id, title) => setOpen({ kind: "rename", target, id, title }),
     }),
     [],
@@ -90,6 +102,39 @@ export function DialogHost({
         submitLabel="Rename"
         onClose={close}
         onSubmit={(title) => (rename ? actions.rename(rename.target, rename.id, title) : Promise.resolve(false))}
+      />
+      <Dialog
+        open={open?.kind === "end"}
+        children={null}
+        title={`End “${open?.kind === "end" ? open.session.title : ""}”?`}
+        lede={`An ended ${terms.session.toLowerCase()} is kept as a record and can no longer change: no new comments or ${terms.update}s, and it cannot be resumed. To stop for a while instead, pause it.`}
+        onClose={close}
+        onSubmit={() => {
+          if (open?.kind === "end") void actions.setSessionState(open.session.sessionId, "end");
+          close();
+        }}
+        buttons={
+          <>
+            <Button type="button" variant="ghost" onClick={close}>
+              Cancel
+            </Button>
+            {open?.kind === "end" && open.session.state === "active" && (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  void actions.setSessionState(open.session.sessionId, "pause");
+                  close();
+                }}
+              >
+                Pause instead
+              </Button>
+            )}
+            <Button type="submit" variant="primary">
+              End {terms.session.toLowerCase()}
+            </Button>
+          </>
+        }
       />
     </DialogContext.Provider>
   );

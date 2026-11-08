@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
-import type { KeyboardEvent } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 import { Icon, IconButton } from "@wei/design-system";
 
 export interface MenuItem {
@@ -10,7 +10,16 @@ export interface MenuItem {
 }
 
 // A small action menu: opens under its trigger, arrow keys move, Esc and outside clicks close, focus returns.
-export function Menu({ label, items }: { label: string; items: MenuItem[] }) {
+export function Menu({
+  label,
+  items,
+  text,
+}: {
+  label: string;
+  items: MenuItem[];
+  /** A visible trigger (its words are its name), opening the menu to its left edge; an ⋯ button otherwise. */
+  text?: ReactNode;
+}) {
   const [open, setOpen] = useState(false),
     id = useId(),
     root = useRef<HTMLDivElement>(null),
@@ -43,20 +52,42 @@ export function Menu({ label, items }: { label: string; items: MenuItem[] }) {
   };
   return (
     <div ref={root} style={{ position: "relative" }} onKeyDown={onKey}>
-      <IconButton
-        ref={trigger}
-        className="vc-menu-trigger"
-        variant="ghost"
-        size="md"
-        label={label}
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls={open ? id : undefined}
-        icon={<Icon name="ellipsis-horizontal" />}
-        onClick={() => setOpen((value) => !value)}
-      />
+      {text !== undefined ? (
+        <button
+          ref={trigger}
+          type="button"
+          className="vc-menu-text"
+          title={label}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-controls={open ? id : undefined}
+          onClick={() => setOpen((value) => !value)}
+        >
+          {text}
+          <Icon name="chevron-down" size={16} />
+        </button>
+      ) : (
+        <IconButton
+          ref={trigger}
+          className="vc-menu-trigger"
+          variant="ghost"
+          size="md"
+          label={label}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-controls={open ? id : undefined}
+          icon={<Icon name="ellipsis-horizontal" />}
+          onClick={() => setOpen((value) => !value)}
+        />
+      )}
       {open && (
-        <div ref={list} id={id} className="vc-menu" role="menu" style={{ right: 0, top: "calc(100% + 4px)" }}>
+        <div
+          ref={list}
+          id={id}
+          className="vc-menu"
+          role="menu"
+          style={text !== undefined ? { left: 0, top: "calc(100% + 4px)" } : { right: 0, top: "calc(100% + 4px)" }}
+        >
           {items.map((item) => (
             <div key={item.label} role="none">
               {item.separatorBefore && <hr />}
