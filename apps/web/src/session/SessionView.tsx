@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button, Icon } from "@wei/design-system";
 import type {
   Element,
@@ -9,16 +9,16 @@ import type {
 import { terms } from "../../../ui/src/copy/terms.js";
 import { useBridge, useLiveQuery } from "../live/LiveStore.js";
 import type { DraftRow, SessionRow } from "../live/workspace.js";
-import { DocumentView } from "../document/DocumentView.js";
 import { useDialogs } from "../home/DialogHost.js";
 import { useActions } from "../home/actions.js";
 import { Menu } from "../ui/Menu.js";
 import type { MenuItem } from "../ui/Menu.js";
-import { useToast } from "../ui/Toast.js";
 import { plural, relativeTime } from "../ui/time.js";
 import { navigate } from "../shell/prefs.js";
 import { CatchUp } from "./CatchUp.js";
-import { CommentSurface } from "./CommentSurface.js";
+import { DraftDocument } from "./DraftDocument.js";
+import { useLoop } from "./loop.js";
+import type { Loop } from "./loop.js";
 import { useMarkSeen } from "./useMarkSeen.js";
 import { byElementId } from "./textRanges.js";
 
@@ -34,10 +34,11 @@ export function SessionView({ session, artifactId }: { session: SessionRow; arti
   // The primary Draft first, then the others in the order they were attached (the order the engine returns).
   const ordered = [...(drafts.data ?? [])].sort((a, b) => Number(b.role === "primary") - Number(a.role === "primary"));
   const current = ordered.find((d) => d.artifactId === artifactId) ?? ordered[0];
+  const loop = useLoop(session.sessionId, current?.artifactId ?? "", current !== undefined);
   if (drafts.loading)
     return (
       <div className="vc-session">
-        <SessionHeader session={session} drafts={[]} current={undefined} />
+        <SessionHeader session={session} drafts={[]} current={undefined} loop={loop} />
         <div className="vc-doc-wrap">
           <DocSkeleton />
         </div>
@@ -45,15 +46,16 @@ export function SessionView({ session, artifactId }: { session: SessionRow; arti
     );
   return (
     <div className="vc-session">
-      <SessionHeader session={session} drafts={ordered} current={current} />
+      <SessionHeader session={session} drafts={ordered} current={current} loop={loop} />
       <ResumeStrip sessionId={session.sessionId} />
       <div className="vc-doc-wrap">
         {current ? (
           <DraftDocument
             key={current.artifactId}
-            sessionId={session.sessionId}
+            session={session}
             artifactId={current.artifactId}
-            readOnly={session.state === "ended"}
+            loop={loop}
+            skeleton={<DocSkeleton />}
           />
         ) : (
           <EmptySession session={session} />
@@ -67,10 +69,12 @@ function SessionHeader({
   session,
   drafts,
   current,
+  loop,
 }: {
   session: SessionRow;
   drafts: DraftRow[];
   current: DraftRow | undefined;
+  loop: Loop;
 }) {
   const dialogs = useDialogs(),
     actions = useActions(),
@@ -86,6 +90,7 @@ function SessionHeader({
     artifact.data ? `version ${artifact.data.headVersion}` : undefined,
     blocks !== undefined ? plural(blocks, "block") : undefined,
     artifact.data ? `updated ${relativeTime(artifact.data.updatedAt)}` : undefined,
+    loop.autoAgree ? "Agent proposals count as agreed" : undefined,
   ]
     .filter(Boolean)
     .join(" · ");
@@ -96,6 +101,14 @@ function SessionHeader({
           {
             label: `Bring in a ${terms.draft.toLowerCase()}`,
             onSelect: () => dialogs.attachDraft(session.sessionId),
+          },
+        ]
+      : []),
+    ...(session.state !== "ended" && current
+      ? [
+          {
+            label: loop.planReview ? "Stop reviewing plans" : "Review each plan before writing",
+            onSelect: () => void actions.setSessionSettings(session.sessionId, { planReview: !loop.planReview }),
           },
         ]
       : []),
@@ -190,63 +203,6 @@ function ResumeStrip({ sessionId }: { sessionId: string }) {
         setTimeout(() => node?.classList.remove("vc-flash"), 1600);
       }}
     />
-  );
-}
-
-function DraftDocument({
-  sessionId,
-  artifactId,
-  readOnly,
-}: {
-  sessionId: string;
-  artifactId: string;
-  readOnly: boolean;
-}) {
-  const bridge = useBridge(),
-    toast = useToast(),
-    elements = useLiveQuery<Element[]>("vc.Elements", { artifactId }),
-    artifact = useLiveQuery<VcArtifactOperation["result"]>("vc.Artifact", { artifactId }),
-    seenVersion = useRef<number>(undefined),
-    anchor = useRef<{ id: string; top: number }>(undefined);
-  // Keep the block at the top of the viewport where it was when a new version re-renders the page.
-  useEffect(() => {
-    const record = () => {
-      const header = document.querySelector(".vc-session-head")?.getBoundingClientRect().bottom ?? 0;
-      for (const node of document.querySelectorAll<HTMLElement>(".vc-doc > [data-element-id]")) {
-        const rect = node.getBoundingClientRect();
-        if (rect.bottom > header) {
-          anchor.current = { id: node.dataset.elementId ?? "", top: rect.top };
-          return;
-        }
-      }
-    };
-    record();
-    window.addEventListener("scroll", record, { passive: true });
-    return () => window.removeEventListener("scroll", record);
-  }, []);
-  useLayoutEffect(() => {
-    const saved = anchor.current;
-    if (!saved) return;
-    const node = document.querySelector<HTMLElement>(byElementId(saved.id));
-    if (node) window.scrollBy(0, node.getBoundingClientRect().top - saved.top);
-  }, [elements.data]);
-  useEffect(() => {
-    const version = artifact.data?.headVersion;
-    if (version === undefined) return;
-    if (seenVersion.current !== undefined && version > seenVersion.current) toast(`Updated to version ${version}`);
-    seenVersion.current = version;
-  }, [artifact.data?.headVersion, toast]);
-  if (!elements.data) return <DocSkeleton />;
-  return (
-    <CommentSurface
-      sessionId={sessionId}
-      artifactId={artifactId}
-      version={artifact.data?.headVersion ?? 1}
-      elements={elements.data}
-      readOnly={readOnly || !artifact.data}
-    >
-      <DocumentView elements={elements.data} blobUrl={bridge.blobUrl} />
-    </CommentSurface>
   );
 }
 

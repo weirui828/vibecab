@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Icon } from "@wei/design-system";
 import type { IconName } from "@wei/design-system";
-import type { Element } from "../../../../contract/generated/index.js";
+import type { DiffResult, Element } from "../../../../contract/generated/index.js";
 import { InlineText } from "./InlineText.js";
 
 const BATCH = 300;
@@ -33,8 +33,44 @@ const calloutIcon: Record<"info" | "note" | "warning", IconName> = {
 };
 const calloutLabel = { info: "Info", note: "Note", warning: "Warning" } as const;
 
+/** A changes view: the diff from the base version, and the base's removed top-level blocks to show in place. */
+export interface DocDiff {
+  result: DiffResult;
+  removed: Element[];
+}
+const DiffContext = createContext<DiffResult | undefined>(undefined);
+
+/**
+ * Word-level changes inside one element. Insertions and deletions carry a "+" / "−" marker and words for screen
+ * readers, so colour is never the only signal.
+ */
+function DiffText({ parts }: { parts: Array<{ value: string; added?: boolean; removed?: boolean }> }) {
+  return (
+    <span className="vc-text">
+      {parts.map((part, index) =>
+        part.added ? (
+          <ins key={index} className="vc-ins">
+            <span className="sr-only">added: </span>
+            {part.value}
+          </ins>
+        ) : part.removed ? (
+          <del key={index} className="vc-del">
+            <span className="sr-only">removed: </span>
+            {part.value}
+          </del>
+        ) : (
+          <span key={index}>{part.value}</span>
+        ),
+      )}
+    </span>
+  );
+}
+
 /** The element's inline text, in the container that anchors and highlights count characters in. */
 function Text({ id, text }: { id: string; text: string }) {
+  const diff = useContext(DiffContext),
+    parts = diff?.textDiffs[id];
+  if (parts && diff?.changed.includes(id)) return <DiffText parts={parts} />;
   return (
     <span className="vc-text" data-text-for={id}>
       <InlineText text={text} />
@@ -60,8 +96,36 @@ function Heading({ level, id, children }: { level: number; id: string; children:
   }
 }
 
-export function DocumentView({ elements, blobUrl }: { elements: Element[]; blobUrl(hash: string): string }) {
-  const tree = useMemo(() => buildTree(elements), [elements]),
+const kindLabel: Partial<Record<Element["type"], string>> = {
+  heading: "heading",
+  paragraph: "paragraph",
+  list: "list",
+  quote: "quote",
+  code_block: "code block",
+  table: "table",
+  image: "image",
+  divider: "divider",
+  callout: "callout",
+};
+
+export function DocumentView({
+  elements,
+  blobUrl,
+  diff,
+}: {
+  elements: Element[];
+  blobUrl(hash: string): string;
+  diff?: DocDiff | undefined;
+}) {
+  const tree = useMemo(() => {
+      const built = buildTree(elements);
+      if (!diff) return built;
+      // Removed blocks go back where they were: sibling order keys are stable across versions.
+      const roots = [...built.roots, ...diff.removed.filter((e) => e.parentId === null)].sort((a, b) =>
+        a.order < b.order ? -1 : a.order > b.order ? 1 : 0,
+      );
+      return { roots, children: built.children };
+    }, [elements, diff]),
     [shown, setShown] = useState(BATCH),
     sentinel = useRef<HTMLDivElement>(null);
   const more = tree.roots.length > shown;
@@ -184,11 +248,41 @@ export function DocumentView({ elements, blobUrl }: { elements: Element[]; blobU
     }
   }
 
+  const removedIds = new Set(diff?.result.removed ?? []);
+  function top(element: Element): ReactNode {
+    const id = element.elementId;
+    if (removedIds.has(id))
+      return (
+        <details key={id} className="vc-removed" data-element-id={id}>
+          <summary>
+            <span aria-hidden="true">−</span> Removed {kindLabel[element.type] ?? "block"}
+          </summary>
+          {"text" in element && element.type !== "code_block" ? <p>{element.text}</p> : null}
+        </details>
+      );
+    const change = diff?.result.added.includes(id)
+      ? "New"
+      : diff?.result.moved.includes(id)
+        ? "Moved"
+        : diff?.result.changed.includes(id)
+          ? "Changed"
+          : undefined;
+    if (!change) return block(element);
+    return (
+      <div key={id} className="vc-changed" data-change={change.toLowerCase()}>
+        <span className="vc-change-label">{change}</span>
+        {block(element)}
+      </div>
+    );
+  }
+
   if (tree.roots.length === 0) return <p className="vc-doc-empty">Nothing written yet.</p>;
   return (
-    <article className="vc-doc">
-      {tree.roots.slice(0, shown).map(block)}
-      {more && <div ref={sentinel} className="vc-doc-more" aria-hidden="true" />}
-    </article>
+    <DiffContext.Provider value={diff?.result}>
+      <article className="vc-doc" data-diff={diff ? "true" : undefined}>
+        {tree.roots.slice(0, shown).map(top)}
+        {more && <div ref={sentinel} className="vc-doc-more" aria-hidden="true" />}
+      </article>
+    </DiffContext.Provider>
   );
 }

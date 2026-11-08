@@ -2,6 +2,7 @@
 @import "@wei/design-system/theme.css";
 @import "./document/document.css";
 @import "./session/comments.css";
+@import "./session/loop.css";
 @source "../node_modules/@wei/design-system/dist";
 
 /* VibeCab web. Semantic design-system tokens only: no raw colours (a test enforces it).
@@ -696,7 +697,7 @@
 .vc-toast {
   position: fixed;
   left: 50%;
-  bottom: 28px;
+  bottom: 88px; /* above the session's floating bar */
   z-index: 60;
   display: flex;
   align-items: center;

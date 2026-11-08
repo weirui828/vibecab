@@ -110,10 +110,9 @@ it("comments on selected words with an exact anchor, and the agent's reply arriv
       ),
     { timeout: 15_000 },
   );
-  // Proposals are read-only in W3: shown as text, never as buttons.
-  expect(
-    tl.within(container.querySelector(".vc-margin") as HTMLElement).queryByRole("button", { name: /Name the idea/ }),
-  ).toBeNull();
+  // The agent's words are never a button label: option buttons say only "Agree" (W4).
+  const marginButtons = [...(container.querySelector(".vc-margin") as HTMLElement).querySelectorAll("button")];
+  expect(marginButtons.some((b) => b.textContent?.includes("Name the idea"))).toBe(false);
 });
 
 it("comments on a whole block and on the whole session", async () => {
@@ -171,7 +170,8 @@ it("filters threads to those the agent answered", async () => {
   const { container } = await openSession();
   await tl.waitFor(() => expect(container.querySelectorAll(".vc-margin .vc-thread").length).toBe(3));
   tl.fireEvent.click(tl.screen.getByRole("button", { name: "Filter threads" }));
-  tl.fireEvent.click(tl.screen.getByRole("button", { name: "Agent" }));
+  const filter = await tl.screen.findByRole("dialog", { name: "Filter threads" });
+  tl.fireEvent.click(tl.within(filter).getByRole("button", { name: "Agent" }));
   await tl.waitFor(() => expect(container.querySelectorAll(".vc-margin .vc-thread").length).toBe(1));
   expect(container.querySelector(".vc-margin .vc-thread")?.textContent).toContain("Name the rock.");
 });

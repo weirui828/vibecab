@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { Icon } from "@wei/design-system";
+import { Button, Icon } from "@wei/design-system";
 import type { ThreadFilter } from "./threads.js";
 import { defaultFilter } from "./threads.js";
 
@@ -23,6 +23,50 @@ function Glyph({ d }: { d: string }) {
 const bubble =
   "M4.5 6.5A2.5 2.5 0 0 1 7 4h10a2.5 2.5 0 0 1 2.5 2.5v7A2.5 2.5 0 0 1 17 16h-6l-4.5 4v-4h0A2.5 2.5 0 0 1 4.5 13.5v-7Z";
 const margin = "M4.5 5.5h15v13h-15zM14.5 5.5v13";
+const spark =
+  "M12 3.5l1.9 5.1 5.1 1.9-5.1 1.9L12 17.5l-1.9-5.1-5.1-1.9 5.1-1.9zM18.5 15.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z";
+
+export type ReplyMode = "realtime" | "batch" | "manual";
+
+function AgentPanel({
+  mode,
+  modelReady,
+  onMode,
+  onAsk,
+}: {
+  mode: ReplyMode;
+  modelReady: boolean;
+  onMode(mode: ReplyMode): void;
+  onAsk(): void;
+}) {
+  const options: Array<[ReplyMode, string, string]> = [
+    ["realtime", "Realtime", "The agent replies a moment after each comment."],
+    ["batch", "Batch", "The agent replies after a few comments or a quiet spell."],
+    ["manual", "Manual", "The agent replies when you ask."],
+  ];
+  return (
+    <div className="vc-filter vc-agent-panel" role="dialog" aria-label="Agent">
+      {modelReady ? (
+        <>
+          <p className="vc-label">The agent replies</p>
+          <div className="vc-segmented small" role="group" aria-label="Reply mode">
+            {options.map(([value, label]) => (
+              <button key={value} type="button" aria-pressed={mode === value} onClick={() => onMode(value)}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <p className="hint">{options.find(([value]) => value === mode)?.[2]}</p>
+          <Button size="sm" variant="secondary" onClick={onAsk}>
+            Ask agent now
+          </Button>
+        </>
+      ) : (
+        <p className="hint">Add a model in Settings to work with the agent.</p>
+      )}
+    </div>
+  );
+}
 
 function BarButton(props: {
   label: string;
@@ -89,7 +133,15 @@ export function ActionBar({
   onComment,
   onToggleThreads,
   onFilter,
+  replyMode,
+  modelReady,
+  onReplyMode,
+  onAsk,
 }: {
+  replyMode: ReplyMode;
+  modelReady: boolean;
+  onReplyMode(mode: ReplyMode): void;
+  onAsk(): void;
   canComment: boolean;
   threadCount: number;
   threadsShown: boolean;
@@ -98,19 +150,22 @@ export function ActionBar({
   onToggleThreads(): void;
   onFilter(filter: ThreadFilter): void;
 }) {
-  const [filtering, setFiltering] = useState(false),
+  const [panel, setPanel] = useState<"filter" | "agent">(),
+    filtering = panel === "filter",
+    setFiltering = (on: boolean | ((v: boolean) => boolean)) =>
+      setPanel((current) => ((typeof on === "function" ? on(current === "filter") : on) ? "filter" : undefined)),
     root = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!filtering) return;
-    const away = (event: PointerEvent) => !root.current?.contains(event.target as Node) && setFiltering(false);
-    const key = (event: KeyboardEvent) => event.key === "Escape" && setFiltering(false);
+    if (!panel) return;
+    const away = (event: PointerEvent) => !root.current?.contains(event.target as Node) && setPanel(undefined);
+    const key = (event: KeyboardEvent) => event.key === "Escape" && setPanel(undefined);
     document.addEventListener("pointerdown", away);
     document.addEventListener("keydown", key);
     return () => {
       document.removeEventListener("pointerdown", away);
       document.removeEventListener("keydown", key);
     };
-  }, [filtering]);
+  }, [panel]);
   const filtered = JSON.stringify(filter) !== JSON.stringify(defaultFilter);
   return (
     <div className="vc-bar-dock">
@@ -119,6 +174,20 @@ export function ActionBar({
           <BarButton label="Comment on the whole session" onClick={onComment}>
             <Glyph d={bubble} />
           </BarButton>
+        )}
+        {canComment && (
+          <BarButton
+            label="Agent"
+            pressed={panel === "agent"}
+            onClick={() => setPanel((current) => (current === "agent" ? undefined : "agent"))}
+          >
+            <Glyph d={spark} />
+          </BarButton>
+        )}
+        {canComment && modelReady && replyMode === "manual" && (
+          <button type="button" className="vc-bar-button labelled" onClick={onAsk}>
+            Ask agent
+          </button>
         )}
         <BarButton
           label={threadsShown ? "Hide threads" : "Show threads"}
@@ -133,6 +202,17 @@ export function ActionBar({
           {filtered && <span className="dot" aria-hidden="true" />}
         </BarButton>
         {filtering && <FilterPanel filter={filter} onChange={onFilter} />}
+        {panel === "agent" && (
+          <AgentPanel
+            mode={replyMode}
+            modelReady={modelReady}
+            onMode={onReplyMode}
+            onAsk={() => {
+              setPanel(undefined);
+              onAsk();
+            }}
+          />
+        )}
       </div>
     </div>
   );

@@ -5,6 +5,9 @@ import type { Element, VcDeliveryStateOperation } from "../../../../contract/gen
 import { locatorForTextSelection } from "../../../ui/src/document/anchors.js";
 import { useLiveQuery } from "../live/LiveStore.js";
 import { ActionBar } from "./ActionBar.js";
+import type { ReplyMode } from "./ActionBar.js";
+import { canDecide, threadStatus } from "./loop.js";
+import type { Loop } from "./loop.js";
 import { Composer } from "./Composer.js";
 import { ThreadCard } from "./ThreadCard.js";
 import { layoutMargin } from "./marginLayout.js";
@@ -43,8 +46,14 @@ export function CommentSurface({
   version,
   elements,
   readOnly,
+  loop,
+  replyMode,
+  onOpenChanges,
   children,
 }: {
+  loop: Loop;
+  replyMode: ReplyMode;
+  onOpenChanges(version: number): void;
   sessionId: string;
   artifactId: string;
   version: number;
@@ -68,8 +77,16 @@ export function CommentSurface({
   const all = useLiveQuery<Thread[]>("vc.Threads", { sessionId });
   const threads = useMemo(() => threadsForDraft(all.data ?? [], artifactId), [all.data, artifactId]);
   const shownThreads = useMemo(
-    () => sortByPosition(applyFilter(threads, filter), elements),
-    [threads, filter, elements],
+    () =>
+      sortByPosition(
+        // "Open" also hides threads the loop has finished with (applied, declined, set aside).
+        applyFilter(threads, filter).filter(
+          (t) =>
+            filter.status === "all" || !["applied", "declined", "muted"].includes(threadStatus(t, loop)?.tone ?? ""),
+        ),
+        elements,
+      ),
+    [threads, filter, elements, loop],
   );
   const humanIds = shownThreads.map((t) => latestHuman(t)?.commentId).filter((id): id is string => Boolean(id));
   const delivery = useLiveQuery<VcDeliveryStateOperation["result"]>(
@@ -292,6 +309,13 @@ export function CommentSurface({
         turn={turnOf(deliveryOf(thread)?.turnId)}
         readOnly={readOnly}
         actions={actions}
+        decision={{
+          status: threadStatus(thread, loop),
+          canDecide: canDecide(thread, loop),
+          manual: replyMode === "manual",
+          modelReady: loop.modelReady,
+          onOpenChanges,
+        }}
         {...(positioned ? { style: { position: "absolute", top: 0, left: 0, right: 0 } } : {})}
         onActivate={() => showText(thread)}
       />
@@ -392,6 +416,10 @@ export function CommentSurface({
         onComment={() => startWriting({})}
         onToggleThreads={() => (wide ? setShown((v) => !v) : setSheet((v) => !v))}
         onFilter={setFilter}
+        replyMode={replyMode}
+        modelReady={loop.modelReady}
+        onReplyMode={(mode) => void actions.setReplyMode(mode)}
+        onAsk={() => void actions.ask()}
       />
     </div>
   );

@@ -1,4 +1,7 @@
 import { forwardRef, useState } from "react";
+import type { CSSProperties } from "react";
+import { Button } from "@wei/design-system";
+import { terms } from "../../../ui/src/copy/terms.js";
 import type { FeedbackComment, Thread } from "./threads.js";
 import {
   anchorOf,
@@ -10,6 +13,7 @@ import {
   visibleComments,
 } from "./threads.js";
 import type { Delivery, TurnStatus } from "./threads.js";
+import type { ThreadStatus } from "./loop.js";
 import { Composer } from "./Composer.js";
 import type { useCommentActions } from "./useCommentActions.js";
 import { Menu } from "../ui/Menu.js";
@@ -17,27 +21,70 @@ import { relativeTime } from "../ui/time.js";
 
 type Actions = ReturnType<typeof useCommentActions>;
 
-function Proposal({ comment }: { comment: FeedbackComment }) {
+export interface Decision {
+  status: ThreadStatus | undefined;
+  /** Nothing agreed or declined yet, and the person may decide here. */
+  canDecide: boolean;
+  manual: boolean;
+  modelReady: boolean;
+  onOpenChanges(version: number): void;
+}
+
+/**
+ * The agent's proposal. Its words stay text with an "Agent proposes" label; the buttons say only "Agree", and their
+ * accessible names quote the option label so a reader knows what they agree to.
+ */
+function Proposal({ comment, decide, actions }: { comment: FeedbackComment; decide: boolean; actions: Actions }) {
   const proposal = comment.proposal;
   if (!proposal) return null;
-  // Read-only until W4: the agent's words never become a button label.
-  const items = Array.isArray(proposal) ? proposal : [{ label: "", text: proposal.text }];
+  const options = Array.isArray(proposal) ? proposal : undefined;
   return (
     <div className="vc-proposal">
       <p className="vc-label">Agent proposes</p>
       <ul>
-        {items.map((item, index) => (
-          <li key={index}>
-            {item.label && <strong>{item.label}: </strong>}
-            <span>{item.text}</span>
-          </li>
-        ))}
+        {(options ?? [{ label: "", text: proposal && !Array.isArray(proposal) ? proposal.text : "" }]).map(
+          (item, index) => (
+            <li key={index}>
+              <span className="text">
+                {item.label && <strong>{item.label}: </strong>}
+                <span>{item.text}</span>
+              </span>
+              {decide && (
+                <button
+                  type="button"
+                  className="vc-agree-option"
+                  aria-label={
+                    options ? `${terms.agree} with option: ${item.label}` : `${terms.agree} with the agent's proposal`
+                  }
+                  onClick={() =>
+                    void actions.agree(
+                      comment.commentId,
+                      options ? { kind: "option", optionLabel: item.label } : { kind: "agent_proposal" },
+                    )
+                  }
+                >
+                  {terms.agree}
+                </button>
+              )}
+            </li>
+          ),
+        )}
       </ul>
     </div>
   );
 }
 
-function Comment({ comment, actions, readOnly }: { comment: FeedbackComment; actions: Actions; readOnly: boolean }) {
+function CommentItem({
+  comment,
+  actions,
+  readOnly,
+  decide,
+}: {
+  comment: FeedbackComment;
+  actions: Actions;
+  readOnly: boolean;
+  decide: boolean;
+}) {
   const [editing, setEditing] = useState(false),
     [confirming, setConfirming] = useState(false);
   const own = comment.author.kind === "human" && !readOnly;
@@ -83,7 +130,7 @@ function Comment({ comment, actions, readOnly }: { comment: FeedbackComment; act
               <span>{comment.suggestion.replacement}</span>
             </p>
           )}
-          <Proposal comment={comment} />
+          <Proposal comment={comment} decide={decide && comment.author.kind === "agent"} actions={actions} />
         </>
       )}
       {confirming && (
@@ -101,6 +148,46 @@ function Comment({ comment, actions, readOnly }: { comment: FeedbackComment; act
   );
 }
 
+/** Agree / Decline for the opening comment. Never focused automatically; Decline asks for an optional reason. */
+function DecideRow({ comment, actions }: { comment: FeedbackComment; actions: Actions }) {
+  const [declining, setDeclining] = useState(false),
+    [reason, setReason] = useState("");
+  if (declining)
+    return (
+      <form
+        className="vc-decline"
+        aria-label="Decline"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void actions.decline(comment.commentId, reason.trim() || undefined);
+        }}
+      >
+        <input
+          aria-label="Why not? (optional)"
+          placeholder="Why not? (optional)"
+          value={reason}
+          onChange={(event) => setReason(event.target.value)}
+        />
+        <Button type="button" size="sm" variant="ghost" onClick={() => setDeclining(false)}>
+          Cancel
+        </Button>
+        <Button type="submit" size="sm" variant="secondary">
+          {terms.decline}
+        </Button>
+      </form>
+    );
+  return (
+    <div className="vc-decide">
+      <Button size="sm" variant="primary" onClick={() => void actions.agree(comment.commentId, { kind: "as_written" })}>
+        {terms.agree}
+      </Button>
+      <Button size="sm" variant="ghost" onClick={() => setDeclining(true)}>
+        {terms.decline}
+      </Button>
+    </div>
+  );
+}
+
 export const ThreadCard = forwardRef<
   HTMLElement,
   {
@@ -110,16 +197,19 @@ export const ThreadCard = forwardRef<
     turn: TurnStatus | undefined;
     readOnly: boolean;
     actions: Actions;
-    style?: React.CSSProperties;
+    decision: Decision;
+    style?: CSSProperties;
     onActivate(): void;
   }
->(function ThreadCard({ thread, focused, delivery, turn, readOnly, actions, style, onActivate }, ref) {
+>(function ThreadCard({ thread, focused, delivery, turn, readOnly, actions, decision, style, onActivate }, ref) {
   const [replying, setReplying] = useState(false);
   const anchor = anchorOf(thread),
     resolution = resolutionOf(thread),
     comments = visibleComments(thread),
-    state = threadState(thread),
-    last = comments.at(-1);
+    opening = comments[0],
+    last = comments.at(-1),
+    state = threadState(thread);
+  const decide = decision.canDecide && !readOnly;
   const where = !anchor
     ? "On the whole session"
     : resolution?.state === "removed"
@@ -129,7 +219,12 @@ export const ThreadCard = forwardRef<
         : anchor.locator
           ? undefined
           : "On this block";
-  const status = [state !== "open" ? stateLabel(state) : undefined, deliveryLabel(delivery, turn)].filter(Boolean);
+  const agentLine = deliveryLabel(delivery, turn),
+    failed = turn === "failed" || turn === "uncertain",
+    waitingOnAgent = !decision.status && last?.author.kind === "human" && delivery !== "replied",
+    askable =
+      decision.modelReady && !readOnly && (failed || (decision.manual && waitingOnAgent && delivery !== "delivered"));
+  const status = decision.status;
   return (
     <article
       ref={ref}
@@ -137,8 +232,9 @@ export const ThreadCard = forwardRef<
       data-thread-id={thread.threadId}
       data-focused={focused || undefined}
       data-resolution={resolution?.state}
+      data-status={status?.tone}
       tabIndex={0}
-      aria-label={`Thread: ${comments[0]?.body.slice(0, 60) ?? ""}`}
+      aria-label={`Thread: ${opening?.body.slice(0, 60) ?? ""}`}
       style={style}
       onClick={(event) => {
         if ((event.target as HTMLElement).closest("button, textarea, input, a, form")) return;
@@ -156,9 +252,27 @@ export const ThreadCard = forwardRef<
       {where && <p className="where">{where}</p>}
       <ul className="comments">
         {comments.map((comment) => (
-          <Comment key={comment.commentId} comment={comment} actions={actions} readOnly={readOnly} />
+          <CommentItem
+            key={comment.commentId}
+            comment={comment}
+            actions={actions}
+            readOnly={readOnly}
+            decide={decide}
+          />
         ))}
       </ul>
+      {status && (
+        <p className="vc-status" data-tone={status.tone}>
+          {status.appliedIn ? (
+            <button type="button" className="vc-link-button" onClick={() => decision.onOpenChanges(status.appliedIn!)}>
+              {status.text}
+            </button>
+          ) : (
+            status.text
+          )}
+        </p>
+      )}
+      {decide && opening?.author.kind === "human" && !replying && <DecideRow comment={opening} actions={actions} />}
       {replying ? (
         <Composer
           label="Reply"
@@ -173,9 +287,15 @@ export const ThreadCard = forwardRef<
         />
       ) : (
         <div className="foot">
-          {status.length > 0 && <span className="status">{status.join(" · ")}</span>}
+          {!status && state !== "open" && <span className="status">{stateLabel(state)}</span>}
+          {agentLine && <span className="status">{agentLine}</span>}
+          {askable && (
+            <button type="button" className="vc-link-button" onClick={() => void actions.ask([thread.threadId])}>
+              {failed ? "Try again" : "Ask agent"}
+            </button>
+          )}
           {!readOnly && (
-            <button type="button" className="vc-link-button" onClick={() => setReplying(true)}>
+            <button type="button" className="vc-link-button reply" onClick={() => setReplying(true)}>
               Reply
             </button>
           )}
