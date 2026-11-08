@@ -5609,7 +5609,7 @@ export const schemasById: Record<string, AnySchema> = {
             "role": {
               "enum": [
                 "primary",
-                "supporting"
+                "reference"
               ]
             }
           },
