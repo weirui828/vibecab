@@ -47,6 +47,7 @@ export function NewDraftDialog({
       role: target && target.artifactIds.length > 0 ? "reference" : "primary",
       ...(mode === "import" && file ? { markdown: file.text } : {}),
       ...(fixedSession ? { sessionId: fixedSession.sessionId } : sessionId !== NEW_SESSION ? { sessionId } : {}),
+      ...(fixedSession?.state === "paused" ? { resume: true } : {}),
     });
     setBusy(false);
     if (ok) onClose();
@@ -57,7 +58,7 @@ export function NewDraftDialog({
       title={fixedSession ? `Add a ${terms.draft.toLowerCase()}` : `New ${terms.draft.toLowerCase()}`}
       lede={
         fixedSession
-          ? `To “${fixedSession.title}”. Start from a blank page or bring in a Markdown file.`
+          ? `To “${fixedSession.title}”${fixedSession.state === "paused" ? `, which resumes` : ""}. Start from a blank page or bring in a Markdown file.`
           : "Start from a blank page or bring in a Markdown file."
       }
       onClose={onClose}
@@ -75,12 +76,28 @@ export function NewDraftDialog({
     >
       <div className="vc-choice" role="radiogroup" aria-label="Start from">
         <label>
-          <input type="radio" name="mode" checked={mode === "blank"} onChange={() => setMode("blank")} />
+          <input
+            type="radio"
+            name="mode"
+            checked={mode === "blank"}
+            onChange={() => {
+              setMode("blank");
+              setError(undefined);
+            }}
+          />
           <strong>Blank {terms.document.toLowerCase()}</strong>
           <span>An empty page to comment on with the agent.</span>
         </label>
         <label>
-          <input type="radio" name="mode" checked={mode === "import"} onChange={() => setMode("import")} />
+          <input
+            type="radio"
+            name="mode"
+            checked={mode === "import"}
+            onChange={() => {
+              setMode("import");
+              setError(undefined);
+            }}
+          />
           <strong>Import Markdown</strong>
           <span>A .md or .txt file from this computer.</span>
         </label>
@@ -94,6 +111,7 @@ export function NewDraftDialog({
             onChange={(event) => {
               const chosen = event.target.files?.[0];
               if (!chosen) return setFile(undefined);
+              setError(undefined);
               void chosen.text().then((text) => setFile({ name: chosen.name, text }));
             }}
           />
@@ -223,7 +241,11 @@ export function AttachDialog({
     <Dialog
       open={open}
       title={`Bring in a ${terms.draft.toLowerCase()}`}
-      lede={session ? `It stays where it is and also joins “${session.title}”.` : undefined}
+      lede={
+        session
+          ? `It stays where it is and also joins “${session.title}”${session.state === "paused" ? ", which resumes" : ""}.`
+          : undefined
+      }
       onClose={onClose}
       onSubmit={() => void submit()}
       buttons={

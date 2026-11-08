@@ -16,6 +16,8 @@ export interface NewDraft {
   sessionId?: string;
   /** The first Draft in a session is its primary one. */
   role?: "primary" | "reference";
+  /** The existing session is paused: resume it first, since Drafts join only active sessions. */
+  resume?: boolean;
 }
 
 /** Workspace actions shared by Home, Drafts and Needs you. Errors become short toasts. */
@@ -34,7 +36,9 @@ export function useActions() {
     [bridge, toast],
   );
   return {
-    async createDraft({ title, markdown, sessionId, role = "primary" }: NewDraft): Promise<boolean> {
+    async createDraft({ title, markdown, sessionId, role = "primary", resume }: NewDraft): Promise<boolean> {
+      // Resume before creating, so a refusal never leaves a Draft behind with no session.
+      if (sessionId && resume && (await run("vc.ResumeSession", { sessionId })) === undefined) return false;
       const created =
         markdown === undefined
           ? await run<{ artifactId: string }>("vc.CreateArtifact", { title, mediaKind: "doc" })
@@ -50,7 +54,13 @@ export function useActions() {
       if (attached) navigate(`/s/${target}/d/${created.artifactId}`);
       return attached !== undefined;
     },
-    async attach(sessionId: string, artifactId: string, role: "primary" | "reference"): Promise<boolean> {
+    async attach(
+      sessionId: string,
+      artifactId: string,
+      role: "primary" | "reference",
+      resume = false,
+    ): Promise<boolean> {
+      if (resume && (await run("vc.ResumeSession", { sessionId })) === undefined) return false;
       const attached = await run("vc.AttachArtifact", { sessionId, artifactId, role });
       if (attached) navigate(`/s/${sessionId}/d/${artifactId}`);
       return attached !== undefined;
