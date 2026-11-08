@@ -152,7 +152,8 @@ it("keeps a block's buttons reachable: a rail inside the Document spans the gap 
   // Moving over the rail itself keeps the buttons up.
   tl.fireEvent.mouseMove(rail!);
   expect(tl.screen.getByRole("button", { name: "Comment on this block" })).toBeTruthy();
-  expect(tl.screen.getByRole("button", { name: "Why is this here?" })).toBeTruthy();
+  // No Update has changed this paragraph, so it has no change history to offer.
+  expect(tl.screen.queryByRole("button", { name: "Change history" })).toBeNull();
 });
 
 it("replies, edits and deletes in a thread", async () => {
@@ -291,4 +292,19 @@ it("sends a quick mark in one click, with any words typed after it", async () =>
       "Explain this in more detail. The second half.",
     ),
   );
+});
+
+it("outlines the block under the pointer, and keeps the one being commented on outlined", async () => {
+  const { container } = await openSession();
+  const [first, second] = [...container.querySelectorAll<HTMLElement>(".vc-doc > p")];
+  tl.fireEvent.mouseMove(first!);
+  await tl.waitFor(() => expect(first!.hasAttribute("data-target")).toBe(true));
+  tl.fireEvent.mouseMove(second!);
+  await tl.waitFor(() => expect(second!.hasAttribute("data-target")).toBe(true));
+  expect(first!.hasAttribute("data-target")).toBe(false);
+  tl.fireEvent.click(await tl.screen.findByRole("button", { name: "Comment on this block" }));
+  await tl.waitFor(() => expect(second!.hasAttribute("data-commenting")).toBe(true));
+  tl.fireEvent.mouseLeave(container.querySelector(".vc-surface-doc")!);
+  await tl.waitFor(() => expect(second!.hasAttribute("data-target")).toBe(false));
+  expect(second!.hasAttribute("data-commenting")).toBe(true);
 });

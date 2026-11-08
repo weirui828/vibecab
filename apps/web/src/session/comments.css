@@ -9,7 +9,8 @@
   font-size: 17px;
 }
 .vc-surface[data-margin] {
-  grid-template-columns: minmax(0, 68ch) 300px;
+  grid-template-columns: minmax(0, 68ch) 280px;
+  column-gap: 40px;
 }
 .vc-surface-doc {
   position: relative;
@@ -551,4 +552,17 @@ li > .vc-inline {
 .vc-marks button:hover {
   border-color: var(--color-accent-default);
   color: var(--color-accent-fg);
+}
+
+/* As in covibe: a dashed outline shows which block a comment would be about; a solid one marks the block being
+   commented on. Outlines take no space, so nothing moves. */
+.vc-doc [data-target] {
+  outline: 1px dashed var(--color-accent-default);
+  outline-offset: 5px;
+  border-radius: 4px;
+}
+.vc-doc [data-commenting] {
+  outline: 1.5px solid var(--color-accent-default);
+  outline-offset: 5px;
+  border-radius: 4px;
 }
