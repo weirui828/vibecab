@@ -21,6 +21,27 @@ export interface NavProps {
   setTheme(choice: ThemeChoice): void;
   version: string;
   onNavigate?(): void;
+  /** Folds the sidebar to a rail of icons and back; only the main sidebar has it, not the phone sheet. */
+  onToggleRail?(): void;
+}
+
+/** A panel with its left column: the sidebar, folding (◀) or opening (▶). */
+function RailGlyph({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      aria-hidden="true"
+    >
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2.5" />
+      <path d="M9 4.5v15" />
+      <path d={open ? "M15.5 10l-2 2 2 2" : "M13.5 10l2 2-2 2"} strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
 }
 
 export const primaryNav: Array<{ path: string; label: string; icon: IconName }> = [
@@ -77,7 +98,7 @@ const isCurrent = (route: string, path: string) =>
 
 /** A quiet sidebar for navigation only. */
 export function Sidebar(props: NavProps) {
-  const { route, sessions, attention, needsYou, connection, theme, setTheme, version, onNavigate } = props;
+  const { route, sessions, attention, needsYou, connection, onNavigate, onToggleRail } = props;
   const open = sortSessions(sessions ?? [], attention).filter((s) => s.state !== "ended"),
     ended = (sessions ?? []).length - open.length;
   return (
@@ -152,12 +173,13 @@ export function Sidebar(props: NavProps) {
         </div>
       )}
       <div className="vc-sidebar-foot">
-        <span className="collapsible">
-          <ConnectionLabel state={connection} />
-        </span>
-        <span className="collapsible">
-          <ThemeSwitch theme={theme} setTheme={setTheme} small />
-        </span>
+        {/* Only Settings and Trash live here: the theme and version are in Settings. The connection shows only when
+            something is wrong, since then Settings cannot load. */}
+        {connection !== "Connected" && (
+          <span className="collapsible">
+            <ConnectionLabel state={connection} />
+          </span>
+        )}
         <div className="vc-foot-links collapsible">
           <a href="#/settings" onClick={onNavigate}>
             Settings
@@ -165,9 +187,17 @@ export function Sidebar(props: NavProps) {
           <a href="#/trash" onClick={onNavigate}>
             Trash
           </a>
-          <span className="vc-facts" style={{ marginLeft: "auto", fontSize: 11 }}>
-            v{version}
-          </span>
+          {onToggleRail && (
+            <button
+              type="button"
+              className="vc-rail-toggle"
+              aria-label="Collapse sidebar"
+              title="Collapse sidebar"
+              onClick={onToggleRail}
+            >
+              <RailGlyph open />
+            </button>
+          )}
         </div>
         <nav className="vc-nav rail-only" aria-label="More">
           <a className="vc-nav-link" href="#/trash" title="Trash" aria-label="Trash">
@@ -176,6 +206,17 @@ export function Sidebar(props: NavProps) {
           <a className="vc-nav-link" href="#/settings" title="Settings" aria-label="Settings">
             <Icon name="cog-6-tooth" size={20} />
           </a>
+          {onToggleRail && (
+            <button
+              type="button"
+              className="vc-nav-link vc-rail-expand"
+              aria-label="Expand sidebar"
+              title="Expand sidebar"
+              onClick={onToggleRail}
+            >
+              <RailGlyph open={false} />
+            </button>
+          )}
         </nav>
       </div>
     </aside>

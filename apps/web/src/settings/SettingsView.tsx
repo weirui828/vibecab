@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, Field, Input } from "@wei/design-system";
 import { terms } from "../../../ui/src/copy/terms.js";
 import { useBridge, useLiveQuery } from "../live/LiveStore.js";
 import type { SessionRow } from "../live/workspace.js";
 import { ThemeSwitch } from "../shell/Navigation.js";
+import { navigate } from "../shell/prefs.js";
 import type { ThemeChoice } from "../shell/prefs.js";
 import { relativeTime } from "../ui/time.js";
 import { AssistantSection, DataSection, GrantsSection, ToolsSection } from "./AccessSections.js";
@@ -213,11 +214,27 @@ function AnotherBrowser() {
   );
 }
 
+const tabs = [
+  ["model", "Model"],
+  ["spending", "Spending"],
+  ["agent", "Agent"],
+  ["permissions", "Permissions"],
+  ["tools", "Tools"],
+  ["assistant", "Assistant"],
+  ["data", "Data"],
+  ["appearance", "Appearance"],
+  ["about", "About"],
+] as const;
+type Tab = (typeof tabs)[number][0];
+
+/** Settings as tabs, one section at a time; the tab is in the address (`#/settings/agent`), so it survives a reload. */
 export function SettingsView({
+  tab: asked,
   sessions,
   theme,
   setTheme,
 }: {
+  tab: string;
   sessions: SessionRow[];
   theme: ThemeChoice;
   setTheme(choice: ThemeChoice): void;
@@ -225,61 +242,92 @@ export function SettingsView({
   const bridge = useBridge(),
     settings = useLiveQuery<SettingsShape>("sys.Settings", {}),
     caps = useLiveQuery<{ contractVersion: string }>("sys.Capabilities", {}),
-    [state, setState] = useState<{ workspacePath: string; version: string; mcpRelayPath?: string }>();
+    [state, setState] = useState<{ workspacePath: string; version: string; mcpRelayPath?: string }>(),
+    list = useRef<HTMLDivElement>(null);
   useEffect(() => {
     void bridge.app.state().then(setState, () => undefined);
   }, [bridge]);
-  const sections: Array<[string, string]> = [
-    ["model", "Model"],
-    ["spending", "Spending"],
-    ["agent", "Agent"],
-    ["permissions", "Permissions"],
-    ["tools", "Tools"],
-    ["assistant", "Assistant"],
-    ["data", "Data"],
-    ["appearance", "Appearance"],
-  ];
+  const tab: Tab = tabs.find(([id]) => id === asked)?.[0] ?? "model";
+  const go = (id: Tab, focus = false) => {
+    navigate("/settings/" + id);
+    if (focus) setTimeout(() => list.current?.querySelector<HTMLElement>(`[data-tab="${id}"]`)?.focus(), 0);
+  };
+  // ← → move between tabs, Home and End jump to the ends (the usual tablist keys).
+  const onKey = (event: React.KeyboardEvent) => {
+    const at = tabs.findIndex(([id]) => id === tab),
+      to =
+        event.key === "ArrowRight"
+          ? (at + 1) % tabs.length
+          : event.key === "ArrowLeft"
+            ? (at - 1 + tabs.length) % tabs.length
+            : event.key === "Home"
+              ? 0
+              : event.key === "End"
+                ? tabs.length - 1
+                : -1;
+    const next = tabs[to];
+    if (!next) return;
+    event.preventDefault();
+    go(next[0], true);
+  };
   return (
     <div className="vc-page vc-settings">
       <header className="vc-header">
         <h1 className="vc-display">Settings</h1>
-        <nav className="vc-toc" aria-label="Sections">
-          {sections.map(([id, label]) => (
-            <a
-              key={id}
-              href={"#/settings"}
-              onClick={(e) => {
-                e.preventDefault();
-                document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-              }}
-            >
-              {label}
-            </a>
-          ))}
-        </nav>
       </header>
-      <Section
-        id="model"
-        title="Model"
-        lede="The model the agent thinks with. VibeCab sends it only what a reply or an Update needs."
-      >
-        <ModelForm />
-      </Section>
-      <SpendingSection />
-      <AgentSection budgets={settings.data?.budgets} />
-      <GrantsSection sessions={sessions} />
-      <ToolsSection />
-      <AssistantSection workspace={state?.workspacePath ?? ""} relayPath={state?.mcpRelayPath} />
-      <DataSection workspace={state?.workspacePath ?? ""} retention={settings.data?.trashRetentionDays} />
-      <AnotherBrowser />
-      <Section id="appearance" title="Appearance" lede="Auto follows this computer's light and dark setting.">
-        <ThemeSwitch theme={theme} setTheme={setTheme} />
-      </Section>
-      <Section id="about" title="About">
-        <p className="vc-facts">
-          VibeCab {state?.version ?? ""} · contract {caps.data?.contractVersion ?? "…"}
-        </p>
-      </Section>
+      <div className="vc-tabs" role="tablist" aria-label="Settings" ref={list} onKeyDown={onKey}>
+        {tabs.map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            id={"tab-" + id}
+            data-tab={id}
+            aria-selected={id === tab}
+            aria-controls={"panel-" + id}
+            tabIndex={id === tab ? 0 : -1}
+            onClick={() => go(id)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+      <div className="vc-tab-panel" role="tabpanel" id={"panel-" + tab} aria-labelledby={"tab-" + tab} key={tab}>
+        {tab === "model" && (
+          <Section
+            id="model"
+            title="Model"
+            lede="The model the agent thinks with. VibeCab sends it only what a reply or an Update needs."
+          >
+            <ModelForm />
+          </Section>
+        )}
+        {tab === "spending" && <SpendingSection />}
+        {tab === "agent" && <AgentSection budgets={settings.data?.budgets} />}
+        {tab === "permissions" && <GrantsSection sessions={sessions} />}
+        {tab === "tools" && <ToolsSection />}
+        {tab === "assistant" && (
+          <AssistantSection workspace={state?.workspacePath ?? ""} relayPath={state?.mcpRelayPath} />
+        )}
+        {tab === "data" && (
+          <DataSection workspace={state?.workspacePath ?? ""} retention={settings.data?.trashRetentionDays} />
+        )}
+        {tab === "appearance" && (
+          <Section id="appearance" title="Appearance" lede="Auto follows this computer's light and dark setting.">
+            <ThemeSwitch theme={theme} setTheme={setTheme} />
+          </Section>
+        )}
+        {tab === "about" && (
+          <>
+            <Section id="about" title="About">
+              <p className="vc-facts">
+                VibeCab {state?.version ?? ""} · contract {caps.data?.contractVersion ?? "…"}
+              </p>
+            </Section>
+            <AnotherBrowser />
+          </>
+        )}
+      </div>
     </div>
   );
 }

@@ -71,7 +71,7 @@ it("saves the model and key; the key never comes back to the page", async () => 
 });
 
 it("sets the daily limit and agent limits from Settings", async () => {
-  await open("/settings");
+  await open("/settings/spending");
   const spending = tl.within(await tl.screen.findByRole("region", { name: "Spending" }));
   tl.fireEvent.change(spending.getByLabelText("Daily limit in dollars"), { target: { value: "7.5" } });
   tl.fireEvent.click(spending.getByRole("button", { name: "Save" }));
@@ -82,7 +82,8 @@ it("sets the daily limit and agent limits from Settings", async () => {
     );
     expect(usage.accounts.find((a) => a.account.kind === "daily")?.limitMicros).toBe(7_500_000);
   });
-  const agent = tl.within(tl.screen.getByRole("region", { name: "The agent" }));
+  tl.fireEvent.click(tl.screen.getByRole("tab", { name: "Agent" }));
+  const agent = tl.within(await tl.screen.findByRole("region", { name: "The agent" }));
   tl.fireEvent.change(agent.getByLabelText("Wait before replying (seconds)"), { target: { value: "4" } });
   tl.fireEvent.click(agent.getByRole("button", { name: "Save" }));
   await tl.waitFor(async () => {
@@ -92,7 +93,7 @@ it("sets the daily limit and agent limits from Settings", async () => {
 });
 
 it("gives the assistant access once, lists it without the secret, and revokes it", async () => {
-  const { container } = await open("/settings");
+  const { container } = await open("/settings/assistant");
   const assistant = tl.within(await tl.screen.findByRole("region", { name: "Your AI assistant" }));
   await tl.waitFor(() =>
     expect(assistant.getByRole("button", { name: "Read only" })).not.toHaveProperty("disabled", true),
@@ -119,8 +120,23 @@ it("gives the assistant access once, lists it without the secret, and revokes it
   });
 });
 
-it("makes a sign-in link for another browser", async () => {
+it("shows one tab at a time, marks the current one, and moves with the arrow keys", async () => {
   await open("/settings");
+  const model = await tl.screen.findByRole("tab", { name: "Model" });
+  expect(model.getAttribute("aria-selected")).toBe("true");
+  expect(await tl.screen.findByRole("region", { name: "Model" })).toBeTruthy();
+  expect(tl.screen.queryByRole("region", { name: "Spending" })).toBeNull();
+  tl.fireEvent.keyDown(model, { key: "ArrowRight" });
+  await tl.waitFor(() => expect(window.location.hash).toBe("#/settings/spending"));
+  expect((await tl.screen.findByRole("tab", { name: "Spending" })).getAttribute("aria-selected")).toBe("true");
+  expect(await tl.screen.findByRole("region", { name: "Spending" })).toBeTruthy();
+  expect(tl.screen.queryByRole("region", { name: "Model" })).toBeNull();
+  tl.fireEvent.keyDown(tl.screen.getByRole("tab", { name: "Spending" }), { key: "End" });
+  await tl.waitFor(() => expect(window.location.hash).toBe("#/settings/about"));
+});
+
+it("makes a sign-in link for another browser", async () => {
+  await open("/settings/about");
   tl.fireEvent.click(await tl.screen.findByRole("button", { name: "Make a sign-in link" }));
   await tl.waitFor(() => expect(document.querySelector("#browser pre")?.textContent).toMatch(/\?launch=/));
 });

@@ -2,19 +2,59 @@
 .vc-settings .vc-header {
   margin-bottom: 8px;
 }
-.vc-toc {
+/* Real tabs: one section at a time; the current one is underlined in the accent and set in the full colour. */
+.vc-tabs {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px 16px;
-  margin-top: 14px;
-  font-size: 13.5px;
+  gap: 4px;
+  margin-top: 20px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--color-border-subtle);
+  scrollbar-width: none;
 }
-.vc-toc a {
+.vc-tabs [role="tab"] {
+  position: relative;
+  flex: none;
+  padding: 10px 12px 12px;
+  border: 0;
+  background: none;
   color: var(--color-fg-muted);
-  text-decoration: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--vc-fast) var(--vc-ease);
 }
-.vc-toc a:hover {
+.vc-tabs [role="tab"]:hover {
   color: var(--color-fg-default);
+}
+.vc-tabs [role="tab"][aria-selected="true"] {
+  color: var(--color-fg-default);
+  font-weight: 600;
+}
+.vc-tabs [role="tab"]::after {
+  content: "";
+  position: absolute;
+  right: 12px;
+  bottom: -1px;
+  left: 12px;
+  height: 2px;
+  border-radius: 2px;
+  background: transparent;
+  transition: background var(--vc-fast) var(--vc-ease);
+}
+.vc-tabs [role="tab"][aria-selected="true"]::after {
+  background: var(--color-accent-default);
+}
+.vc-tabs [role="tab"]:focus-visible {
+  outline: 2px solid var(--color-accent-default);
+  outline-offset: -2px;
+  border-radius: 8px;
+}
+/* In a tab, the section needs no rule above it; sections that share a tab keep theirs between them. */
+.vc-tab-panel > .vc-setting:first-child {
+  margin-top: 8px;
+  border-top: 0;
 }
 .vc-setting {
   padding: 40px 0;

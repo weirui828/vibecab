@@ -8,7 +8,7 @@ import { LiveStoreProvider } from "./live/LiveStore.js";
 import { useWorkspace } from "./live/workspace.js";
 import { ToastProvider } from "./ui/Toast.js";
 import { Mark, Wordmark } from "./ui/Brand.js";
-import { useRoute, useTheme } from "./shell/prefs.js";
+import { useRoute, useSidebarRail, useTheme } from "./shell/prefs.js";
 import { Sidebar } from "./shell/Navigation.js";
 import type { NavProps } from "./shell/Navigation.js";
 import { DialogHost } from "./home/DialogHost.js";
@@ -107,6 +107,7 @@ function Shell({
   onRestart(): void;
 }) {
   const route = useRoute(),
+    [railed, setRailed] = useSidebarRail(),
     workspace = useWorkspace(ready),
     settings = useLiveQuery<SettingsShape>("sys.Settings", {}, ready),
     [firstRunDone, setFirstRunDone] = useState(() => readFlag("vc-first-run-done")),
@@ -153,8 +154,15 @@ function Shell({
     ) : (
       <PageSkeleton />
     );
-  else if (route === "/settings")
-    page = <SettingsView sessions={workspace.sessions ?? []} theme={theme} setTheme={setTheme} />;
+  else if (route === "/settings" || route.startsWith("/settings/"))
+    page = (
+      <SettingsView
+        tab={route.slice("/settings/".length)}
+        sessions={workspace.sessions ?? []}
+        theme={theme}
+        setTheme={setTheme}
+      />
+    );
   else if (route === "/trash") page = <TrashView />;
   else if (route === "/ideas") page = <IdeasView sessions={workspace.sessions ?? []} />;
   else if (route === "/projects") page = <ProjectsView />;
@@ -183,8 +191,8 @@ function Shell({
     ) : null;
   return (
     <DialogHost sessions={workspace.sessions ?? []} drafts={workspace.drafts ?? []}>
-      <div className="vc-app">
-        <Sidebar {...nav} />
+      <div className="vc-app" data-rail={railed || undefined}>
+        <Sidebar {...nav} onToggleRail={() => setRailed(!railed)} />
         <dialog
           ref={sheet}
           className="vc-sheet"

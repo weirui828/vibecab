@@ -159,3 +159,15 @@ it("shows a session's state, pauses and resumes it, asks before ending, and list
   await tl.waitFor(() => expect(ended.textContent).toContain("Field season"));
   expect(tl.screen.queryByRole("region", { name: "Active" })).toBeNull();
 });
+
+it("folds the sidebar to a rail and back, and remembers it", async () => {
+  const { container } = await renderApp();
+  tl.fireEvent.click(await tl.screen.findByRole("button", { name: "Collapse sidebar" }));
+  expect(container.querySelector(".vc-app")?.hasAttribute("data-rail")).toBe(true);
+  expect(localStorage.getItem("vc-sidebar")).toBe("rail");
+  tl.fireEvent.click(tl.screen.getByRole("button", { name: "Expand sidebar" }));
+  expect(container.querySelector(".vc-app")?.hasAttribute("data-rail")).toBe(false);
+  expect(localStorage.getItem("vc-sidebar")).toBe("full");
+  // Only Settings and Trash stay at the foot; the theme and version live in Settings.
+  expect(container.querySelector(".vc-sidebar-foot")?.textContent).not.toMatch(/Polar night|v\d/);
+});
