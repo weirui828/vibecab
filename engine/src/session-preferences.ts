@@ -5,12 +5,14 @@ export function sessionPreferences(settings: Settings, sessionId: string): Setti
 }
 
 /**
- * The model a session's work runs on when no alias is set for that role: the default model, else the session's chosen
- * SDK agent, else any SDK agent that is set up — so Claude Code or Codex alone is enough to work with (W12).
+ * The pool agent that works for a session (W13): the session's own choice, else the VibeCab role's agent, else the
+ * default model, else any agent in the pool — so one agent of any kind is enough to work with.
  */
 export function baseModelRef(settings: Settings, sessionId?: string): string {
-  if (settings.models.default) return "default";
+  const has = (id: string | undefined): id is string => Boolean(id && settings.models[id]);
   const chosen = sessionId ? sessionPreferences(settings, sessionId)?.agent : undefined;
-  if (chosen && chosen !== "vibecab" && settings.models[chosen]) return chosen;
-  return ["claude-code", "codex"].find((id) => settings.models[id]) ?? "default";
+  if (chosen !== "vibecab" && has(chosen)) return chosen;
+  if (has(settings.roles?.vibecab)) return settings.roles.vibecab;
+  if (has("default")) return "default";
+  return Object.keys(settings.models).sort()[0] ?? "default";
 }

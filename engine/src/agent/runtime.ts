@@ -155,7 +155,7 @@ export abstract class AgentRuntime extends AgentExternalRuntime {
         { kind: "turn", key: turnId },
         { kind: "session", key: turn.sessionId },
         { kind: "daily" },
-        { kind: "agent", key: agentFor(model) },
+        { kind: "agent", key: agentFor(modelRef) },
       ],
       amount,
     );
@@ -191,7 +191,7 @@ export abstract class AgentRuntime extends AgentExternalRuntime {
         );
       for await (const event of this.gateway!.call(request, {
         reservationId,
-        attribution: { agentId: agentFor(model), sessionId: turn.sessionId, purpose: "reply" },
+        attribution: { agentId: agentFor(modelRef), sessionId: turn.sessionId, purpose: "reply" },
         idempotencyKey: turnId + ":0",
         signal: abort.signal,
         onSent,
@@ -418,13 +418,13 @@ export abstract class AgentRuntime extends AgentExternalRuntime {
             { kind: "turn", key: turnId },
             { kind: "session", key: turn.sessionId },
             { kind: "daily" },
-            { kind: "agent", key: agentFor(model) },
+            { kind: "agent", key: agentFor(modelRef) },
           ],
           estimateReservationMicros(followRequest, model),
         );
         for await (const ignored of this.gateway!.call(followRequest, {
           reservationId: followReservationId,
-          attribution: { agentId: agentFor(model), sessionId: turn.sessionId, purpose: "reply" },
+          attribution: { agentId: agentFor(modelRef), sessionId: turn.sessionId, purpose: "reply" },
           idempotencyKey: turnId + ":1",
           signal: abort.signal,
         }))

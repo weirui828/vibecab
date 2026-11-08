@@ -12,7 +12,7 @@
           "properties": {
             "models": {
               "type": "object",
-              "description": "Models to add or replace; null removes that alias (\"default\" cannot be removed).",
+              "description": "Pool agents to add or replace; null removes that agent (W13).",
               "additionalProperties": {
                 "oneOf": [
                   {
@@ -32,6 +32,9 @@
             },
             "trashRetentionDays": {
               "$ref": "https://vibecab.local/schemas/settings.json#/properties/trashRetentionDays"
+            },
+            "roles": {
+              "$ref": "https://vibecab.local/schemas/roles.json"
             }
           },
           "additionalProperties": false

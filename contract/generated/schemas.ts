@@ -4724,7 +4724,7 @@ export const schemasById: Record<string, AnySchema> = {
             "properties": {
               "models": {
                 "type": "object",
-                "description": "Models to add or replace; null removes that alias (\"default\" cannot be removed).",
+                "description": "Pool agents to add or replace; null removes that agent (W13).",
                 "additionalProperties": {
                   "oneOf": [
                     {
@@ -4744,6 +4744,9 @@ export const schemasById: Record<string, AnySchema> = {
               },
               "trashRetentionDays": {
                 "$ref": "https://vibecab.local/schemas/settings.json#/properties/trashRetentionDays"
+              },
+              "roles": {
+                "$ref": "https://vibecab.local/schemas/roles.json"
               }
             },
             "additionalProperties": false
@@ -5608,12 +5611,10 @@ export const schemasById: Record<string, AnySchema> = {
           "question",
           "items",
           "criteria",
-          "processSpec",
-          "participants",
-          "limits",
           "mode"
         ],
-        "additionalProperties": false
+        "additionalProperties": false,
+        "description": "Without participants, processSpec or limits, the run uses the TMR role's panel, process and spending cap (W13)."
       },
       "result": {
         "type": "object",
@@ -11277,6 +11278,17 @@ export const schemasById: Record<string, AnySchema> = {
           "custom"
         ],
         "description": "Where the price came from: the built-in catalog, a provider's live list, or the person."
+      },
+      "name": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 60,
+        "description": "The agent's display name in the pool (W13)."
+      },
+      "instructions": {
+        "type": "string",
+        "maxLength": 4000,
+        "description": "Extra instructions added to every request this agent makes, VibeCab or TMR (W13)."
       }
     },
     "required": [
@@ -11409,6 +11421,61 @@ export const schemasById: Record<string, AnySchema> = {
       "status",
       "createdAt"
     ],
+    "additionalProperties": false
+  },
+  "https://vibecab.local/schemas/roles.json": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://vibecab.local/schemas/roles.json",
+    "title": "Roles",
+    "description": "Which pool agents do which job (W13). Agent ids are model aliases.",
+    "type": "object",
+    "properties": {
+      "vibecab": {
+        "type": "string",
+        "minLength": 1,
+        "description": "The agent for Covibe sessions (replies, Updates, digests) unless a session chooses another."
+      },
+      "tmr": {
+        "type": "object",
+        "properties": {
+          "panel": {
+            "type": "array",
+            "maxItems": 7,
+            "items": {
+              "type": "object",
+              "properties": {
+                "agentId": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 40
+                }
+              },
+              "required": [
+                "agentId"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "process": {
+            "enum": [
+              "independent-review"
+            ]
+          },
+          "spendMicros": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "panel"
+        ],
+        "additionalProperties": false
+      }
+    },
     "additionalProperties": false
   },
   "https://vibecab.local/schemas/session-artifact.json": {
@@ -11583,12 +11650,9 @@ export const schemasById: Record<string, AnySchema> = {
         "exclusiveMinimum": 0
       },
       "agent": {
-        "enum": [
-          "vibecab",
-          "claude-code",
-          "codex"
-        ],
-        "description": "Which agent replies in this session's threads. Claude Code and Codex run through their SDKs with this computer's sign-in (W12)."
+        "type": "string",
+        "minLength": 1,
+        "description": "The pool agent that works in this session; \"vibecab\" means the VibeCab role's agent (W13)."
       }
     },
     "additionalProperties": false
@@ -11718,6 +11782,9 @@ export const schemasById: Record<string, AnySchema> = {
         "type": "integer",
         "minimum": 1,
         "maximum": 3650
+      },
+      "roles": {
+        "$ref": "https://vibecab.local/schemas/roles.json"
       }
     },
     "required": [
@@ -13318,6 +13385,7 @@ export const schemasByPath: Record<string, string> = {
   "query-envelope.json": "https://vibecab.local/schemas/query-envelope.json",
   "reply-trigger.json": "https://vibecab.local/schemas/reply-trigger.json",
   "review-request.json": "https://vibecab.local/schemas/review-request.json",
+  "roles.json": "https://vibecab.local/schemas/roles.json",
   "session-artifact.json": "https://vibecab.local/schemas/session-artifact.json",
   "session-digest.json": "https://vibecab.local/schemas/session-digest.json",
   "session-seen.json": "https://vibecab.local/schemas/session-seen.json",

@@ -181,7 +181,7 @@ it("describes an SDK model the engine can store: no key, priced at zero", () => 
   expect(model.keyRef).toBeUndefined();
 });
 
-it("turns an SDK agent off by removing its model, but never the default model", async () => {
+it("turns an SDK agent off by removing its model, like any agent in the pool", async () => {
   const f = await fixture();
   try {
     const set = (models: Record<string, unknown>, id: string) =>
@@ -199,7 +199,6 @@ it("turns an SDK agent off by removing its model, but never the default model", 
       models: Record<string, unknown>;
     };
     expect(after.models.codex).toBeUndefined();
-    expect(await set({ default: null }, "no-default")).toMatchObject({ ok: false, error: { code: "invalid" } });
   } finally {
     await f.close();
   }

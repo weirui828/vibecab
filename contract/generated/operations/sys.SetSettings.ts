@@ -4,7 +4,7 @@ export interface SysSetSettingsOperation {
   payload: {
     patch: {
       /**
-       * Models to add or replace; null removes that alias ("default" cannot be removed).
+       * Pool agents to add or replace; null removes that agent (W13).
        */
       models?: {
         [k: string]: ProviderModel | null;
@@ -12,6 +12,7 @@ export interface SysSetSettingsOperation {
       budgets?: Budgets;
       sessions?: Sessions;
       trashRetentionDays?: number;
+      roles?: Roles;
     };
   };
   result: {
@@ -45,6 +46,14 @@ export interface ProviderModel {
    * Where the price came from: the built-in catalog, a provider's live list, or the person.
    */
   pricingSource?: "catalog" | "live" | "custom";
+  /**
+   * The agent's display name in the pool (W13).
+   */
+  name?: string;
+  /**
+   * Extra instructions added to every request this agent makes, VibeCab or TMR (W13).
+   */
+  instructions?: string;
 }
 export interface Budgets {
   localTimeZone?: string;
@@ -73,9 +82,153 @@ export interface SessionSettings {
   holdIdleMinutes?: number;
   updateIdleMinutes?: number;
   /**
-   * Which agent replies in this session's threads. Claude Code and Codex run through their SDKs with this computer's sign-in (W12).
+   * The pool agent that works in this session; "vibecab" means the VibeCab role's agent (W13).
    */
-  agent?: "vibecab" | "claude-code" | "codex";
+  agent?: string;
+}
+/**
+ * Which pool agents do which job (W13). Agent ids are model aliases.
+ */
+export interface Roles {
+  /**
+   * The agent for Covibe sessions (replies, Updates, digests) unless a session chooses another.
+   */
+  vibecab?: string;
+  tmr?: {
+    /**
+     * @maxItems 7
+     */
+    panel:
+      | []
+      | [
+          {
+            agentId: string;
+            label?: string;
+          }
+        ]
+      | [
+          {
+            agentId: string;
+            label?: string;
+          },
+          {
+            agentId: string;
+            label?: string;
+          }
+        ]
+      | [
+          {
+            agentId: string;
+            label?: string;
+          },
+          {
+            agentId: string;
+            label?: string;
+          },
+          {
+            agentId: string;
+            label?: string;
+          }
+        ]
+      | [
+          {
+            agentId: string;
+            label?: string;
+          },
+          {
+            agentId: string;
+            label?: string;
+          },
+          {
+            agentId: string;
+            label?: string;
+          },
+          {
+            agentId: string;
+            label?: string;
+          }
+        ]
+      | [
+          {
+            agentId: string;
+            label?: string;
+          },
+          {
+            agentId: string;
+            label?: string;
+          },
+          {
+            agentId: string;
+            label?: string;
+          },
+          {
+            agentId: string;
+            label?: string;
+          },
+          {
+            agentId: string;
+            label?: string;
+          }
+        ]
+      | [
+          {
+            agentId: string;
+            label?: string;
+          },
+          {
+            agentId: string;
+            label?: string;
+          },
+          {
+            agentId: string;
+            label?: string;
+          },
+          {
+            agentId: string;
+            label?: string;
+          },
+          {
+            agentId: string;
+            label?: string;
+          },
+          {
+            agentId: string;
+            label?: string;
+          }
+        ]
+      | [
+          {
+            agentId: string;
+            label?: string;
+          },
+          {
+            agentId: string;
+            label?: string;
+          },
+          {
+            agentId: string;
+            label?: string;
+          },
+          {
+            agentId: string;
+            label?: string;
+          },
+          {
+            agentId: string;
+            label?: string;
+          },
+          {
+            agentId: string;
+            label?: string;
+          },
+          {
+            agentId: string;
+            label?: string;
+          }
+        ];
+    process?: "independent-review";
+    spendMicros?: number;
+  };
 }
 export interface Settings {
   models: {
@@ -84,4 +237,5 @@ export interface Settings {
   budgets: Budgets;
   sessions: Sessions;
   trashRetentionDays?: number;
+  roles?: Roles;
 }

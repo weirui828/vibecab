@@ -2,7 +2,7 @@ import { fail, type Contract } from "../../../contract/src/index.js";
 import type { Clock } from "../dependencies.js";
 import type { BudgetLedger } from "./ledger.js";
 import { estimateInputTokens, reportedCostMicros } from "./ledger.js";
-import { BUILT_IN_AGENT, agentFor } from "./types.js";
+import { agentFor } from "./types.js";
 import type {
   ModelCallOptions,
   ModelCapabilities,
@@ -54,6 +54,9 @@ export class ProviderGateway {
       fail("invalid", "Structured output schema is invalid");
     const provider = this.providers[model.provider];
     if (!provider) fail("unsupported", "Configured model provider is unavailable");
+    // The agent's own instructions go with every request it makes, VibeCab or TMR (W13).
+    const instructions = model.instructions?.trim();
+    if (instructions) request = withInstructions(request, instructions);
     const reservation = this.ledger.assertReserved(options.reservationId),
       startedAt = this.clock.now(),
       startMs = Date.parse(startedAt);
@@ -131,10 +134,8 @@ export class ProviderGateway {
           finishReason,
           durationMs: Math.max(0, Date.parse(this.clock.now()) - startMs),
           ...(errorCode ? { errorCode } : {}),
-          // An SDK agent's calls are always its own, whoever asked.
-          ...(options.attribution
-            ? { agentId: agentFor(model) === BUILT_IN_AGENT ? options.attribution.agentId : agentFor(model) }
-            : {}),
+          // A call is the pool agent's whose model it used, whoever asked (W13).
+          ...(options.attribution ? { agentId: agentFor(request.modelRef) } : {}),
           ...(options.attribution?.sessionId ? { sessionId: options.attribution.sessionId } : {}),
           ...(options.attribution?.purpose ? { purpose: options.attribution.purpose } : {}),
           ...(inputTokens !== undefined ? { inputTokens } : {}),
@@ -145,4 +146,18 @@ export class ProviderGateway {
       );
     }
   }
+}
+
+/** The request with the agent's instructions added after its system messages. */
+function withInstructions(request: ModelRequest, instructions: string): ModelRequest {
+  const system = request.messages.filter((m) => m.role === "system"),
+    rest = request.messages.filter((m) => m.role !== "system");
+  return {
+    ...request,
+    messages: [
+      ...system,
+      { role: "system", content: "Instructions from the person who set you up:\n" + instructions },
+      ...rest,
+    ],
+  };
 }

@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/roles.json",
+  "title": "Roles",
+  "description": "Which pool agents do which job (W13). Agent ids are model aliases.",
+  "type": "object",
+  "properties": {
+    "vibecab": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The agent for Covibe sessions (replies, Updates, digests) unless a session chooses another."
+    },
+    "tmr": {
+      "type": "object",
+      "properties": {
+        "panel": {
+          "type": "array",
+          "maxItems": 7,
+          "items": {
+            "type": "object",
+            "properties": {
+              "agentId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 40
+              }
+            },
+            "required": ["agentId"],
+            "additionalProperties": false
+          }
+        },
+        "process": {
+          "enum": ["independent-review"]
+        },
+        "spendMicros": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": ["panel"],
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

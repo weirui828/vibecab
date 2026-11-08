@@ -10,6 +10,7 @@ import type { ProcessSpec } from "./process.js";
 import { finish, markdownReport, saveRun } from "./report.js";
 import type { Run } from "./types.js";
 import { purgeBySource } from "./purge.js";
+import { fromRole } from "./role.js";
 
 const commands = ["tmr.Submit", "tmr.Cancel", "tmr.Resume", "tmr.PurgeBySource"],
   queries = ["tmr.Run", "tmr.Runs", "tmr.Report", "tmr.Events", "tmr.Export"];
@@ -75,7 +76,10 @@ export function tmrModule(): EngineModule {
   };
 }
 
-function submit(ctx: ModuleContext, p: Record<string, Json>): Json {
+function submit(ctx: ModuleContext, request: Record<string, Json>): Json {
+  // The request as sent identifies it; the role fills in what it left out.
+  const requestHash = createHash("sha256").update(canonical(request)).digest("hex"),
+    p = fromRole(ctx, request);
   const participants = ctx.contract.read<Run["participants"]>("json", p.participants),
     ids = participants.map((x) => x.participantId);
   if (!ids.length || new Set(ids).size !== ids.length) fail("invalid", "TMR participants need unique ids");
@@ -84,7 +88,7 @@ function submit(ctx: ModuleContext, p: Record<string, Json>): Json {
   validateProcess(spec, ids);
   if (spec.stages.some((stage) => !ctx.contract.schemaIsValid(stage.outputSchema)))
     fail("invalid", "TMR stage output schema is invalid");
-  const payloadHash = createHash("sha256").update(canonical(p)).digest("hex"),
+  const payloadHash = requestHash,
     requestId = str(p, "requestId"),
     existing = listRuns(ctx).find((x) => x.requestId === requestId);
   if (existing) {
@@ -397,6 +401,8 @@ async function liveContribution(
       reservationId,
       idempotencyKey: key,
       signal: controller.signal,
+      // Each panel member's calls are its own in usage stats (W13).
+      attribution: { agentId: participant.modelRef, purpose: "review" },
     })) {
       if (event.type === "output") output = ctx.contract.read<Json>("json", event.json);
       if (event.type === "error") fail("unavailable", "TMR model contribution failed");

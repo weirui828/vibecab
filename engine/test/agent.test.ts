@@ -341,7 +341,7 @@ it("runs a manual reply through validated tools, records exact manifests and del
       "#/properties/result",
     );
     expect(calls.length).toBeGreaterThan(0);
-    for (const call of calls) expect(call).toMatchObject({ agentId: "vibecab", sessionId, purpose: "reply" });
+    for (const call of calls) expect(call).toMatchObject({ agentId: "default", sessionId, purpose: "reply" });
     expect(await f.engine.query(ctx, { name: "vc.Versions", args: { artifactId } })).toHaveLength(1);
     expect(await f.engine.query(ctx, { name: "vc.Grants", args: {} })).toHaveLength(0);
   } finally {

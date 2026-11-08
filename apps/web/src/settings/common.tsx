@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import type { ReactNode } from "react";
 import { errorMessage } from "../../../ui/src/copy/errors.js";
-import { useBridge } from "../live/LiveStore.js";
+import { useBridge, useLiveQuery } from "../live/LiveStore.js";
 import { useToast } from "../ui/Toast.js";
 import { newCommandId } from "../bridge/webBridge.js";
 
@@ -59,12 +59,19 @@ export function AgentGroup({
   );
 }
 
-/** Names for agent ids in Settings. */
+/** Names for agent ids without a name of their own: the built-in ids, and "vibecab" from before the pool (W13). */
 export const agentNames: Record<string, string> = {
+  default: "Main agent",
   vibecab: "VibeCab agent",
   "claude-code": "Claude Code",
   codex: "Codex",
 };
+
+/** What to call an agent id: the name it was given in the pool, else a built-in name, else the id. */
+export function useAgentName(): (id: string) => string {
+  const settings = useLiveQuery<{ models?: Record<string, { name?: string }> }>("sys.Settings", {});
+  return (id) => settings.data?.models?.[id]?.name?.trim() || agentNames[id] || id;
+}
 
 /** Runs a command; errors become a toast. Returns the result, or undefined on failure. */
 export function useRun() {

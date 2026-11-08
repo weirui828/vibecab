@@ -213,9 +213,9 @@ it("shows what the agent cost and did in Settings → Spending → Usage", async
   const { App } = await import("../src/App.js");
   tl.render(<App bridge={bridge} />);
   const usage = await tl.screen.findByRole("region", { name: "Usage" });
-  // Replies and Updates ran earlier in this file, all on the VibeCab agent.
+  // Replies and Updates ran earlier in this file on the default model: "Main agent" until it has a name.
   await tl.waitFor(() =>
-    expect(tl.within(usage).getByRole("table", { name: "By agent" }).textContent).toContain("VibeCab agent"),
+    expect(tl.within(usage).getByRole("table", { name: "By agent" }).textContent).toContain("Main agent"),
   );
   const purposes = tl.within(usage).getByRole("table", { name: "By purpose" }).textContent ?? "";
   expect(purposes).toContain("Replies");

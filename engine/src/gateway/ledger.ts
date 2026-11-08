@@ -80,8 +80,8 @@ export class BudgetLedger {
       },
     );
   }
-  /** Today's spending: overall, and per agent (the built-in agent always, others once they have a limit or use). */
-  today(): {
+  /** Today's spending: overall, and per agent (every pool agent, and others once they have a limit or use). */
+  today(poolAgents: readonly string[] = []): {
     date: string;
     daily: { limitMicros: number | null; usedMicros: number; reservedMicros: number };
     agents: Array<{ agentId: string; limitMicros: number | null; usedMicros: number; reservedMicros: number }>;
@@ -92,7 +92,7 @@ export class BudgetLedger {
         usedMicros,
         reservedMicros,
       });
-    const ids = new Set(["vibecab"]);
+    const ids = new Set(poolAgents);
     for (const row of this.store.feedbackList("budget-standing")) {
       const key = this.contract.read<{ key: string }>("json", row).key;
       if (key.startsWith("agent:")) ids.add(key.slice("agent:".length));

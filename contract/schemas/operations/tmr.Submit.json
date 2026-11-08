@@ -7,28 +7,73 @@
     "payload": {
       "type": "object",
       "properties": {
-        "requestId": { "type": "string", "minLength": 1 },
-        "question": { "type": "string", "minLength": 1 },
-        "intendedUse": { "type": "string" },
-        "items": { "type": "array", "items": { "type": "object" } },
-        "criteria": { "type": "array", "items": { "type": "string" } },
-        "processSpec": { "type": "object" },
-        "participants": { "type": "array", "items": { "type": "object" } },
+        "requestId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "question": {
+          "type": "string",
+          "minLength": 1
+        },
+        "intendedUse": {
+          "type": "string"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "criteria": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "processSpec": {
+          "type": "object"
+        },
+        "participants": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
         "limits": {
           "type": "object",
-          "properties": { "spendMicros": { "type": "integer", "minimum": 0 }, "autoResume": { "type": "boolean" } },
+          "properties": {
+            "spendMicros": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "autoResume": {
+              "type": "boolean"
+            }
+          },
           "required": ["spendMicros"],
           "additionalProperties": false
         },
-        "mode": { "enum": ["live", "demo"] },
-        "rerunOf": { "type": "string" }
+        "mode": {
+          "enum": ["live", "demo"]
+        },
+        "rerunOf": {
+          "type": "string"
+        }
       },
-      "required": ["requestId", "question", "items", "criteria", "processSpec", "participants", "limits", "mode"],
-      "additionalProperties": false
+      "required": ["requestId", "question", "items", "criteria", "mode"],
+      "additionalProperties": false,
+      "description": "Without participants, processSpec or limits, the run uses the TMR role's panel, process and spending cap (W13)."
     },
     "result": {
       "type": "object",
-      "properties": { "runId": { "type": "string" }, "status": { "type": "string" } },
+      "properties": {
+        "runId": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        }
+      },
       "required": ["runId", "status"],
       "additionalProperties": false
     }
@@ -38,6 +83,10 @@
   "operation": {
     "name": "tmr.Submit",
     "kind": "command",
-    "meta": { "effect": "collaborate", "irreversible": false, "channels": ["in_process", "http", "cli", "mcp"] }
+    "meta": {
+      "effect": "collaborate",
+      "irreversible": false,
+      "channels": ["in_process", "http", "cli", "mcp"]
+    }
   }
 }

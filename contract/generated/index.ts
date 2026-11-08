@@ -203,6 +203,7 @@ export type { ProviderModel } from './provider-model.js';
 export type { QueryEnvelope } from './query-envelope.js';
 export type { ReplyTrigger } from './reply-trigger.js';
 export type { ReviewRequest } from './review-request.js';
+export type { Roles } from './roles.js';
 export type { SessionArtifact } from './session-artifact.js';
 export type { SessionDigest } from './session-digest.js';
 export type { SessionSeen } from './session-seen.js';

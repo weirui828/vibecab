@@ -144,7 +144,7 @@ export abstract class QueryOperations extends CommandOperations {
         read();
         const budgets = this.budgets;
         if (!budgets) fail("unavailable", "Budget ledger is not started");
-        return budgets.today();
+        return budgets.today(Object.keys(this.settings().models));
       }
       case "sys.Budgets": {
         read();

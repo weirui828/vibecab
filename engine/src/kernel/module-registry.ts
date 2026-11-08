@@ -45,7 +45,12 @@ export type GatewayEventPort =
 export interface GatewayPort {
   call(
     request: GatewayRequestPort,
-    options: { reservationId: string; idempotencyKey: string; signal: AbortSignal },
+    options: {
+      reservationId: string;
+      idempotencyKey: string;
+      signal: AbortSignal;
+      attribution?: { agentId: string; purpose: "review" };
+    },
   ): AsyncIterable<GatewayEventPort>;
 }
 

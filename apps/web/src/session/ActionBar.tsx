@@ -4,7 +4,6 @@ import { Button, Icon } from "@wei/design-system";
 import type { ThreadFilter } from "./threads.js";
 import { defaultFilter } from "./threads.js";
 import { plural } from "../ui/time.js";
-import { agentWords } from "./loop.js";
 import type { SessionAgent } from "./loop.js";
 import type { CommentPlace } from "../shell/prefs.js";
 
@@ -46,10 +45,11 @@ function AgentPanel({
   modelReady: boolean;
   onMode(mode: ReplyMode): void;
   onAsk(): void;
-  agents: SessionAgent[];
-  agent: SessionAgent;
+  agents: Array<{ id: SessionAgent; name: string }>;
+  agent: SessionAgent | undefined;
   onAgent(agent: SessionAgent): void;
 }) {
+  const name = agents.find((a) => a.id === agent)?.name ?? "The agent";
   const options: Array<[ReplyMode, string, string]> = [
     ["realtime", "Realtime", "The agent replies a moment after each comment."],
     ["batch", "Batch", "The agent replies after some comments, or when there are no new comments for some minutes."],
@@ -63,15 +63,15 @@ function AgentPanel({
             <>
               <p className="vc-label">Who replies</p>
               <div className="vc-segmented small" role="group" aria-label="Who replies">
-                {agents.map((id) => (
-                  <button key={id} type="button" aria-pressed={agent === id} onClick={() => onAgent(id)}>
-                    {agentWords[id]}
+                {agents.map((a) => (
+                  <button key={a.id} type="button" aria-pressed={agent === a.id} onClick={() => onAgent(a.id)}>
+                    {a.name}
                   </button>
                 ))}
               </div>
             </>
           )}
-          <p className="vc-label">{agentWords[agent]} replies</p>
+          <p className="vc-label">{name} replies</p>
           <div className="vc-segmented small" role="group" aria-label="Reply mode">
             {options.map(([value, label]) => (
               <button key={value} type="button" aria-pressed={mode === value} onClick={() => onMode(value)}>
@@ -85,7 +85,7 @@ function AgentPanel({
           </Button>
         </>
       ) : (
-        <p className="hint">Add a model in Settings to work with the agent.</p>
+        <p className="hint">Add an agent in Settings to work with an agent.</p>
       )}
     </div>
   );
@@ -213,8 +213,8 @@ export function ActionBar({
   onReplyMode(mode: ReplyMode): void;
   onAsk(): void;
   /** Who can reply in this session, who does now, and the way to choose (W12). */
-  agents: SessionAgent[];
-  agent: SessionAgent;
+  agents: Array<{ id: SessionAgent; name: string }>;
+  agent: SessionAgent | undefined;
   onAgent(agent: SessionAgent): void;
   canComment: boolean;
   threadCount: number;

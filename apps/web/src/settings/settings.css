@@ -449,3 +449,70 @@
   color: var(--color-warning-fg);
   font-size: 13.5px;
 }
+
+/* W13: the agent pool, one quiet entry per agent, and the TMR panel's member list. */
+.vc-pool {
+  display: grid;
+  gap: 0;
+  margin: 20px 0;
+}
+.vc-pool-agent {
+  padding: 18px 0 18px 20px;
+  border-left: 2px solid var(--color-border-subtle);
+}
+.vc-pool-agent + .vc-pool-agent {
+  border-top: 1px solid var(--color-border-subtle);
+}
+.vc-pool-agent h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+.vc-pool-agent .vc-facts {
+  margin: 4px 0 0;
+}
+.vc-pool-agent .vc-form-actions {
+  margin-top: 12px;
+}
+.vc-instructions {
+  max-width: 62ch;
+  margin: 8px 0 0;
+  color: var(--color-fg-muted);
+  font-size: 14px;
+  font-style: italic;
+  white-space: pre-wrap;
+}
+.vc-agent-editor {
+  max-width: 640px;
+  margin-top: 16px;
+}
+.vc-panel-members {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.vc-panel-member {
+  display: grid;
+  gap: 6px;
+}
+.vc-panel-check {
+  display: flex;
+  gap: 10px;
+  align-items: start;
+  cursor: pointer;
+}
+.vc-panel-check input {
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: var(--color-accent-default);
+}
+.vc-panel-check .vc-facts {
+  display: block;
+}
+.vc-panel-check + * {
+  margin-left: 28px;
+  max-width: 420px;
+}
