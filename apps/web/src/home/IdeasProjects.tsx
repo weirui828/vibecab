@@ -93,8 +93,18 @@ export function IdeasView({ sessions }: { sessions: SessionRow[] }) {
         <p className="vc-facts">
           {list.length ? plural(list.length, ideaWord) : "Write things down before they slip away."}
         </p>
-        {list.length > 0 && projectList.length > 0 && (
-          <div className="vc-actions">
+      </header>
+      <Capture
+        label={`Write an ${ideaWord} down, then press ↩`}
+        onSave={async (text) => (await act.run("vc.CaptureIdea", { text })) !== undefined}
+      />
+      {list.length > 0 && (
+        // How to use the list, and how to arrange it: both about the list, so both sit right above it.
+        <div className="vc-list-head">
+          <p className="vc-hint">
+            Click an {ideaWord} to change its words. Tick a few to make a {draftWord} or a {projectWord} from them.
+          </p>
+          {projectList.length > 0 && (
             <div className="vc-segmented small" role="group" aria-label="Arrange">
               <button type="button" aria-pressed={group === "newest"} onClick={() => setGroup("newest")}>
                 Newest first
@@ -103,17 +113,8 @@ export function IdeasView({ sessions }: { sessions: SessionRow[] }) {
                 By {projectWord}
               </button>
             </div>
-          </div>
-        )}
-      </header>
-      <Capture
-        label={`Write an ${ideaWord} down, then press ↩`}
-        onSave={async (text) => (await act.run("vc.CaptureIdea", { text })) !== undefined}
-      />
-      {list.length > 0 && (
-        <p className="vc-hint">
-          Click an {ideaWord} to change its words. Tick a few to make a {draftWord} or a {projectWord} from them.
-        </p>
+          )}
+        </div>
       )}
       {groups.map((g) => (
         <section key={g.key} className="vc-section" aria-label={g.title || `${terms.idea}s`}>

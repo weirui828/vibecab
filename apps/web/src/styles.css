@@ -1350,3 +1350,16 @@
 .vc-session-head .vc-facts-line .vc-facts {
   margin-top: 0;
 }
+
+/* Above a list: how to use it on the left, how to arrange it on the right. */
+.vc-list-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-top: 14px;
+}
+.vc-list-head .vc-hint {
+  margin: 0;
+}
