@@ -13,7 +13,7 @@ import { estimateInputTokens, estimateReservationMicros } from "../gateway/ledge
 import type { ModelEvent as GatewayEvent, ModelRequest as GatewayRequest } from "../gateway/types.js";
 import { UpdatePreparationRuntime } from "./preparation-runtime.js";
 import { discussionFor, storeRequestIndex } from "./helpers.js";
-import { untrustedMcpResult } from "../agent/tools/external.js";
+import { untrustedMcpResult } from "../agent/index.js";
 import { sessionPreferences } from "../session-preferences.js";
 
 export abstract class UpdatePlanningRuntime extends UpdatePreparationRuntime {

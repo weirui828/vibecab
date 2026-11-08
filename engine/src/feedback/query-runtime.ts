@@ -19,7 +19,7 @@ import type {
   Update,
   SessionSeen,
 } from "../../../contract/src/index.js";
-import { resolveAnchors } from "../content/diff.js";
+import { resolveAnchors } from "../content/index.js";
 import { FeedbackAgreementRuntime } from "./agreement-runtime.js";
 export class Feedback extends FeedbackAgreementRuntime {
   query(name: string, raw: unknown): unknown {

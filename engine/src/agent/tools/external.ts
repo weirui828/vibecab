@@ -5,7 +5,7 @@ import type { Clock, IdGenerator } from "../../dependencies.js";
 import type { KeyStore } from "../../gateway/types.js";
 import type { Repository } from "../../storage/repository.js";
 import type { ToolTransport } from "../tool-transport.js";
-import { canonical } from "../../content/hash.js";
+import { canonical } from "../../kernel/canonical.js";
 
 export interface OfferedExternalTool {
   name: string;

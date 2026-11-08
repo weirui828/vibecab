@@ -9,9 +9,9 @@ import type {
 import type { Dependencies } from "./dependencies.js";
 import { defaults } from "./dependencies.js";
 import { LifecycleRuntime } from "./lifecycle/runtime.js";
-import { contentModule } from "./content/module.js";
+import { contentModule } from "./content/index.js";
 import { feedbackModule, feedbackPort } from "./feedback/index.js";
-import { agentModule } from "./agent/module.js";
+import { agentModule } from "./agent/index.js";
 import { updatesModule, updatesPort } from "./updates/index.js";
 import { gatewayModule } from "./gateway/module.js";
 import { lifecycleModule } from "./lifecycle/module.js";

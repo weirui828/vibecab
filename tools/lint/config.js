@@ -57,7 +57,22 @@ export default tseslint.config(
   {
     files: ["engine/src/{content,feedback,updates,agent,tmr,integration}/**/*.ts"],
     rules: {
-      "no-restricted-imports": ["error", { paths: ["better-sqlite3"], patterns: ["adapters/*", "**/adapters/*"] }],
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: ["better-sqlite3"],
+          patterns: [
+            // Gitignore-style groups cannot match "../"-relative specifiers, so relative paths need a regex.
+            { group: ["adapters/*", "**/adapters/*"] },
+            { regex: "(^|/)adapters/", message: "Domain modules must not import adapters." },
+            {
+              // Domain modules reach each other only through the other module's index.ts (ports), never its internals.
+              regex: "^\\.\\./(\\.\\./)?(content|feedback|updates|agent|tmr|integration)/(?!index\\.js$)",
+              message: "Import another domain module only through its index.ts.",
+            },
+          ],
+        },
+      ],
     },
   },
   {

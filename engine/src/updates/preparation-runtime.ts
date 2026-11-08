@@ -1,6 +1,6 @@
 import { errorOf, fail } from "../../../contract/src/index.js";
 import type { Json, FeedbackComment, Agreement, Update, Job } from "../../../contract/src/index.js";
-import { AgentRuntime } from "../agent/runtime.js";
+import { AgentRuntime } from "../agent/index.js";
 import { discussionFor, findVerbatimQuote } from "./helpers.js";
 import { inlineMarkdownToPlainText, replaceInlineMarkdownText } from "../../../contract/src/inline-markdown.js";
 import { sessionPreferences } from "../session-preferences.js";

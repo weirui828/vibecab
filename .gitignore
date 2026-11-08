@@ -10,3 +10,6 @@ release/
 apps/macos/build/
 .vibecab/
 *.tsbuildinfo
+
+# graphify knowledge-graph output
+graphify-out/

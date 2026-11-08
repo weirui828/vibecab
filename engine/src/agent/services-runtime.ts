@@ -1,6 +1,6 @@
-import { Content } from "../content/content.js";
+import { Content } from "../content/index.js";
 import { errorOf } from "../../../contract/src/index.js";
-import { Feedback } from "../feedback/feedback.js";
+import { Feedback } from "../feedback/index.js";
 import { BudgetLedger } from "../gateway/ledger.js";
 import { ProviderGateway } from "../gateway/gateway.js";
 import { OpenAICompatibleProvider } from "../gateway/providers/openai-compatible.js";
