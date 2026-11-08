@@ -24,6 +24,7 @@ import { escapeHtml } from "./helpers-runtime.js";
 import { sessionPreferences } from "../session-preferences.js";
 import { renderHtmlDocument, renderHtmlFragment, renderMarkdown } from "./render.js";
 import { BUILT_IN_AGENT } from "../gateway/types.js";
+import { baseModelRef } from "../session-preferences.js";
 import { isQuiet, nextSweepDeferral, shouldForceSweep } from "./sweep-policy.js";
 
 const runFile = promisify(execFile);
@@ -381,7 +382,8 @@ export abstract class LifecycleJobsRuntime extends LifecycleHelpersRuntime {
       sessionId = this.jobId(job, "sessionId");
     if (this.available().feedback("digest", digestId)) return;
     const settings = this.settings(),
-      alias = settings.models.digest ? "digest" : settings.models.default ? "default" : undefined,
+      fallback = baseModelRef(settings, sessionId),
+      alias = settings.models.digest ? "digest" : settings.models[fallback] ? fallback : undefined,
       model = alias ? settings.models[alias] : undefined;
     if (!alias || !model || !this.gateway || !this.budgets) fail("unsupported", "Digest model is not configured");
     const prompt = await readFile(new URL("../agent/prompts/digest.md", import.meta.url), "utf8"),
