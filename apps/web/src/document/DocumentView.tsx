@@ -33,6 +33,15 @@ const calloutIcon: Record<"info" | "note" | "warning", IconName> = {
 };
 const calloutLabel = { info: "Info", note: "Note", warning: "Warning" } as const;
 
+/** The element's inline text, in the container that anchors and highlights count characters in. */
+function Text({ id, text }: { id: string; text: string }) {
+  return (
+    <span className="vc-text" data-text-for={id}>
+      <InlineText text={text} />
+    </span>
+  );
+}
+
 function Heading({ level, id, children }: { level: number; id: string; children: ReactNode }) {
   const props = { "data-element-id": id, className: `vc-h vc-h${level}` };
   switch (level) {
@@ -75,19 +84,19 @@ export function DocumentView({ elements, blobUrl }: { elements: Element[]; blobU
       case "heading":
         return (
           <Heading key={id} id={id} level={Math.max(1, Math.min(6, element.props.level))}>
-            <InlineText text={element.text} />
+            <Text id={id} text={element.text} />
           </Heading>
         );
       case "paragraph":
         return (
           <p key={id} data-element-id={id}>
-            <InlineText text={element.text} />
+            <Text id={id} text={element.text} />
           </p>
         );
       case "quote":
         return (
           <blockquote key={id} data-element-id={id}>
-            <InlineText text={element.text} />
+            <Text id={id} text={element.text} />
           </blockquote>
         );
       case "code_block":
@@ -112,7 +121,7 @@ export function DocumentView({ elements, blobUrl }: { elements: Element[]; blobU
       case "list_item":
         return (
           <li key={id} data-element-id={id}>
-            <InlineText text={element.text} />
+            <Text id={id} text={element.text} />
             {kids(element)}
           </li>
         );
@@ -125,11 +134,11 @@ export function DocumentView({ elements, blobUrl }: { elements: Element[]; blobU
               cell.type === "table_cell" ? (
                 header ? (
                   <th key={cell.elementId} data-element-id={cell.elementId} scope="col">
-                    <InlineText text={cell.text} />
+                    <Text id={cell.elementId} text={cell.text} />
                   </th>
                 ) : (
                   <td key={cell.elementId} data-element-id={cell.elementId}>
-                    <InlineText text={cell.text} />
+                    <Text id={cell.elementId} text={cell.text} />
                   </td>
                 )
               ) : null,
@@ -168,7 +177,7 @@ export function DocumentView({ elements, blobUrl }: { elements: Element[]; blobU
           <aside key={id} data-element-id={id} className="vc-callout" data-tone={element.props.tone}>
             <Icon name={calloutIcon[element.props.tone]} size={20} label={calloutLabel[element.props.tone]} />
             <div>
-              <InlineText text={element.text} />
+              <Text id={id} text={element.text} />
             </div>
           </aside>
         );

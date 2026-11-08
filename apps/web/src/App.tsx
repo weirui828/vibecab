@@ -17,7 +17,11 @@ import { SessionView, parseSessionRoute } from "./session/SessionView.js";
 
 type Access = "checking" | "signed-out" | "ready";
 
-export function App({ bridge = webBridge() }: { bridge?: WebBridge }) {
+// One bridge for the page's lifetime: a new one per render would reset every live query and the event stream.
+let pageBridge: WebBridge | undefined;
+const defaultBridge = () => (pageBridge ??= webBridge());
+
+export function App({ bridge = defaultBridge() }: { bridge?: WebBridge }) {
   const [access, setAccess] = useState<Access>("checking"),
     [connection, setConnection] = useState<ConnectionState>("Starting"),
     [version, setVersion] = useState("0.1.0"),
