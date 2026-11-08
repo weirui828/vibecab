@@ -2,6 +2,7 @@ import { fail, type Contract } from "../../../contract/src/index.js";
 import type { Clock } from "../dependencies.js";
 import type { BudgetLedger } from "./ledger.js";
 import { estimateInputTokens, reportedCostMicros } from "./ledger.js";
+import { BUILT_IN_AGENT, agentFor } from "./types.js";
 import type {
   ModelCallOptions,
   ModelCapabilities,
@@ -130,7 +131,10 @@ export class ProviderGateway {
           finishReason,
           durationMs: Math.max(0, Date.parse(this.clock.now()) - startMs),
           ...(errorCode ? { errorCode } : {}),
-          ...(options.attribution?.agentId ? { agentId: options.attribution.agentId } : {}),
+          // An SDK agent's calls are always its own, whoever asked.
+          ...(options.attribution
+            ? { agentId: agentFor(model) === BUILT_IN_AGENT ? options.attribution.agentId : agentFor(model) }
+            : {}),
           ...(options.attribution?.sessionId ? { sessionId: options.attribution.sessionId } : {}),
           ...(options.attribution?.purpose ? { purpose: options.attribution.purpose } : {}),
           ...(inputTokens !== undefined ? { inputTokens } : {}),

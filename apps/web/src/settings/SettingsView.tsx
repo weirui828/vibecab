@@ -10,6 +10,7 @@ import { relativeTime } from "../ui/time.js";
 import { AssistantSection, DataSection, GrantsSection, ToolsSection } from "./AccessSections.js";
 import { AgentGroup, Section, agentNames, dollars, toMicros, useRun } from "./common.js";
 import { UsageSection } from "./UsageSection.js";
+import { SdkAgents } from "./SdkAgents.js";
 import { ModelForm } from "./ModelForm.js";
 import type { SettingsShape } from "./ModelForm.js";
 
@@ -409,6 +410,7 @@ export function SettingsView({
               <GrantsSection sessions={sessions} />
               <ToolsSection />
             </AgentGroup>
+            <SdkAgents settings={settings.data} />
             <AgentGroup
               id="assistants-agent"
               name="Your AI assistants"

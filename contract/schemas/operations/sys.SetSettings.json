@@ -12,8 +12,16 @@
           "properties": {
             "models": {
               "type": "object",
+              "description": "Models to add or replace; null removes that alias (\"default\" cannot be removed).",
               "additionalProperties": {
-                "$ref": "https://vibecab.local/schemas/provider-model.json"
+                "oneOf": [
+                  {
+                    "$ref": "https://vibecab.local/schemas/provider-model.json"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               }
             },
             "budgets": {

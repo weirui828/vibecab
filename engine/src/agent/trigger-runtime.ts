@@ -43,7 +43,14 @@ export abstract class AgentTriggerRuntime extends AgentServicesRuntime {
     const store = this.available(),
       turnId = this.deps.ids.next("turn_"),
       settings = this.settings(),
-      modelRef = settings.models.reply ? "reply" : "default";
+      chosen = sessionPreferences(settings, sessionId)?.agent,
+      // The session's own agent (Claude Code or Codex, W12) replies when it is set up; else the VibeCab agent.
+      modelRef =
+        chosen && chosen !== "vibecab" && settings.models[chosen]
+          ? chosen
+          : settings.models.reply
+            ? "reply"
+            : "default";
     const turn = this.contract.read<AgentTurn>("agent-turn", {
       turnId,
       sessionId,

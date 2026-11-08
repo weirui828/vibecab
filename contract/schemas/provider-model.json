@@ -5,7 +5,8 @@
   "type": "object",
   "properties": {
     "provider": {
-      "const": "openai-compatible"
+      "enum": ["openai-compatible", "claude-agent-sdk", "codex-sdk"],
+      "description": "openai-compatible: an HTTP model API. claude-agent-sdk / codex-sdk: Claude Code or Codex on this computer, through its SDK and its own sign-in; such models are priced 0 here."
     },
     "baseUrl": {
       "type": "string",

@@ -4,6 +4,7 @@ import { Feedback } from "../feedback/index.js";
 import { BudgetLedger } from "../gateway/ledger.js";
 import { ProviderGateway } from "../gateway/gateway.js";
 import { OpenAICompatibleProvider } from "../gateway/providers/openai-compatible.js";
+import { SdkAgentProvider, claudeCodeRunner, codexRunner } from "../gateway/providers/sdk-agent.js";
 import type { BudgetPort, GatewayPort } from "../kernel/module-registry.js";
 import { QueryOperations } from "../runtime/query-operations.js";
 
@@ -23,6 +24,9 @@ export abstract class AgentServicesRuntime extends QueryOperations {
       this.settings().models,
       {
         "openai-compatible": new OpenAICompatibleProvider(this.deps.keyStore),
+        // Claude Code and Codex on this computer (W12); their SDKs load only when a session uses them.
+        "claude-agent-sdk": new SdkAgentProvider(claudeCodeRunner),
+        "codex-sdk": new SdkAgentProvider(codexRunner),
         ...this.deps.modelProviders,
       },
       this.budgets,

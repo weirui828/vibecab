@@ -4,6 +4,8 @@ import { Button, Icon } from "@wei/design-system";
 import type { ThreadFilter } from "./threads.js";
 import { defaultFilter } from "./threads.js";
 import { plural } from "../ui/time.js";
+import { agentWords } from "./loop.js";
+import type { SessionAgent } from "./loop.js";
 import type { CommentPlace } from "../shell/prefs.js";
 
 // Outline glyphs in the design system's style (24px grid, 1.5 stroke, currentColor) for what it does not ship.
@@ -36,11 +38,17 @@ function AgentPanel({
   modelReady,
   onMode,
   onAsk,
+  agents,
+  agent,
+  onAgent,
 }: {
   mode: ReplyMode;
   modelReady: boolean;
   onMode(mode: ReplyMode): void;
   onAsk(): void;
+  agents: SessionAgent[];
+  agent: SessionAgent;
+  onAgent(agent: SessionAgent): void;
 }) {
   const options: Array<[ReplyMode, string, string]> = [
     ["realtime", "Realtime", "The agent replies a moment after each comment."],
@@ -51,7 +59,19 @@ function AgentPanel({
     <div className="vc-filter vc-agent-panel" role="dialog" aria-label="Agent">
       {modelReady ? (
         <>
-          <p className="vc-label">The agent replies</p>
+          {agents.length > 1 && (
+            <>
+              <p className="vc-label">Who replies</p>
+              <div className="vc-segmented small" role="group" aria-label="Who replies">
+                {agents.map((id) => (
+                  <button key={id} type="button" aria-pressed={agent === id} onClick={() => onAgent(id)}>
+                    {agentWords[id]}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+          <p className="vc-label">{agentWords[agent]} replies</p>
           <div className="vc-segmented small" role="group" aria-label="Reply mode">
             {options.map(([value, label]) => (
               <button key={value} type="button" aria-pressed={mode === value} onClick={() => onMode(value)}>
@@ -172,6 +192,9 @@ export function ActionBar({
   replyMode,
   modelReady,
   onReplyMode,
+  agents,
+  agent,
+  onAgent,
   onAsk,
   onHistory,
   onSnapshot,
@@ -189,6 +212,10 @@ export function ActionBar({
   modelReady: boolean;
   onReplyMode(mode: ReplyMode): void;
   onAsk(): void;
+  /** Who can reply in this session, who does now, and the way to choose (W12). */
+  agents: SessionAgent[];
+  agent: SessionAgent;
+  onAgent(agent: SessionAgent): void;
   canComment: boolean;
   threadCount: number;
   /** Threads with agent replies not looked at yet. */
@@ -271,6 +298,9 @@ export function ActionBar({
         )}
         {panel === "agent" && (
           <AgentPanel
+            agents={agents}
+            agent={agent}
+            onAgent={onAgent}
             mode={replyMode}
             modelReady={modelReady}
             onMode={onReplyMode}

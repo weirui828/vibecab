@@ -4,19 +4,57 @@
   "title": "SessionSettings",
   "type": "object",
   "properties": {
-    "replyTrigger": { "enum": ["realtime", "batch", "manual"] },
-    "tokenLimit": { "type": "integer", "minimum": 1 },
-    "toolCallLimit": { "type": "integer", "minimum": 1 },
-    "replyRateLimitPerHour": { "type": "integer", "minimum": 1 },
-    "realtimeDebounceSeconds": { "type": "integer", "minimum": 1 },
-    "batchCommentThreshold": { "type": "integer", "minimum": 1 },
-    "batchIdleMinutes": { "type": "number", "exclusiveMinimum": 0 },
-    "agentProfile": { "type": "string" },
-    "brief": { "type": "string" },
-    "planReview": { "type": "boolean" },
-    "directEditing": { "type": "boolean" },
-    "holdIdleMinutes": { "type": "number", "exclusiveMinimum": 0 },
-    "updateIdleMinutes": { "type": "number", "exclusiveMinimum": 0 }
+    "replyTrigger": {
+      "enum": ["realtime", "batch", "manual"]
+    },
+    "tokenLimit": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "toolCallLimit": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "replyRateLimitPerHour": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "realtimeDebounceSeconds": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "batchCommentThreshold": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "batchIdleMinutes": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "agentProfile": {
+      "type": "string"
+    },
+    "brief": {
+      "type": "string"
+    },
+    "planReview": {
+      "type": "boolean"
+    },
+    "directEditing": {
+      "type": "boolean"
+    },
+    "holdIdleMinutes": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "updateIdleMinutes": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "agent": {
+      "enum": ["vibecab", "claude-code", "codex"],
+      "description": "Which agent replies in this session's threads. Claude Code and Codex run through their SDKs with this computer's sign-in (W12)."
+    }
   },
   "additionalProperties": false
 }

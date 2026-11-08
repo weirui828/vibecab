@@ -23,7 +23,10 @@ export interface Settings {
   trashRetentionDays?: number;
 }
 export interface ProviderModel {
-  provider: "openai-compatible";
+  /**
+   * openai-compatible: an HTTP model API. claude-agent-sdk / codex-sdk: Claude Code or Codex on this computer, through its SDK and its own sign-in; such models are priced 0 here.
+   */
+  provider: "openai-compatible" | "claude-agent-sdk" | "codex-sdk";
   baseUrl: string;
   model: string;
   keyRef?: string;
@@ -61,4 +64,8 @@ export interface SessionSettings {
   directEditing?: boolean;
   holdIdleMinutes?: number;
   updateIdleMinutes?: number;
+  /**
+   * Which agent replies in this session's threads. Claude Code and Codex run through their SDKs with this computer's sign-in (W12).
+   */
+  agent?: "vibecab" | "claude-code" | "codex";
 }

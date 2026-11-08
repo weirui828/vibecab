@@ -14,4 +14,8 @@ export interface SessionSettings {
   directEditing?: boolean;
   holdIdleMinutes?: number;
   updateIdleMinutes?: number;
+  /**
+   * Which agent replies in this session's threads. Claude Code and Codex run through their SDKs with this computer's sign-in (W12).
+   */
+  agent?: "vibecab" | "claude-code" | "codex";
 }

@@ -222,6 +222,9 @@ export async function serve(
     for (const turn of sequence) provider.enqueueDefaultSequence([turn]);
     providers["vibecab-fake"] = provider;
     providers["openai-compatible"] = provider;
+    // In development and tests, Claude Code and Codex answer from the same script: no real SDK ever starts.
+    providers["claude-agent-sdk"] = provider;
+    providers["codex-sdk"] = provider;
   }
   const workspace = resolve(workspaceDir),
     engine = createEngine({ ...(fakeProviderPath ? { modelProviders: providers } : {}), keyStore });

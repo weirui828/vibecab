@@ -31,7 +31,7 @@ export abstract class CommandOperations extends StorageAccessRuntime {
       case "sys.SetSettings": {
         const p = this.contract.read<{
           patch: {
-            models?: Record<string, ProviderModel>;
+            models?: Record<string, ProviderModel | null>;
             budgets?: SettingsDocument["budgets"];
             sessions?: Record<string, Json>;
             trashRetentionDays?: SettingsDocument["trashRetentionDays"];
@@ -52,8 +52,15 @@ export abstract class CommandOperations extends StorageAccessRuntime {
             next = typeof patch === "object" && patch !== null && !Array.isArray(patch) ? patch : {};
           sessions[sessionId] = { ...existing, ...next };
         }
+        // null removes a model alias (a Claude Code or Codex agent being turned off); the default always stays.
+        const models: Record<string, ProviderModel> = { ...current.models };
+        for (const [alias, model] of Object.entries(p.patch.models ?? {})) {
+          if (model) models[alias] = model;
+          else if (alias === "default") fail("invalid", "The default model cannot be removed");
+          else delete models[alias];
+        }
         const settings = this.saveSettings({
-          models: { ...current.models, ...p.patch.models },
+          models,
           budgets,
           sessions,
           ...(p.patch.trashRetentionDays !== undefined || current.trashRetentionDays !== undefined

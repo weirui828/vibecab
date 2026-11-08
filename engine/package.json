@@ -4,7 +4,9 @@
   "type": "module",
   "exports": "./src/engine.ts",
   "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "0.3.319",
     "@napi-rs/keyring": "^2.1.2",
+    "@openai/codex-sdk": "0.167.0",
     "@vibecab/contract": "workspace:*",
     "better-sqlite3": "^13.0.3",
     "canonicalize": "^5.1.0",
