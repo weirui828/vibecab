@@ -26,6 +26,8 @@ export const primaryNav: Array<{ path: string; label: string; icon: IconName }> 
   { path: "/", label: "Home", icon: "home" },
   { path: "/needs-you", label: "Needs you", icon: "bell" },
   { path: "/drafts", label: `${terms.draft}s`, icon: "document-text" },
+  { path: "/ideas", label: `${terms.idea}s`, icon: "pencil" },
+  { path: "/projects", label: `${terms.project}s`, icon: "briefcase" },
 ];
 
 export function sessionTone(session: SessionRow, items: AttentionItem[] | undefined): MoundTone {
@@ -69,7 +71,8 @@ export function ThemeSwitch({
   );
 }
 
-const isCurrent = (route: string, path: string) => (path === "/" ? route === "/" : route.startsWith(path));
+const isCurrent = (route: string, path: string) =>
+  path === "/" ? route === "/" : route.startsWith(path) || (path === "/projects" && route.startsWith("/p/"));
 
 /** A quiet sidebar for navigation only. */
 export function Sidebar(props: NavProps) {

@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Element, VcArtifactOperation } from "../../../../contract/generated/index.js";
 import { useBridge, useLiveQuery } from "../live/LiveStore.js";
-import type { SessionRow } from "../live/workspace.js";
+import type { DraftRow, SessionRow } from "../live/workspace.js";
 import { DocumentView } from "../document/DocumentView.js";
 import { useToast } from "../ui/Toast.js";
 import { CommentSurface } from "./CommentSurface.js";
 import { ChangesView } from "./ChangesView.js";
 import { ConflictDialog } from "./ConflictDialog.js";
 import { UpdateStrip } from "./UpdateStrip.js";
+import { ExportDialog } from "./ExportDialog.js";
+import type { ExportTarget } from "./ExportDialog.js";
+import { HistorySheet, SnapshotDialog } from "./HistorySheet.js";
+import { VersionView } from "./VersionView.js";
 import type { Loop, Update } from "./loop.js";
 import type { Thread } from "./threads.js";
 import { byElementId } from "./textRanges.js";
@@ -23,11 +27,14 @@ function flash(elementId: string) {
 export function DraftDocument({
   session,
   artifactId,
+  drafts,
   loop,
   skeleton,
 }: {
   session: SessionRow;
   artifactId: string;
+  /** The session's Drafts, for Snapshots and history. */
+  drafts: DraftRow[];
   loop: Loop;
   skeleton: React.ReactNode;
 }) {
@@ -39,6 +46,10 @@ export function DraftDocument({
     [changes, setChanges] = useState<Update>(),
     [dismissed, setDismissed] = useState<string>(),
     [choosing, setChoosing] = useState(false),
+    [viewing, setViewing] = useState<number>(),
+    [history, setHistory] = useState(false),
+    [snapshot, setSnapshot] = useState(false),
+    [exporting, setExporting] = useState<{ target: ExportTarget; title: string }>(),
     seenVersion = useRef<number>(undefined),
     anchor = useRef<{ id: string; top: number }>(undefined);
   const readOnly = session.state === "ended" || !artifact.data;
@@ -83,30 +94,42 @@ export function DraftDocument({
     },
     [loop.updates],
   );
-  const closeChoosing = useCallback(() => setChoosing(false), []);
+  const closeChoosing = useCallback(() => setChoosing(false), []),
+    closeHistory = useCallback(() => setHistory(false), []);
+  const draft = drafts.find((d) => d.artifactId === artifactId);
   if (!elements.data) return <>{skeleton}</>;
   const allThreads = threads.data ?? [];
   return (
     <>
-      <UpdateStrip
-        artifactId={artifactId}
-        loop={loop}
-        threads={allThreads}
-        elements={elements.data}
-        dismissedUpdate={dismissed}
-        changesShown={changes !== undefined}
-        onDismiss={(id) => {
-          setDismissed(id);
-          setChanges(undefined);
-        }}
-        onToggleChanges={(update) => setChanges((current) => (current ? undefined : update))}
-        onFind={(id) => {
-          setChanges(undefined);
-          setTimeout(() => flash(id), 0);
-        }}
-        onConflicts={() => setChoosing(true)}
-      />
-      {changes ? (
+      {!viewing && (
+        <UpdateStrip
+          artifactId={artifactId}
+          loop={loop}
+          threads={allThreads}
+          elements={elements.data}
+          dismissedUpdate={dismissed}
+          changesShown={changes !== undefined}
+          onDismiss={(id) => {
+            setDismissed(id);
+            setChanges(undefined);
+          }}
+          onToggleChanges={(update) => setChanges((current) => (current ? undefined : update))}
+          onFind={(id) => {
+            setChanges(undefined);
+            setTimeout(() => flash(id), 0);
+          }}
+          onConflicts={() => setChoosing(true)}
+        />
+      )}
+      {viewing && artifact.data && viewing < artifact.data.headVersion ? (
+        <VersionView
+          artifactId={artifactId}
+          version={viewing}
+          head={artifact.data.headVersion}
+          readOnly={readOnly}
+          onBack={() => setViewing(undefined)}
+        />
+      ) : changes ? (
         <ChangesView
           artifactId={artifactId}
           update={changes}
@@ -126,10 +149,38 @@ export function DraftDocument({
           loop={loop}
           replyMode={session.replyTrigger}
           onOpenChanges={openChanges}
+          onHistory={() => setHistory(true)}
+          onSnapshot={() => setSnapshot(true)}
         >
           <DocumentView elements={elements.data} blobUrl={bridge.blobUrl} />
         </CommentSurface>
       )}
+      {history && draft && (
+        <HistorySheet
+          sessionId={session.sessionId}
+          draft={draft}
+          drafts={drafts}
+          viewing={viewing}
+          onView={(version) => {
+            setChanges(undefined);
+            setViewing(version);
+          }}
+          onExport={(target, title) => setExporting({ target, title })}
+          onClose={closeHistory}
+        />
+      )}
+      <SnapshotDialog
+        open={snapshot}
+        sessionId={session.sessionId}
+        drafts={drafts}
+        onClose={() => setSnapshot(false)}
+      />
+      <ExportDialog
+        open={exporting !== undefined}
+        target={exporting?.target}
+        title={exporting?.title ?? ""}
+        onClose={() => setExporting(undefined)}
+      />
       <ConflictDialog open={choosing} loop={loop} threads={allThreads} onClose={closeChoosing} />
     </>
   );

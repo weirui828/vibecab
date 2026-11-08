@@ -49,8 +49,12 @@ export function CommentSurface({
   loop,
   replyMode,
   onOpenChanges,
+  onHistory,
+  onSnapshot,
   children,
 }: {
+  onHistory(): void;
+  onSnapshot(): void;
   loop: Loop;
   replyMode: ReplyMode;
   onOpenChanges(version: number): void;
@@ -420,6 +424,8 @@ export function CommentSurface({
         modelReady={loop.modelReady}
         onReplyMode={(mode) => void actions.setReplyMode(mode)}
         onAsk={() => void actions.ask()}
+        onHistory={onHistory}
+        onSnapshot={onSnapshot}
       />
     </div>
   );
