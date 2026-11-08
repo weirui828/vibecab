@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/operations/vc.EditIdea.json",
+  "title": "vcEditIdeaOperation",
+  "type": "object",
+  "properties": {
+    "payload": {
+      "type": "object",
+      "properties": {
+        "ideaId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["ideaId", "text"],
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "properties": {
+        "ideaId": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": ["ideaId"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["payload", "result"],
+  "additionalProperties": false,
+  "operation": {
+    "name": "vc.EditIdea",
+    "kind": "command",
+    "meta": {
+      "effect": "collaborate",
+      "irreversible": false,
+      "channels": ["in_process", "http", "cli", "mcp"]
+    }
+  }
+}

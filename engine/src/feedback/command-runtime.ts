@@ -10,6 +10,7 @@ import type {
   SessionArtifact,
   ReplyTrigger,
   VcCaptureIdeaOperation,
+  VcEditIdeaOperation,
   VcCreateProjectOperation,
   VcStartSessionOperation,
   VcAttachArtifactOperation,
@@ -42,6 +43,18 @@ export abstract class FeedbackCommandRuntime extends FeedbackCoreRuntime {
         });
         this.event("vc.IdeaCaptured", { kind: "idea", id: ideaId }, { ideaId });
         return { ideaId };
+      }
+      case "vc.EditIdea": {
+        const p = this.contract.read<VcEditIdeaOperation["payload"]>(
+          "operations/vc.EditIdea",
+          raw,
+          "#/properties/payload",
+        );
+        // Only the words change: the idea keeps its id, links, date and the sessions and projects it went into.
+        const idea = this.get<Idea>("idea", "idea", p.ideaId);
+        this.save<Idea>("idea", "idea", p.ideaId, { ...idea, text: p.text });
+        this.event("vc.IdeaEdited", { kind: "idea", id: p.ideaId }, { ideaId: p.ideaId });
+        return { ideaId: p.ideaId };
       }
       case "vc.CreateProject": {
         const p = this.contract.read<VcCreateProjectOperation["payload"]>(

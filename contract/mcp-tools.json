@@ -117,6 +117,10 @@
     "toolName": "edit_digest",
     "description": "Perform edit digest."
   },
+  "vc.EditIdea": {
+    "toolName": "edit_idea",
+    "description": "Change the text of a saved idea."
+  },
   "vc.Elements": {
     "toolName": "read_elements",
     "description": "Read blocks from an artifact version."
