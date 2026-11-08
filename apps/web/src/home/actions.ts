@@ -13,6 +13,8 @@ export interface NewDraft {
   markdown?: string;
   /** Existing session to add the Draft to; a new session named after the Draft otherwise. */
   sessionId?: string;
+  /** The first Draft in a session is its primary one. */
+  role?: "primary" | "reference";
 }
 
 /** Workspace actions shared by Home, Drafts and Needs you. Errors become short toasts. */
@@ -31,7 +33,7 @@ export function useActions() {
     [bridge, toast],
   );
   return {
-    async createDraft({ title, markdown, sessionId }: NewDraft): Promise<boolean> {
+    async createDraft({ title, markdown, sessionId, role = "primary" }: NewDraft): Promise<boolean> {
       const created =
         markdown === undefined
           ? await run<{ artifactId: string }>("vc.CreateArtifact", { title, mediaKind: "doc" })
@@ -42,9 +44,14 @@ export function useActions() {
       const attached = await run("vc.AttachArtifact", {
         sessionId: target,
         artifactId: created.artifactId,
-        role: "primary",
+        role: sessionId ? role : "primary",
       });
-      if (attached) navigate("/s/" + target);
+      if (attached) navigate(`/s/${target}/d/${created.artifactId}`);
+      return attached !== undefined;
+    },
+    async attach(sessionId: string, artifactId: string, role: "primary" | "reference"): Promise<boolean> {
+      const attached = await run("vc.AttachArtifact", { sessionId, artifactId, role });
+      if (attached) navigate(`/s/${sessionId}/d/${artifactId}`);
       return attached !== undefined;
     },
     async startSession(title: string): Promise<boolean> {

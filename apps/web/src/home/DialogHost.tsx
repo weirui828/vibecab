@@ -1,42 +1,70 @@
 import { createContext, useContext, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { terms } from "../../../ui/src/copy/terms.js";
-import type { SessionRow } from "../live/workspace.js";
+import type { DraftRow, SessionRow } from "../live/workspace.js";
 import { useActions } from "./actions.js";
 import type { TrashKind } from "./actions.js";
-import { NewDraftDialog, TitleDialog } from "./Dialogs.js";
+import { AttachDialog, NewDraftDialog, TitleDialog } from "./Dialogs.js";
 
 interface Dialogs {
-  newDraft(): void;
+  newDraft(sessionId?: string): void;
+  attachDraft(sessionId: string): void;
   newSession(): void;
   rename(kind: TrashKind, id: string, title: string): void;
 }
-const DialogContext = createContext<Dialogs>({ newDraft() {}, newSession() {}, rename() {} });
+const DialogContext = createContext<Dialogs>({ newDraft() {}, attachDraft() {}, newSession() {}, rename() {} });
 export const useDialogs = () => useContext(DialogContext);
 
-type Open = { kind: "draft" } | { kind: "session" } | { kind: "rename"; target: TrashKind; id: string; title: string };
+type Open =
+  | { kind: "draft"; sessionId?: string }
+  | { kind: "attach"; sessionId: string }
+  | { kind: "session" }
+  | { kind: "rename"; target: TrashKind; id: string; title: string };
 
-export function DialogHost({ sessions, children }: { sessions: SessionRow[]; children: ReactNode }) {
+export function DialogHost({
+  sessions,
+  drafts,
+  children,
+}: {
+  sessions: SessionRow[];
+  drafts: DraftRow[];
+  children: ReactNode;
+}) {
   const [open, setOpen] = useState<Open>(),
     actions = useActions(),
     close = () => setOpen(undefined);
   const api = useMemo<Dialogs>(
     () => ({
-      newDraft: () => setOpen({ kind: "draft" }),
+      newDraft: (sessionId?: string) => setOpen(sessionId ? { kind: "draft", sessionId } : { kind: "draft" }),
+      attachDraft: (sessionId: string) => setOpen({ kind: "attach", sessionId }),
       newSession: () => setOpen({ kind: "session" }),
       rename: (target, id, title) => setOpen({ kind: "rename", target, id, title }),
     }),
     [],
   );
-  const rename = open?.kind === "rename" ? open : undefined;
+  const rename = open?.kind === "rename" ? open : undefined,
+    fixed = open?.kind === "draft" && open.sessionId ? sessions.find((s) => s.sessionId === open.sessionId) : undefined,
+    attachTo = open?.kind === "attach" ? sessions.find((s) => s.sessionId === open.sessionId) : undefined;
   return (
     <DialogContext.Provider value={api}>
       {children}
       <NewDraftDialog
         open={open?.kind === "draft"}
         sessions={sessions}
+        {...(fixed ? { fixedSession: fixed } : {})}
         onClose={close}
         onCreate={actions.createDraft}
+      />
+      <AttachDialog
+        open={open?.kind === "attach"}
+        session={attachTo}
+        drafts={drafts}
+        onClose={close}
+        onAttach={(artifactId) =>
+          attachTo
+            ? actions.attach(attachTo.sessionId, artifactId, attachTo.artifactIds.length ? "reference" : "primary")
+            : Promise.resolve(false)
+        }
       />
       <TitleDialog
         open={open?.kind === "session"}

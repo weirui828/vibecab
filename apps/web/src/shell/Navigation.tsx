@@ -118,7 +118,11 @@ export function Sidebar(props: NavProps) {
                   className="vc-session-link"
                   href={"#/s/" + session.sessionId}
                   data-state={session.state}
-                  aria-current={route === "/s/" + session.sessionId ? "page" : undefined}
+                  aria-current={
+                    route === "/s/" + session.sessionId || route.startsWith("/s/" + session.sessionId + "/")
+                      ? "page"
+                      : undefined
+                  }
                   onClick={onNavigate}
                 >
                   <Mound tone={sessionTone(session, items)} />

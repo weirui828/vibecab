@@ -33,7 +33,7 @@ export function HomeView({ workspace }: { workspace: Workspace }) {
         <h1 className="vc-display">{greeting()}</h1>
         <p className="vc-facts">{facts}</p>
         <div className="vc-actions">
-          <Button variant="primary" leadingIcon={<Icon name="plus" />} onClick={dialogs.newDraft}>
+          <Button variant="primary" leadingIcon={<Icon name="plus" />} onClick={() => dialogs.newDraft()}>
             New {terms.draft.toLowerCase()}
           </Button>
           <Button variant="ghost" onClick={dialogs.newSession}>
@@ -107,7 +107,7 @@ export function EmptyHome() {
         <p>
           Start a {terms.draft.toLowerCase()}, leave comments where it feels off, and let the agent do the rewriting.
         </p>
-        <Button variant="primary" size="lg" leadingIcon={<Icon name="plus" />} onClick={dialogs.newDraft}>
+        <Button variant="primary" size="lg" leadingIcon={<Icon name="plus" />} onClick={() => dialogs.newDraft()}>
           New {terms.draft.toLowerCase()}
         </Button>
         <ol className="vc-steps">
@@ -162,7 +162,7 @@ export function DraftsView({ workspace }: { workspace: Workspace }) {
         <h1 className="vc-display">{terms.draft}s</h1>
         <p className="vc-facts">{plural(drafts.length, terms.draft)} · newest first</p>
         <div className="vc-actions">
-          <Button variant="primary" leadingIcon={<Icon name="plus" />} onClick={dialogs.newDraft}>
+          <Button variant="primary" leadingIcon={<Icon name="plus" />} onClick={() => dialogs.newDraft()}>
             New {terms.draft.toLowerCase()}
           </Button>
         </div>

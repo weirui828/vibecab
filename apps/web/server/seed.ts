@@ -60,7 +60,49 @@ Covibe is how a person and an agent shape one piece of work together. You commen
 
 Snapshots freeze a set of drafts so you can share or export them later.`,
   );
-  const launch = await draft("Launch notes", "# Launch notes\n\nWhat ships first, and what waits for the second week.");
+  const launch = await draft(
+    "Launch notes",
+    `# Launch notes
+
+What ships on day one, what waits for the second week, and how we will know it *worked*.
+
+## Day one
+
+The first release is small on purpose. People do **one thing well**: comment where it feels off, then agree.
+
+- Start a Draft from a blank page or a Markdown file
+- Comment on any sentence or block
+  - Replies arrive in the margin, next to the text
+  - Nothing changes until you agree
+- Take a Snapshot before sending it anywhere
+
+### What we measure
+
+| Signal | Target | Why it matters |
+| --- | --- | --- |
+| Drafts with a second version | 60% | People trusted the agent with a rewrite |
+| Comments per Draft | 4–8 | Enough to steer, not so many it becomes editing |
+| Undo after an Update | under 5% | Updates change only what was agreed |
+
+## Second week
+
+1. Snapshots and export to Markdown
+2. Connecting your own assistant through MCP
+3. A calmer history view
+
+> The best launch note is short enough to read twice.
+
+---
+
+To try the engine from a terminal, run \`vibecab --workspace ~/notes\` and then:
+
+\`\`\`bash
+vibecab sessions list
+vibecab comment --session launch "Lead with the one thing people can do on day one."
+\`\`\`
+
+More in the [design notes](https://example.com/vibecab/design).`,
+  );
   const faq = await draft("Launch FAQ", "# Launch FAQ\n\nShort answers to the questions people will ask on day one.");
   const reading = await draft("Reading list", "# Reading list\n\nPapers worth a second look.");
   const retro = await draft("Q3 retrospective", "# Q3 retrospective\n\nWhat worked, what did not, what we change.");

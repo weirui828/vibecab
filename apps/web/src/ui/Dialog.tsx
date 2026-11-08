@@ -13,7 +13,7 @@ export function Dialog({
 }: {
   open: boolean;
   title: string;
-  lede?: string;
+  lede?: string | undefined;
   onClose(): void;
   onSubmit(): void;
   children: ReactNode;

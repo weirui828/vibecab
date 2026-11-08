@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Button, Field, Input } from "@wei/design-system";
 import { terms } from "../../../ui/src/copy/terms.js";
 import { Dialog } from "../ui/Dialog.js";
-import type { SessionRow } from "../live/workspace.js";
+import type { DraftRow, SessionRow } from "../live/workspace.js";
 import type { NewDraft } from "./actions.js";
 
 const NEW_SESSION = "__new__";
@@ -10,11 +10,14 @@ const NEW_SESSION = "__new__";
 export function NewDraftDialog({
   open,
   sessions,
+  fixedSession,
   onClose,
   onCreate,
 }: {
   open: boolean;
   sessions: SessionRow[];
+  /** Adding to a known session: no session picker. */
+  fixedSession?: SessionRow;
   onClose(): void;
   onCreate(draft: NewDraft): Promise<boolean>;
 }) {
@@ -38,10 +41,12 @@ export function NewDraftDialog({
     if (!name) return setError("Give it a title.");
     if (mode === "import" && !file) return setError("Choose a Markdown file.");
     setBusy(true);
+    const target = fixedSession ?? sessions.find((s) => s.sessionId === sessionId);
     const ok = await onCreate({
       title: name,
+      role: target && target.artifactIds.length > 0 ? "reference" : "primary",
       ...(mode === "import" && file ? { markdown: file.text } : {}),
-      ...(sessionId !== NEW_SESSION ? { sessionId } : {}),
+      ...(fixedSession ? { sessionId: fixedSession.sessionId } : sessionId !== NEW_SESSION ? { sessionId } : {}),
     });
     setBusy(false);
     if (ok) onClose();
@@ -49,8 +54,12 @@ export function NewDraftDialog({
   return (
     <Dialog
       open={open}
-      title={`New ${terms.draft.toLowerCase()}`}
-      lede="Start from a blank page or bring in a Markdown file."
+      title={fixedSession ? `Add a ${terms.draft.toLowerCase()}` : `New ${terms.draft.toLowerCase()}`}
+      lede={
+        fixedSession
+          ? `To “${fixedSession.title}”. Start from a blank page or bring in a Markdown file.`
+          : "Start from a blank page or bring in a Markdown file."
+      }
       onClose={onClose}
       onSubmit={() => void submit()}
       buttons={
@@ -102,7 +111,7 @@ export function NewDraftDialog({
           }}
         />
       </Field>
-      {active.length > 0 && (
+      {!fixedSession && active.length > 0 && (
         <Field label={terms.session}>
           <select className="vc-select" value={sessionId} onChange={(event) => setSessionId(event.target.value)}>
             <option value={NEW_SESSION}>A new {terms.session.toLowerCase()}</option>
@@ -180,6 +189,69 @@ export function TitleDialog({
           }}
         />
       </Field>
+    </Dialog>
+  );
+}
+
+export function AttachDialog({
+  open,
+  session,
+  drafts,
+  onClose,
+  onAttach,
+}: {
+  open: boolean;
+  session: SessionRow | undefined;
+  drafts: DraftRow[];
+  onClose(): void;
+  onAttach(artifactId: string): Promise<boolean>;
+}) {
+  const candidates = drafts.filter((d) => !session?.artifactIds.includes(d.artifactId)),
+    [choice, setChoice] = useState(""),
+    [busy, setBusy] = useState(false);
+  useEffect(() => {
+    if (open) setChoice(candidates[0]?.artifactId ?? "");
+  }, [open]);
+  async function submit() {
+    if (!choice) return;
+    setBusy(true);
+    const ok = await onAttach(choice);
+    setBusy(false);
+    if (ok) onClose();
+  }
+  return (
+    <Dialog
+      open={open}
+      title={`Bring in a ${terms.draft.toLowerCase()}`}
+      lede={session ? `It stays where it is and also joins “${session.title}”.` : undefined}
+      onClose={onClose}
+      onSubmit={() => void submit()}
+      buttons={
+        <>
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="primary" loading={busy} disabled={!choice}>
+            Bring in
+          </Button>
+        </>
+      }
+    >
+      {candidates.length ? (
+        <Field label={terms.draft}>
+          <select className="vc-select" value={choice} onChange={(event) => setChoice(event.target.value)}>
+            {candidates.map((d) => (
+              <option key={d.artifactId} value={d.artifactId}>
+                {d.title}
+              </option>
+            ))}
+          </select>
+        </Field>
+      ) : (
+        <p className="vc-muted" style={{ margin: 0 }}>
+          Every {terms.draft.toLowerCase()} is already here.
+        </p>
+      )}
     </Dialog>
   );
 }
