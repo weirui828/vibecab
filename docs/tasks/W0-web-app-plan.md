@@ -36,6 +36,10 @@ engine HTTP adapter  127.0.0.1:<engine port>  (started or reused through @vibeca
 
 What is wrong today (seen in the running app, 1440×900, both themes): the Document is squeezed between a Drafts column and a 360px rail; threads appear twice (inline under the text and in the rail); the header has four equal buttons and a second row of controls; the catch-up card sits on top of the Document; a decorative session diagram competes with content; nothing adapts below 960px.
 
+### Start from first principles
+
+Nothing in the layout of `apps/ui` is kept by default: not the three columns, not the sidebar contents, not the header, not the order of the sections. Every screen starts from two questions: what is the person here to do, and what is the least on screen that lets them do it well? Function is kept (every operation the Electron app offers must stay reachable); placement, grouping and chrome are redesigned from scratch. Bold changes are welcome when they make the screen calmer or the main task faster.
+
 ### Taste reference: Handscroll
 
 Wei's Handscroll app (`weirui828.github.io/handscroll`, cover in `~/dev/media/handscroll/cover.png`) is the bar: plain and useful, with nothing piled up. What it does, and what VibeCab copies:
