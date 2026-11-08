@@ -332,6 +332,7 @@ export abstract class CommandOperations extends StorageAccessRuntime {
         return { artifactId: r.artifactId, version: r.version };
       }
       case "vc.CaptureIdea":
+      case "vc.EditIdea":
       case "vc.CreateProject":
       case "vc.AttachProjectItem":
       case "vc.DetachProjectItem":

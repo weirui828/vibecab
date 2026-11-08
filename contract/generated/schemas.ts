@@ -2895,6 +2895,22 @@ export const schemasById: Record<string, AnySchema> = {
     ],
     "additionalProperties": false
   },
+  "https://vibecab.local/schemas/events/vc.IdeaEdited.json": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://vibecab.local/schemas/events/vc.IdeaEdited.json",
+    "title": "IdeaEdited",
+    "type": "object",
+    "properties": {
+      "ideaId": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "required": [
+      "ideaId"
+    ],
+    "additionalProperties": false
+  },
   "https://vibecab.local/schemas/events/vc.LifecycleChanged.json": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://vibecab.local/schemas/events/vc.LifecycleChanged.json",
@@ -7302,6 +7318,64 @@ export const schemasById: Record<string, AnySchema> = {
     "additionalProperties": false,
     "operation": {
       "name": "vc.EditDigest",
+      "kind": "command",
+      "meta": {
+        "effect": "collaborate",
+        "irreversible": false,
+        "channels": [
+          "in_process",
+          "http",
+          "cli",
+          "mcp"
+        ]
+      }
+    }
+  },
+  "https://vibecab.local/schemas/operations/vc.EditIdea.json": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://vibecab.local/schemas/operations/vc.EditIdea.json",
+    "title": "vcEditIdeaOperation",
+    "type": "object",
+    "properties": {
+      "payload": {
+        "type": "object",
+        "properties": {
+          "ideaId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "text": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "ideaId",
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "ideaId": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "ideaId"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "required": [
+      "payload",
+      "result"
+    ],
+    "additionalProperties": false,
+    "operation": {
+      "name": "vc.EditIdea",
       "kind": "command",
       "meta": {
         "effect": "collaborate",
@@ -12490,6 +12564,7 @@ export const schemasByPath: Record<string, string> = {
   "events/vc.FeedbackStateChanged.json": "https://vibecab.local/schemas/events/vc.FeedbackStateChanged.json",
   "events/vc.HoldChanged.json": "https://vibecab.local/schemas/events/vc.HoldChanged.json",
   "events/vc.IdeaCaptured.json": "https://vibecab.local/schemas/events/vc.IdeaCaptured.json",
+  "events/vc.IdeaEdited.json": "https://vibecab.local/schemas/events/vc.IdeaEdited.json",
   "events/vc.LifecycleChanged.json": "https://vibecab.local/schemas/events/vc.LifecycleChanged.json",
   "events/vc.ProjectCreated.json": "https://vibecab.local/schemas/events/vc.ProjectCreated.json",
   "events/vc.ProjectItemAttached.json": "https://vibecab.local/schemas/events/vc.ProjectItemAttached.json",
@@ -12568,6 +12643,7 @@ export const schemasByPath: Record<string, string> = {
   "operations/vc.DisconnectToolServer.json": "https://vibecab.local/schemas/operations/vc.DisconnectToolServer.json",
   "operations/vc.EditComment.json": "https://vibecab.local/schemas/operations/vc.EditComment.json",
   "operations/vc.EditDigest.json": "https://vibecab.local/schemas/operations/vc.EditDigest.json",
+  "operations/vc.EditIdea.json": "https://vibecab.local/schemas/operations/vc.EditIdea.json",
   "operations/vc.Elements.json": "https://vibecab.local/schemas/operations/vc.Elements.json",
   "operations/vc.EndSession.json": "https://vibecab.local/schemas/operations/vc.EndSession.json",
   "operations/vc.Export.json": "https://vibecab.local/schemas/operations/vc.Export.json",

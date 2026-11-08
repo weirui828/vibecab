@@ -1,242 +1,181 @@
 import { useState } from "react";
-import { Button, Field, Icon, Input, Textarea } from "@wei/design-system";
+import { Button, Icon } from "@wei/design-system";
 import type { Idea, Project } from "../../../../contract/generated/index.js";
-import { errorMessage } from "../../../ui/src/copy/errors.js";
 import { terms } from "../../../ui/src/copy/terms.js";
-import { useBridge, useLiveQuery } from "../live/LiveStore.js";
+import { useLiveQuery } from "../live/LiveStore.js";
 import type { DraftRow, SessionRow } from "../live/workspace.js";
-import { Dialog } from "../ui/Dialog.js";
 import { Menu } from "../ui/Menu.js";
-import { useToast } from "../ui/Toast.js";
 import { plural, relativeTime } from "../ui/time.js";
-import { navigate } from "../shell/prefs.js";
-import { newCommandId } from "../bridge/webBridge.js";
-import { useActions } from "./actions.js";
 import { PageSkeleton } from "./Views.js";
+import {
+  Capture,
+  CheckDialog,
+  IdeaRow,
+  MakeDraftDialog,
+  NewProjectDialog,
+  PickDialog,
+  SelectionBar,
+  draftWord,
+  ideaWord,
+  kindWords,
+  projectWord,
+  sessionWord,
+  useIdeaActions,
+} from "./ideaParts.js";
+import type { ItemKind } from "./ideaParts.js";
 
-type ItemKind = "idea" | "artifact" | "session";
-const kindWords: Record<ItemKind, string> = { idea: terms.idea, artifact: terms.draft, session: terms.session };
-
-function useRun() {
-  const bridge = useBridge(),
-    toast = useToast();
-  return async <T,>(type: string, payload: unknown): Promise<T | undefined> => {
-    const result = await bridge.command(type, payload, newCommandId());
-    if (!result.ok) {
-      toast(errorMessage(result.error.code));
-      return undefined;
-    }
-    return result.result as T;
-  };
-}
-
-/** Picks one of several things in a small dialog. */
-function PickDialog({
-  open,
-  title,
-  label,
-  options,
-  submitLabel,
-  onClose,
-  onPick,
-}: {
-  open: boolean;
-  title: string;
-  label: string;
-  options: Array<{ id: string; title: string }>;
-  submitLabel: string;
-  onClose(): void;
-  onPick(id: string): Promise<unknown>;
-}) {
-  const [choice, setChoice] = useState("");
-  const value = options.some((o) => o.id === choice) ? choice : (options[0]?.id ?? "");
-  return (
-    <Dialog
-      open={open}
-      title={title}
-      onClose={onClose}
-      onSubmit={() => value && void onPick(value).then(onClose)}
-      buttons={
-        <>
-          <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit" variant="primary" disabled={!value}>
-            {submitLabel}
-          </Button>
-        </>
-      }
-    >
-      {options.length ? (
-        <Field label={label}>
-          <select className="vc-select" value={value} onChange={(event) => setChoice(event.target.value)}>
-            {options.map((o) => (
-              <option key={o.id} value={o.id}>
-                {o.title}
-              </option>
-            ))}
-          </select>
-        </Field>
-      ) : (
-        <p className="vc-muted" style={{ margin: 0 }}>
-          Nothing to add yet.
-        </p>
-      )}
-    </Dialog>
-  );
-}
+export { markdownFromIdeas, titleFromIdeas } from "./ideaParts.js";
 
 export function IdeasView({ sessions }: { sessions: SessionRow[] }) {
   const ideas = useLiveQuery<Idea[]>("vc.Ideas", {}),
     projects = useLiveQuery<Project[]>("vc.Projects", {}),
-    run = useRun(),
-    actions = useActions(),
-    [text, setText] = useState(""),
-    [adding, setAdding] = useState<Idea>();
+    act = useIdeaActions(),
+    [selected, setSelected] = useState<string[]>([]),
+    [group, setGroup] = useState<"newest" | "project">("newest"),
+    [drafting, setDrafting] = useState<Idea[]>(),
+    [adding, setAdding] = useState<Idea[]>(),
+    [gathering, setGathering] = useState<Idea[]>();
   const sessionTitle = new Map(sessions.map((s) => [s.sessionId, s.title])),
-    projectTitle = new Map((projects.data ?? []).map((p) => [p.projectId, p.title]));
+    projectList = projects.data ?? [],
+    projectTitle = new Map(projectList.map((p) => [p.projectId, p.title]));
   if (ideas.loading) return <PageSkeleton />;
-  const list = [...(ideas.data ?? [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  async function capture() {
-    const value = text.trim();
-    if (!value) return;
-    // Clear at once so the next idea can be typed straight away; put the text back if saving fails.
-    setText("");
-    if (!(await run("vc.CaptureIdea", { text: value }))) setText((current) => current || value);
-  }
+  const list = [...(ideas.data ?? [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    chosen = list.filter((i) => selected.includes(i.ideaId));
+  const where = (idea: Idea) => {
+    const places = [
+      ...(idea.projectIds ?? []).map((id) => projectTitle.get(id)).filter(Boolean),
+      ...(idea.sessionIds ?? []).map((id) => sessionTitle.get(id)).filter(Boolean),
+    ];
+    return places.length ? "In " + places.join(", ") : "Not used yet";
+  };
+  const row = (idea: Idea) => (
+    <IdeaRow
+      key={idea.ideaId}
+      idea={idea}
+      where={where(idea)}
+      selected={selected.includes(idea.ideaId)}
+      onSelect={(on) => setSelected((now) => (on ? [...now, idea.ideaId] : now.filter((id) => id !== idea.ideaId)))}
+      menu={
+        <Menu
+          label={`Actions for ${ideaWord}`}
+          items={[
+            { label: `Make a ${draftWord}`, onSelect: () => setDrafting([idea]) },
+            { label: `Add to a ${projectWord}`, onSelect: () => setAdding([idea]) },
+            {
+              label: "Move to Trash",
+              tone: "danger",
+              separatorBefore: true,
+              onSelect: () => act.trash([idea]),
+            },
+          ]}
+        />
+      }
+    />
+  );
+  // Grouped by project: each project's ideas, then the ones in none. An idea in two projects shows twice.
+  const groups =
+    group === "project"
+      ? [
+          ...projectList
+            .map((p) => ({
+              key: p.projectId,
+              title: p.title,
+              ideas: list.filter((i) => i.projectIds?.includes(p.projectId)),
+            }))
+            .filter((g) => g.ideas.length),
+          { key: "none", title: `Not in a ${projectWord}`, ideas: list.filter((i) => !i.projectIds?.length) },
+        ].filter((g) => g.ideas.length)
+      : [{ key: "all", title: "", ideas: list }];
   return (
     <div className="vc-page">
       <header className="vc-header">
         <h1 className="vc-display">{terms.idea}s</h1>
         <p className="vc-facts">
-          {list.length
-            ? `${plural(list.length, terms.idea.toLowerCase())} · newest first`
-            : "Write things down before they slip away."}
+          {list.length ? plural(list.length, ideaWord) : "Write things down before they slip away."}
         </p>
+        {list.length > 0 && projectList.length > 0 && (
+          <div className="vc-actions">
+            <div className="vc-segmented small" role="group" aria-label="Arrange">
+              <button type="button" aria-pressed={group === "newest"} onClick={() => setGroup("newest")}>
+                Newest first
+              </button>
+              <button type="button" aria-pressed={group === "project"} onClick={() => setGroup("project")}>
+                By {projectWord}
+              </button>
+            </div>
+          </div>
+        )}
       </header>
-      <form
-        className="vc-capture"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void capture();
-        }}
-      >
-        <Input
-          inputSize="lg"
-          aria-label={`New ${terms.idea.toLowerCase()}`}
-          placeholder={`Write an ${terms.idea.toLowerCase()} down, then press ↩`}
-          value={text}
-          onChange={(event) => setText(event.target.value)}
-        />
-      </form>
+      <Capture
+        label={`Write an ${ideaWord} down, then press ↩`}
+        onSave={async (text) => (await act.run("vc.CaptureIdea", { text })) !== undefined}
+      />
       {list.length > 0 && (
-        <section className="vc-section" aria-label={`${terms.idea}s`}>
-          <ul className="vc-list">
-            {list.map((idea) => {
-              const where = [
-                ...(idea.sessionIds ?? []).map((id) => sessionTitle.get(id)).filter(Boolean),
-                ...(idea.projectIds ?? []).map((id) => projectTitle.get(id)).filter(Boolean),
-              ];
-              return (
-                <li key={idea.ideaId} className="vc-row">
-                  <span className="lead">
-                    <Icon name="pencil" size={16} />
-                  </span>
-                  <span className="main">
-                    <span className="title static wrap">{idea.text}</span>
-                    <span className="sub">{where.length ? "In " + where.join(", ") : "Not used yet"}</span>
-                  </span>
-                  <span className="end">
-                    <span className="when">{relativeTime(idea.createdAt)}</span>
-                    <Menu
-                      label={`Actions for ${terms.idea.toLowerCase()}`}
-                      items={[
-                        {
-                          label: `Start a ${terms.session.toLowerCase()}`,
-                          onSelect: () =>
-                            void run<{ sessionId: string }>("vc.StartSession", {
-                              title: idea.text.slice(0, 60),
-                              ideaIds: [idea.ideaId],
-                            }).then((r) => r && navigate("/s/" + r.sessionId)),
-                        },
-                        { label: `Add to a ${terms.project.toLowerCase()}`, onSelect: () => setAdding(idea) },
-                        {
-                          label: "Move to Trash",
-                          tone: "danger",
-                          separatorBefore: true,
-                          onSelect: () => void actions.trash("idea", idea.ideaId, idea.text.slice(0, 40)),
-                        },
-                      ]}
-                    />
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
+        <p className="vc-hint">
+          Click an {ideaWord} to change its words. Tick a few to make a {draftWord} or a {projectWord} from them.
+        </p>
       )}
+      {groups.map((g) => (
+        <section key={g.key} className="vc-section" aria-label={g.title || `${terms.idea}s`}>
+          {g.title && <h2 className="vc-label">{g.title}</h2>}
+          <ul className="vc-list">{g.ideas.map(row)}</ul>
+        </section>
+      ))}
+      <SelectionBar count={chosen.length} onClear={() => setSelected([])}>
+        <button type="button" className="vc-bar-button labelled" onClick={() => setDrafting(chosen)}>
+          Make a {draftWord}
+        </button>
+        <button type="button" className="vc-bar-button text" onClick={() => setAdding(chosen)}>
+          Add to a {projectWord}
+        </button>
+        <button type="button" className="vc-bar-button text" onClick={() => setGathering(chosen)}>
+          New {projectWord}
+        </button>
+        <button
+          type="button"
+          className="vc-bar-button text danger"
+          onClick={() => {
+            act.trash(chosen);
+            setSelected([]);
+          }}
+        >
+          Trash
+        </button>
+      </SelectionBar>
+      <MakeDraftDialog
+        ideas={drafting}
+        onClose={() => {
+          setDrafting(undefined);
+          setSelected([]);
+        }}
+      />
       <PickDialog
         open={adding !== undefined}
-        title={`Add to a ${terms.project.toLowerCase()}`}
+        title={`Add to a ${projectWord}`}
+        {...(adding && adding.length > 1 ? { lede: plural(adding.length, ideaWord) + "." } : {})}
         label={terms.project}
         submitLabel="Add"
-        options={(projects.data ?? [])
-          .filter((p) => !p.ideaIds?.includes(adding?.ideaId ?? ""))
+        options={projectList
+          .filter((p) => adding?.some((i) => !p.ideaIds?.includes(i.ideaId)))
           .map((p) => ({ id: p.projectId, title: p.title }))}
         onClose={() => setAdding(undefined)}
-        onPick={(projectId) =>
-          run("vc.AttachProjectItem", { projectId, item: { kind: "idea", id: adding?.ideaId ?? "" } })
-        }
+        onPick={async (projectId) => {
+          const project = projectList.find((p) => p.projectId === projectId);
+          const ids = (adding ?? []).map((i) => i.ideaId).filter((id) => !project?.ideaIds?.includes(id));
+          const ok = await act.addToProject(projectId, "idea", ids);
+          if (ok) setSelected([]);
+          return ok;
+        }}
+      />
+      <NewProjectDialog
+        open={gathering !== undefined}
+        ideas={gathering ?? []}
+        onClose={() => {
+          setGathering(undefined);
+          setSelected([]);
+        }}
       />
     </div>
-  );
-}
-
-function NewProjectDialog({ open, onClose }: { open: boolean; onClose(): void }) {
-  const run = useRun(),
-    [title, setTitle] = useState(""),
-    [background, setBackground] = useState(""),
-    [busy, setBusy] = useState(false);
-  async function submit() {
-    if (!title.trim()) return;
-    setBusy(true);
-    const created = await run<{ projectId: string }>("vc.CreateProject", {
-      title: title.trim(),
-      ...(background.trim() ? { background: background.trim() } : {}),
-    });
-    setBusy(false);
-    if (created) {
-      setTitle("");
-      setBackground("");
-      onClose();
-      navigate("/p/" + created.projectId);
-    }
-  }
-  return (
-    <Dialog
-      open={open}
-      title={`New ${terms.project.toLowerCase()}`}
-      lede={`A ${terms.project.toLowerCase()} gathers ${terms.idea.toLowerCase()}s, ${terms.draft.toLowerCase()}s and ${terms.session.toLowerCase()}s that belong together.`}
-      onClose={onClose}
-      onSubmit={() => void submit()}
-      buttons={
-        <>
-          <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit" variant="primary" loading={busy}>
-            Create
-          </Button>
-        </>
-      }
-    >
-      <Field label="Title">
-        <Input inputSize="lg" autoFocus value={title} onChange={(event) => setTitle(event.target.value)} />
-      </Field>
-      <Field label="Background (optional)">
-        <Textarea rows={3} value={background} onChange={(event) => setBackground(event.target.value)} />
-      </Field>
-    </Dialog>
   );
 }
 
@@ -249,12 +188,10 @@ export function ProjectsView() {
     <div className="vc-page">
       <header className="vc-header">
         <h1 className="vc-display">{terms.project}s</h1>
-        <p className="vc-facts">
-          {list.length ? plural(list.length, terms.project.toLowerCase()) : "Nothing gathered yet."}
-        </p>
+        <p className="vc-facts">{list.length ? plural(list.length, projectWord) : "Nothing gathered yet."}</p>
         <div className="vc-actions">
           <Button variant="primary" leadingIcon={<Icon name="plus" />} onClick={() => setCreating(true)}>
-            New {terms.project.toLowerCase()}
+            New {projectWord}
           </Button>
         </div>
       </header>
@@ -272,9 +209,9 @@ export function ProjectsView() {
                   </a>
                   <span className="sub">
                     {[
-                      plural(p.ideaIds?.length ?? 0, terms.idea.toLowerCase()),
+                      plural(p.ideaIds?.length ?? 0, ideaWord),
                       plural(p.artifactIds?.length ?? 0, terms.draft),
-                      plural(p.sessionIds?.length ?? 0, terms.session.toLowerCase()),
+                      plural(p.sessionIds?.length ?? 0, sessionWord),
                     ].join(" · ")}
                   </span>
                 </span>
@@ -302,8 +239,10 @@ export function ProjectView({
 }) {
   const projects = useLiveQuery<Project[]>("vc.Projects", {}),
     ideas = useLiveQuery<Idea[]>("vc.Ideas", {}),
-    run = useRun(),
-    [adding, setAdding] = useState<ItemKind>();
+    act = useIdeaActions(),
+    [adding, setAdding] = useState<ItemKind>(),
+    [selected, setSelected] = useState<string[]>([]),
+    [drafting, setDrafting] = useState<Idea[]>();
   if (projects.loading) return <PageSkeleton />;
   const project = projects.data?.find((p) => p.projectId === projectId);
   if (!project)
@@ -312,21 +251,46 @@ export function ProjectView({
         <h1 className="vc-display">{terms.project} not found</h1>
       </div>
     );
-  const all: Record<ItemKind, Array<{ id: string; title: string; href?: string }>> = {
-    idea: (ideas.data ?? []).map((i) => ({ id: i.ideaId, title: i.text })),
-    artifact: drafts.map((d) => ({
-      id: d.artifactId,
-      title: d.title,
-      ...(d.sessionIds[0] ? { href: `#/s/${d.sessionIds[0]}/d/${d.artifactId}` } : {}),
+  const sessionTitle = new Map(sessions.map((s) => [s.sessionId, s.title]));
+  const all: Record<ItemKind, Array<{ id: string; title: string; sub?: string; href?: string }>> = {
+    idea: (ideas.data ?? []).map((i) => ({ id: i.ideaId, title: i.text, sub: relativeTime(i.createdAt) })),
+    artifact: drafts.map((d) => {
+      const home = d.sessionIds.find((id) => sessionTitle.has(id));
+      return {
+        id: d.artifactId,
+        title: d.title,
+        ...(home ? { href: `#/s/${home}/d/${d.artifactId}`, sub: "In " + sessionTitle.get(home) } : {}),
+      };
+    }),
+    session: sessions.map((s) => ({
+      id: s.sessionId,
+      title: s.title,
+      href: "#/s/" + s.sessionId,
+      ...(s.state !== "active" ? { sub: s.state === "paused" ? terms.paused : terms.ended } : {}),
     })),
-    session: sessions.map((s) => ({ id: s.sessionId, title: s.title, href: "#/s/" + s.sessionId })),
   };
   const inProject: Record<ItemKind, string[]> = {
     idea: project.ideaIds ?? [],
     artifact: project.artifactIds ?? [],
     session: project.sessionIds ?? [],
   };
-  const detach = (kind: ItemKind, id: string) => void run("vc.DetachProjectItem", { projectId, item: { kind, id } });
+  const projectIdeas = (ideas.data ?? [])
+      .filter((i) => inProject.idea.includes(i.ideaId))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    chosen = projectIdeas.filter((i) => selected.includes(i.ideaId));
+  const detach = (kind: ItemKind, id: string) =>
+    void act.run("vc.DetachProjectItem", { projectId, item: { kind, id } });
+  const removeMenu = (
+    kind: ItemKind,
+    id: string,
+    title: string,
+    extra: Array<{ label: string; onSelect(): void }> = [],
+  ) => (
+    <Menu
+      label={`Actions for ${title.slice(0, 30)}`}
+      items={[...extra, { label: `Remove from ${projectWord}`, onSelect: () => detach(kind, id) }]}
+    />
+  );
   return (
     <div className="vc-page">
       <header className="vc-header">
@@ -334,7 +298,48 @@ export function ProjectView({
         <h1 className="vc-display">{project.title}</h1>
         {project.background && <p className="vc-lede">{project.background}</p>}
       </header>
-      {(["idea", "artifact", "session"] as const).map((kind) => {
+      <section className="vc-section" aria-label={`${terms.idea}s`}>
+        <div className="vc-section-head">
+          <h2 className="vc-label">{terms.idea}s</h2>
+          <button type="button" className="vc-link-button" onClick={() => setAdding("idea")}>
+            Add existing
+          </button>
+        </div>
+        <Capture
+          label={`Add a new ${ideaWord} to this ${projectWord}, then press ↩`}
+          onSave={async (text) => {
+            const idea = await act.run<{ ideaId: string }>("vc.CaptureIdea", { text });
+            return idea !== undefined && (await act.addToProject(projectId, "idea", [idea.ideaId]));
+          }}
+        />
+        {projectIdeas.length > 0 && (
+          <ul className="vc-list">
+            {projectIdeas.map((idea) => (
+              <IdeaRow
+                key={idea.ideaId}
+                idea={idea}
+                where={
+                  idea.sessionIds?.length
+                    ? "In " +
+                      idea.sessionIds
+                        .map((id) => sessionTitle.get(id))
+                        .filter(Boolean)
+                        .join(", ")
+                    : "Not used yet"
+                }
+                selected={selected.includes(idea.ideaId)}
+                onSelect={(on) =>
+                  setSelected((now) => (on ? [...now, idea.ideaId] : now.filter((id) => id !== idea.ideaId)))
+                }
+                menu={removeMenu("idea", idea.ideaId, idea.text, [
+                  { label: `Make a ${draftWord}`, onSelect: () => setDrafting([idea]) },
+                ])}
+              />
+            ))}
+          </ul>
+        )}
+      </section>
+      {(["artifact", "session"] as const).map((kind) => {
         const rows = all[kind].filter((x) => inProject[kind].includes(x.id));
         return (
           <section key={kind} className="vc-section" aria-label={`${kindWords[kind]}s`}>
@@ -349,10 +354,7 @@ export function ProjectView({
                 {rows.map((row) => (
                   <li key={row.id} className="vc-row">
                     <span className="lead">
-                      <Icon
-                        name={kind === "idea" ? "pencil" : kind === "artifact" ? "document-text" : "chevron-right"}
-                        size={16}
-                      />
+                      <Icon name={kind === "artifact" ? "document-text" : "chevron-right"} size={16} />
                     </span>
                     <span className="main">
                       {row.href ? (
@@ -362,15 +364,9 @@ export function ProjectView({
                       ) : (
                         <span className="title static wrap">{row.title}</span>
                       )}
+                      {row.sub && <span className="sub">{row.sub}</span>}
                     </span>
-                    <span className="end">
-                      <Menu
-                        label={`Actions for ${row.title.slice(0, 30)}`}
-                        items={[
-                          { label: `Remove from ${terms.project.toLowerCase()}`, onSelect: () => detach(kind, row.id) },
-                        ]}
-                      />
-                    </span>
+                    <span className="end">{removeMenu(kind, row.id, row.title)}</span>
                   </li>
                 ))}
               </ul>
@@ -380,18 +376,35 @@ export function ProjectView({
           </section>
         );
       })}
-      <PickDialog
+      <SelectionBar count={chosen.length} onClear={() => setSelected([])}>
+        <button type="button" className="vc-bar-button labelled" onClick={() => setDrafting(chosen)}>
+          Make a {draftWord}
+        </button>
+        <button
+          type="button"
+          className="vc-bar-button text"
+          onClick={() => {
+            for (const idea of chosen) detach("idea", idea.ideaId);
+            setSelected([]);
+          }}
+        >
+          Remove from {projectWord}
+        </button>
+      </SelectionBar>
+      <MakeDraftDialog
+        ideas={drafting}
+        onClose={() => {
+          setDrafting(undefined);
+          setSelected([]);
+        }}
+      />
+      <CheckDialog
         open={adding !== undefined}
-        title={`Add a ${adding ? kindWords[adding].toLowerCase() : ""}`}
-        label={adding ? kindWords[adding] : ""}
-        submitLabel="Add"
-        options={
-          adding
-            ? all[adding].filter((x) => !inProject[adding].includes(x.id)).map(({ id, title }) => ({ id, title }))
-            : []
-        }
+        title={`Add ${adding ? kindWords[adding].toLowerCase() : ""}s`}
+        empty={`Everything is in this ${projectWord} already.`}
+        options={adding ? all[adding].filter((x) => !inProject[adding].includes(x.id)) : []}
         onClose={() => setAdding(undefined)}
-        onPick={(id) => run("vc.AttachProjectItem", { projectId, item: { kind: adding, id } })}
+        onAdd={(ids) => (adding ? act.addToProject(projectId, adding, ids) : Promise.resolve(false))}
       />
     </div>
   );

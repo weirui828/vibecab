@@ -191,6 +191,33 @@ export function contractSuite(
       expect(hash).toMatch(/^[a-f0-9]{64}$/);
       expect(await client.getBlob(hash)).toEqual(bytes);
     });
+    it("edits an Idea's text and keeps everything else", async () => {
+      const idea = await cmd("vc.CaptureIdea", { text: "A rough thught", links: ["https://example.test/a"] });
+      if (!idea.ok) throw Error("setup failed");
+      const { ideaId } = schema.read<{ ideaId: string }>(
+        "operations/vc.CaptureIdea",
+        idea.result,
+        "#/properties/result",
+      );
+      expect(await cmd("vc.EditIdea", { ideaId, text: "A rough thought" })).toMatchObject({
+        ok: true,
+        result: { ideaId },
+      });
+      const ideas = schema.read<Array<{ ideaId: string; text: string; links?: string[] }>>(
+        "operations/vc.Ideas",
+        await query("vc.Ideas"),
+        "#/properties/result",
+      );
+      expect(ideas.find((i) => i.ideaId === ideaId)).toMatchObject({
+        text: "A rough thought",
+        links: ["https://example.test/a"],
+      });
+      expect(await cmd("vc.EditIdea", { ideaId, text: "" })).toMatchObject({ ok: false, error: { code: "invalid" } });
+      expect(await cmd("vc.EditIdea", { ideaId: "idea_missing", text: "x" })).toMatchObject({
+        ok: false,
+        error: { code: "not_found" },
+      });
+    });
     it("attaches and detaches Ideas, Drafts and Sessions on a Project", async () => {
       const read = <T>(op: string, result: unknown) =>
         schema.read<T>("operations/" + op, result, "#/properties/result");

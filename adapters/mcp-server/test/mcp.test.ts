@@ -108,6 +108,7 @@ describe("MCP server", () => {
         "digest",
         "edit_comment",
         "edit_digest",
+        "edit_idea",
         "end_session",
         "export",
         "export_tmr_report",

@@ -1,6 +1,7 @@
 // Which queries each event makes stale. Mirrors docs/design/app-events.md.
 const map: Record<string, string[]> = {
   "vc.IdeaCaptured": ["vc.Ideas"],
+  "vc.IdeaEdited": ["vc.Ideas", "vc.Projects"],
   "vc.ProjectCreated": ["vc.Projects"],
   // Projects list their items, and Ideas, Sessions and Drafts list the projects they belong to.
   "vc.ProjectItemAttached": ["vc.Projects", "vc.Ideas", "vc.Sessions", "vc.Artifacts"],

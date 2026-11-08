@@ -1122,3 +1122,154 @@
   max-width: 68ch;
   margin-inline: auto;
 }
+
+/* Ideas: tick to choose, click the words to change them. */
+.vc-row .vc-check {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--color-accent-default);
+  cursor: pointer;
+}
+.vc-row.vc-idea {
+  align-items: start;
+}
+.vc-row.vc-idea .lead {
+  padding-top: 3px;
+}
+.vc-row.vc-idea[data-selected] {
+  background: var(--color-accent-subtle);
+}
+.vc-row .vc-idea-text {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-fg-default);
+  font: inherit;
+  font-size: 15.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  cursor: text;
+}
+.vc-row .vc-idea-text::after {
+  display: none;
+}
+.vc-row .vc-idea-text:hover {
+  text-decoration: underline 1px var(--color-border-default);
+  text-underline-offset: 4px;
+}
+.vc-idea-edit {
+  display: block;
+  width: 100%;
+  margin: -5px 0 -1px -9px;
+  padding: 4px 8px;
+  border: 1px solid var(--color-accent-default);
+  border-radius: 8px;
+  background: var(--color-surface-base);
+  color: var(--color-fg-default);
+  font: inherit;
+  font-size: 15.5px;
+  font-weight: 500;
+  line-height: 1.45;
+  resize: vertical;
+  outline: none;
+}
+.vc-hint {
+  margin: 12px 0 0;
+  color: var(--color-fg-muted);
+  font-size: 13px;
+}
+
+/* The chosen-items bar: the same floating pill as the session's, at the bottom of the page. */
+.vc-selection {
+  position: sticky;
+  bottom: 24px;
+  z-index: 25;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  width: max-content;
+  max-width: 100%;
+  margin: 24px auto 0;
+  padding: 5px 5px 5px 16px;
+  overflow-x: auto;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-surface-base) 92%, transparent);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--vc-shadow-pop);
+  animation: vc-rise var(--vc-fast) var(--vc-ease);
+}
+.vc-selection .count {
+  color: var(--color-fg-default);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.vc-selection .vc-bar-button.text {
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.vc-selection .vc-bar-button.danger:hover {
+  color: var(--color-danger-fg);
+}
+.vc-selection .clear {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--color-fg-muted);
+  cursor: pointer;
+}
+.vc-selection .clear:hover {
+  background: var(--color-surface-raised);
+  color: var(--color-fg-default);
+}
+
+/* A list of things to tick in a dialog. */
+.vc-checklist {
+  display: flex;
+  flex-direction: column;
+  max-height: min(50vh, 420px);
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+.vc-checklist label {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.vc-checklist label:hover {
+  background: var(--color-surface-raised);
+}
+.vc-checklist input {
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  accent-color: var(--color-accent-default);
+}
+.vc-checklist .text {
+  display: block;
+  font-size: 15px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.vc-checklist .sub {
+  display: block;
+  color: var(--color-fg-muted);
+  font-size: 12.5px;
+}

@@ -195,10 +195,78 @@ it("captures Ideas, starts a session from one, and gathers it into a Project", a
     expect(project).toMatchObject({ projectId, ideaIds: [expect.any(String)] });
   });
   tl.fireEvent.click(tl.screen.getByRole("button", { name: "Actions for idea" }));
-  tl.fireEvent.click(await tl.screen.findByRole("menuitem", { name: "Start a session" }));
-  await tl.waitFor(() => expect(window.location.hash).toMatch(/^#\/s\/session_/));
-  const sessions = await query<Array<{ title: string; ideaIds?: string[] }>>("vc.Sessions", {});
-  expect(sessions.find((s) => s.title === "Night mode for writers")?.ideaIds).toHaveLength(1);
+  tl.fireEvent.click(await tl.screen.findByRole("menuitem", { name: "Make a draft" }));
+  const make = await tl.screen.findByRole("dialog", { name: "Make a draft" });
+  expect((tl.within(make).getByLabelText("Title") as HTMLInputElement).value).toBe("Night mode for writers");
+  tl.fireEvent.click(tl.within(make).getByRole("button", { name: "Make draft" }));
+  await tl.waitFor(() => expect(window.location.hash).toMatch(/^#\/s\/session_\w+\/d\/art_/));
+  const sessions = await query<Array<{ title: string; ideaIds?: string[]; artifactIds: string[] }>>("vc.Sessions", {});
+  const made = sessions.find((s) => s.title === "Night mode for writers");
+  expect(made?.ideaIds).toHaveLength(1);
+  expect(made?.artifactIds).toHaveLength(1);
   const view = await open("/p/" + projectId);
   await tl.waitFor(() => expect(view.container.textContent).toContain("Night mode for writers"));
+});
+
+it("edits an idea in place, and gathers several at once into a Project and a Draft", async () => {
+  for (const text of ["Shorter onboarding", "Keyboard first", "Quiet notifications"])
+    await command("vc.CaptureIdea", { text });
+  const { container } = await open("/ideas");
+  // Click the words to change them; ↩ saves.
+  tl.fireEvent.click(await tl.screen.findByRole("button", { name: "Keyboard first — edit" }));
+  const field = tl.screen.getByLabelText("Edit idea");
+  tl.fireEvent.change(field, { target: { value: "Keyboard first, mouse second" } });
+  tl.fireEvent.keyDown(field, { key: "Enter" });
+  await tl.waitFor(async () =>
+    expect((await query<Array<{ text: string }>>("vc.Ideas", {})).map((i) => i.text)).toContain(
+      "Keyboard first, mouse second",
+    ),
+  );
+  // Tick two; the bar acts on both.
+  tl.fireEvent.click(await tl.screen.findByRole("checkbox", { name: "Select: Shorter onboarding" }));
+  tl.fireEvent.click(await tl.screen.findByRole("checkbox", { name: "Select: Keyboard first, mouse second" }));
+  const bar = tl.screen.getByRole("toolbar", { name: "Chosen ideas" });
+  expect(bar.textContent).toContain("2 ideas");
+  tl.fireEvent.click(tl.within(bar).getByRole("button", { name: "New project" }));
+  const dialog = await tl.screen.findByRole("dialog", { name: "New project" });
+  tl.fireEvent.change(tl.within(dialog).getByLabelText("Title"), { target: { value: "Calmer app" } });
+  tl.fireEvent.click(tl.within(dialog).getByRole("button", { name: "Create" }));
+  await tl.waitFor(() => expect(window.location.hash).toMatch(/^#\/p\/project_/));
+  const projectId = window.location.hash.slice(4);
+  const [project] = (await query<Array<{ projectId: string; ideaIds?: string[] }>>("vc.Projects", {})).filter(
+    (p) => p.projectId === projectId,
+  );
+  expect(project?.ideaIds).toHaveLength(2);
+  // On the Project: write a new idea straight in, and add an existing one by ticking it.
+  await tl.waitFor(() => expect(container.ownerDocument.body.textContent).toContain("Calmer app"));
+  const capture = tl.screen.getByLabelText("New idea");
+  tl.fireEvent.change(capture, { target: { value: "Fewer badges" } });
+  tl.fireEvent.submit(capture.closest("form")!);
+  tl.fireEvent.click(tl.screen.getByRole("button", { name: "Add existing" }));
+  const add = await tl.screen.findByRole("dialog", { name: "Add ideas" });
+  tl.fireEvent.click(tl.within(add).getByRole("checkbox", { name: /Quiet notifications/ }));
+  tl.fireEvent.click(tl.within(add).getByRole("button", { name: "Add 1" }));
+  await tl.waitFor(async () => {
+    const ideas = await query<Array<{ ideaId: string; text: string }>>("vc.Ideas", {});
+    const [now] = (await query<Array<{ projectId: string; ideaIds?: string[] }>>("vc.Projects", {})).filter(
+      (p) => p.projectId === projectId,
+    );
+    const names = ideas.filter((i) => now?.ideaIds?.includes(i.ideaId)).map((i) => i.text);
+    expect(names.sort()).toEqual([
+      "Fewer badges",
+      "Keyboard first, mouse second",
+      "Quiet notifications",
+      "Shorter onboarding",
+    ]);
+  });
+  // The page shows them without a reload.
+  await tl.waitFor(() => expect(container.ownerDocument.body.textContent).toContain("Quiet notifications"));
+  expect(container.ownerDocument.body.textContent).toContain("Fewer badges");
+});
+
+it("starts a Draft from ideas as a list of them", async () => {
+  const { markdownFromIdeas, titleFromIdeas } = await import("../src/home/IdeasProjects.js");
+  expect(markdownFromIdeas([{ text: "One\nline" }, { text: "Two" }])).toBe("- One line\n- Two\n");
+  expect(titleFromIdeas([{ text: "Short" }])).toBe("Short");
+  expect(titleFromIdeas([{ text: "word ".repeat(30) }]).endsWith("…")).toBe(true);
 });
