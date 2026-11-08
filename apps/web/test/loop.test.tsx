@@ -1,6 +1,6 @@
 import { JSDOM } from "jsdom";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { Element, Thread } from "../../../contract/generated/index.js";
+import type { Agreement, Element, Thread, Update } from "../../../contract/generated/index.js";
 import { canDecide, startsIn, threadStatus } from "../src/session/loop.js";
 import type { Loop } from "../src/session/loop.js";
 import { planItems } from "../src/session/UpdateStrip.js";
@@ -168,5 +168,46 @@ describe("changes view", () => {
     const labels = [...container.querySelectorAll(".vc-change-label")].map((n) => n.textContent);
     expect(labels).toEqual(["Changed", "New", "Moved"]);
     expect(container.querySelector(".vc-removed summary")?.textContent).toContain("Removed paragraph");
+  });
+});
+
+describe("change history", () => {
+  const update = (id: string, version: number | undefined, results: Array<[string, string[]]>) =>
+    ({
+      updateId: id,
+      artifactId: "a",
+      baseVersion: 1,
+      itemIds: results.map(([item]) => item),
+      status: version ? "committed" : "failed",
+      itemResults: results.map(([itemId, elementIds]) => ({ itemId, status: "addressed", elementIds })),
+      createdAt: `2026-11-0${version ?? 9}T00:00:00.000Z`,
+      ...(version ? { resultVersion: version } : {}),
+    }) as unknown as Update;
+  const agreement = (id: string, instruction: string) =>
+    ({
+      agreementId: id,
+      commentId: "c-" + id,
+      kind: "as_written",
+      instruction,
+      state: "applied",
+    }) as unknown as Agreement;
+  // "li" is a list item inside list "ul"; "p" is a paragraph.
+  const slotOf = (id: string) => ({ p: "p", ul: "ul", li: "li", text: "li" })[id];
+
+  it("lists only the Updates that changed the block, oldest first, with what asked for each", async () => {
+    const { historyEntries, changedBlocks } = await import("../src/session/ChangeHistory.js");
+    const updates = [
+      update("u3", 3, [["g2", ["p"]]]),
+      update("u2", 2, [["g1", ["p", "li"]]]),
+      update("u4", undefined, [["g3", ["p"]]]), // never wrote a version: not history
+    ];
+    const agreements = [agreement("g1", "Shorter."), agreement("g2", "Name it."), agreement("g3", "Never applied.")];
+    expect([...changedBlocks(updates, slotOf)].sort()).toEqual(["li", "p"]);
+    const entries = historyEntries("p", updates, agreements, [], slotOf);
+    expect(entries.map((e) => [e.version, e.asks.map((a) => a.text)])).toEqual([
+      [2, ["Shorter."]],
+      [3, ["Name it."]],
+    ]);
+    expect(historyEntries("ul", updates, agreements, [], slotOf)).toEqual([]);
   });
 });

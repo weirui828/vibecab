@@ -189,13 +189,20 @@ it("asks the agent on request in Manual mode", async () => {
   );
 });
 
-it("explains why a block is the way it is", async () => {
+it("shows a changed block's change history: each Update and what asked for it", async () => {
   const { container } = await openSession();
   const heading = container.querySelector<HTMLElement>(".vc-doc > h1")!;
   tl.fireEvent.mouseMove(heading);
-  tl.fireEvent.click(await tl.screen.findByRole("button", { name: "Why is this here?" }));
-  const dialog = container.ownerDocument.querySelector("dialog.vc-dialog") as HTMLElement;
+  tl.fireEvent.click(await tl.screen.findByRole("button", { name: "Change history" }));
+  const dialog = await tl.screen.findByRole("dialog", { name: "Change history" });
   await tl.waitFor(() => expect(dialog.textContent).toContain("You agreed to the agent's option “Name the idea”"));
-  expect(dialog.textContent).toContain("Changed by an Update in version 2");
-  expect(dialog.textContent).toContain("The title feels flat.");
+  expect(dialog.textContent).toContain("Version 2");
+  // What was asked comes from the session's threads, which may arrive a moment after the dialog opens.
+  await tl.waitFor(() => expect(dialog.textContent).toContain("“The title feels flat."));
+  // A block no Update has touched offers no history.
+  tl.fireEvent.click(tl.within(dialog).getByRole("button", { name: "Close" }));
+  const untouched = [...container.querySelectorAll<HTMLElement>(".vc-doc > p")].at(-1)!;
+  tl.fireEvent.mouseMove(untouched);
+  await tl.screen.findByRole("button", { name: "Comment on this block" });
+  expect(tl.screen.queryByRole("button", { name: "Change history" })).toBeNull();
 });

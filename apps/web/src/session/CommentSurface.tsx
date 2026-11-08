@@ -7,7 +7,7 @@ import { AfterBlock } from "../document/DocumentView.js";
 import { useLiveQuery } from "../live/LiveStore.js";
 import { useCommentPlace } from "../shell/prefs.js";
 import { ActionBar } from "./ActionBar.js";
-import { WhyDialog } from "./WhyDialog.js";
+import { ChangeHistory, changedBlocks, historyEntries } from "./ChangeHistory.js";
 import type { ReplyMode } from "./ActionBar.js";
 import { canDecide, threadStatus } from "./loop.js";
 import type { Loop } from "./loop.js";
@@ -32,8 +32,9 @@ import type { Thread, ThreadFilter, TurnStatus } from "./threads.js";
 import { useCommentActions } from "./useCommentActions.js";
 import type { NewAnchor } from "./useCommentActions.js";
 import { useHighlights } from "./useHighlights.js";
+import { useBlockOutline } from "./useBlockOutline.js";
 
-const WIDE = 1060; // surface width at which the margin fits beside a 68ch Document
+const WIDE = 900; // surface width at which a 280px margin fits beside a Document of at least ~58ch
 const DRAFT = "__draft__";
 const GENERAL = "__general__"; // threads shown in place but tied to no block: the whole session, or removed text
 
@@ -121,6 +122,8 @@ export function CommentSurface({
   useLayoutEffect(() => {
     const node = surface.current;
     if (!node || typeof ResizeObserver === "undefined") return;
+    // Measure before the first paint, or a narrow window flashes the margin layout first.
+    if (node.clientWidth > 0) setWide(node.clientWidth >= WIDE);
     const observer = new ResizeObserver(([entry]) => setWide((entry?.contentRect.width ?? 0) >= WIDE));
     observer.observe(node);
     return () => observer.disconnect();
@@ -185,6 +188,8 @@ export function CommentSurface({
     document.addEventListener("keydown", key);
     return () => document.removeEventListener("keydown", key);
   }, [readOnly, picked, writeOnSelection, startWriting, artifactId, version]);
+
+  useBlockOutline(doc, readOnly ? undefined : gutter?.elementId, writing?.anchor?.elementId, elements);
 
   // Where each card wants to sit: the top of its quote, else of its element.
   const anchorTop = useCallback(
@@ -350,6 +355,7 @@ export function CommentSurface({
 
   // In place: each thread goes under its block (a list item, or the top-level block holding a table cell).
   const slotOf = useMemo(() => slotFinder(elements), [elements]);
+  const changed = useMemo(() => changedBlocks(loop.updates, slotOf), [loop.updates, slotOf]);
   const bySlot = useMemo(() => threadsBySlot(shownThreads, slotOf, GENERAL), [shownThreads, slotOf]);
   const writingSlot = writing && ((writing.anchor && slotOf(writing.anchor.elementId)) ?? GENERAL);
   const newCard = (positioned: boolean) =>
@@ -423,16 +429,19 @@ export function CommentSurface({
                 <Icon name="plus" size={16} />
               </button>
             )}
-            <button
-              type="button"
-              className="vc-gutter why"
-              style={{ top: gutter.top + (readOnly ? 0 : 34) }}
-              aria-label="Why is this here?"
-              title="Why is this here?"
-              onClick={() => setWhy(gutter.elementId)}
-            >
-              <Icon name="information-circle" size={16} />
-            </button>
+            {/* Only blocks an Update has changed have a history to show. */}
+            {changed.has(gutter.elementId) && (
+              <button
+                type="button"
+                className="vc-gutter why"
+                style={{ top: gutter.top + (readOnly ? 0 : 34) }}
+                aria-label="Change history"
+                title="Change history"
+                onClick={() => setWhy(gutter.elementId)}
+              >
+                <Icon name="clock" size={16} />
+              </button>
+            )}
           </>
         )}
       </div>
@@ -454,11 +463,9 @@ export function CommentSurface({
           {newCard(true)}
         </aside>
       )}
-      <WhyDialog
-        artifactId={artifactId}
-        elementId={why}
-        loop={loop}
-        threads={all.data ?? []}
+      <ChangeHistory
+        open={why !== undefined}
+        entries={why ? historyEntries(why, loop.updates, loop.agreements, all.data ?? [], slotOf) : []}
         onClose={() => setWhy(undefined)}
       />
       <ActionBar
@@ -473,7 +480,8 @@ export function CommentSurface({
           void actions.markRead(unreadReplies(next).map((c) => c.commentId));
         }}
         threadsShown={shown}
-        place={wide ? place : undefined}
+        place={place}
+        marginFits={wide}
         onPlace={setPlace}
         filter={filter}
         onComment={() => startWriting({})}

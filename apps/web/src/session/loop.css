@@ -219,7 +219,9 @@
 .vc-agent-panel {
   width: 280px;
 }
-.vc-agent-panel .hint {
+.vc-agent-panel .hint,
+.vc-filter .hint {
+  max-width: 260px;
   margin: 0;
   color: var(--color-fg-muted);
   font-size: 12.5px;
@@ -575,6 +577,15 @@
   flex-direction: column;
   gap: 2px;
   font-size: 14px;
+}
+.vc-why .ask {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.vc-why .how {
+  color: var(--color-fg-muted);
+  font-size: 13px;
 }
 .vc-why .detail {
   color: var(--color-fg-muted);
