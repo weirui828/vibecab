@@ -4,6 +4,7 @@ import type { VcPurgePreviewOperation } from "../../../../contract/generated/ind
 import { errorMessage } from "../../../ui/src/copy/errors.js";
 import { terms } from "../../../ui/src/copy/terms.js";
 import { useBridge, useLiveQuery } from "../live/LiveStore.js";
+import { navigate } from "../shell/prefs.js";
 import { Dialog } from "../ui/Dialog.js";
 import { useToast } from "../ui/Toast.js";
 import { plural } from "../ui/time.js";
@@ -156,7 +157,17 @@ export function TrashView() {
   const days = settings.data?.trashRetentionDays ?? 30;
   const restore = async (item: Item) => {
     const result = await bridge.command("vc.Restore", { target: { kind: item.kind, id: item.id } }, newCommandId());
-    toast(result.ok ? `“${item.title}” is back` : errorMessage(result.error.code));
+    if (!result.ok) return toast(errorMessage(result.error.code));
+    // Say where it went back to, one click away.
+    const where =
+      item.kind === "artifact"
+        ? "/drafts"
+        : item.kind === "session"
+          ? "/s/" + item.id
+          : item.kind === "project"
+            ? "/p/" + item.id
+            : "/ideas";
+    toast(`“${item.title}” is back`, { label: "Show", run: () => navigate(where) });
   };
   return (
     <div className="vc-page">

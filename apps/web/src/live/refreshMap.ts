@@ -2,6 +2,10 @@
 const map: Record<string, string[]> = {
   "vc.IdeaCaptured": ["vc.Ideas"],
   "vc.ProjectCreated": ["vc.Projects"],
+  // Projects list their items, and Ideas, Sessions and Drafts list the projects they belong to.
+  "vc.ProjectItemAttached": ["vc.Projects", "vc.Ideas", "vc.Sessions", "vc.Artifacts"],
+  "vc.ProjectItemDetached": ["vc.Projects", "vc.Ideas", "vc.Sessions", "vc.Artifacts"],
+  "vc.ReplyTriggerChanged": ["vc.Sessions"],
   "vc.SessionStarted": ["vc.Sessions", "vc.Artifacts"],
   "vc.SessionStateChanged": ["vc.Sessions", "vc.Artifacts"],
   "vc.SessionRenamed": ["vc.Sessions", "vc.Artifacts"],
@@ -33,8 +37,25 @@ const map: Record<string, string[]> = {
   "sys.AccessTokenCreated": ["sys.AccessTokens"],
   "sys.AccessTokenRevoked": ["sys.AccessTokens"],
   "sys.SettingsChanged": ["sys.Settings", "sys.Budgets", "sys.Usage"],
+  "sys.ProviderKeyRefSet": ["sys.Settings"],
+  "vc.ToolServerChanged": ["vc.ToolServers", "vc.Grants"],
+  "vc.ToolPolicyChanged": ["vc.ToolServers", "vc.Grants"],
   "sys.BudgetChanged": ["sys.Settings", "sys.Budgets", "sys.Usage"],
 };
+
+/** Events no screen of the web app shows yet (TMR runs, review requests, external tool calls). */
+export const unshownEvents: readonly string[] = [
+  "tmr.ProcessProgress",
+  "tmr.RunChanged",
+  "vc.ExternalToolCalled",
+  "vc.ReportArrived",
+  "vc.ReviewProgress",
+  "vc.ReviewRequested",
+];
+
+export function mappedEvents(): readonly string[] {
+  return Object.keys(map);
+}
 
 export function staleQueries(eventType: string): readonly string[] {
   return map[eventType] ?? [];

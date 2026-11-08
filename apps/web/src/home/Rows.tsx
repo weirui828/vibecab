@@ -100,7 +100,7 @@ export function DraftRows({ drafts, sessions }: { drafts: DraftRow[]; sessions: 
         const sub = [
           inSessions.length
             ? "In " + inSessions.map((s) => s.title).join(", ")
-            : `Not in a ${terms.session.toLowerCase()}`,
+            : `Not in a ${terms.session.toLowerCase()} · opens in a new one`,
           `version ${draft.headVersion}`,
         ].join(" · ");
         return (
@@ -109,9 +109,26 @@ export function DraftRows({ drafts, sessions }: { drafts: DraftRow[]; sessions: 
               <Icon name="document-text" size={20} />
             </span>
             <span className="main">
-              <a className="title" href={home ? "#/s/" + home.sessionId : "#/drafts"}>
-                {draft.title}
-              </a>
+              {home ? (
+                <a className="title" href={`#/s/${home.sessionId}/d/${draft.artifactId}`}>
+                  {draft.title}
+                </a>
+              ) : (
+                // A Draft is worked on in a session; one in none (restored, or left over) gets a new one.
+                <button
+                  type="button"
+                  className="title vc-title-button"
+                  onClick={() =>
+                    void actions.continueSession(
+                      draft.title,
+                      [{ artifactId: draft.artifactId, role: "primary" }],
+                      draft.artifactId,
+                    )
+                  }
+                >
+                  {draft.title}
+                </button>
+              )}
               <span className="sub">{sub}</span>
             </span>
             <span className="end">
