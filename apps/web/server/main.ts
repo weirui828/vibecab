@@ -25,7 +25,7 @@ interface Args {
 }
 
 export function parseArgs(argv: string[]): Args {
-  const args: Args = { port: 4747, open: true, dev: false, tempWorkspace: false, seed: false };
+  const args: Args = { port: 5163, open: true, dev: false, tempWorkspace: false, seed: false };
   for (let i = 0; i < argv.length; i++) {
     const flag = argv[i],
       value = () => {
