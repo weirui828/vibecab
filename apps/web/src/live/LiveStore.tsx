@@ -63,6 +63,8 @@ export function useLiveQuery<T>(name: string, args: unknown = {}, enabled = true
     }),
     refreshRef = useRef<() => void>(() => undefined);
   useEffect(() => {
+    // A different question must never show the previous answer, even if the new one fails.
+    setState({ data: undefined, error: undefined, loading: enabled });
     if (!enabled) return;
     let alive = true;
     const runner = coalesce(async () => {

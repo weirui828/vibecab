@@ -27,5 +27,6 @@ export function greeting(now = new Date()): string {
 }
 
 export function plural(count: number, word: string): string {
-  return `${count} ${count === 1 ? word : word + "s"}`;
+  const many = /[^aeiou]y$/.test(word) ? word.slice(0, -1) + "ies" : word + "s";
+  return `${count} ${count === 1 ? word : many}`;
 }

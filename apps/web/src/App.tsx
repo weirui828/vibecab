@@ -13,6 +13,7 @@ import { Sidebar } from "./shell/Navigation.js";
 import type { NavProps } from "./shell/Navigation.js";
 import { DialogHost } from "./home/DialogHost.js";
 import { DraftsView, HomeView, LaterView, NeedsYouView, PageSkeleton } from "./home/Views.js";
+import { SessionView, parseSessionRoute } from "./session/SessionView.js";
 
 type Access = "checking" | "signed-out" | "ready";
 
@@ -96,17 +97,23 @@ function Shell({
     setTheme,
     version,
   };
-  const session = route.startsWith("/s/") ? workspace.sessions?.find((s) => "/s/" + s.sessionId === route) : undefined;
+  const sessionRoute = parseSessionRoute(route),
+    session = sessionRoute ? workspace.sessions?.find((s) => s.sessionId === sessionRoute.sessionId) : undefined;
   let page;
   if (!ready) page = <PageSkeleton />;
   else if (route === "/needs-you") page = <NeedsYouView workspace={workspace} />;
   else if (route === "/drafts") page = <DraftsView workspace={workspace} />;
-  else if (route.startsWith("/s/"))
-    page = (
-      <LaterView
-        title={session?.title ?? terms.session}
-        line={`The ${terms.session.toLowerCase()} view arrives in the next step of the web app.`}
+  else if (sessionRoute)
+    page = session ? (
+      <SessionView
+        session={session}
+        drafts={workspace.drafts ?? []}
+        {...(sessionRoute.artifactId ? { artifactId: sessionRoute.artifactId } : {})}
       />
+    ) : workspace.sessions ? (
+      <LaterView title={`${terms.session} not found`} line="It may have been moved to Trash." />
+    ) : (
+      <PageSkeleton />
     );
   else if (route === "/settings") page = <LaterView title="Settings" line="Settings arrive in a later step." />;
   else if (route === "/trash") page = <LaterView title="Trash" line="Trash arrives in a later step." />;
@@ -129,7 +136,7 @@ function Shell({
       </div>
     ) : null;
   return (
-    <DialogHost sessions={workspace.sessions ?? []}>
+    <DialogHost sessions={workspace.sessions ?? []} drafts={workspace.drafts ?? []}>
       <div className="vc-app">
         <Sidebar {...nav} />
         <dialog

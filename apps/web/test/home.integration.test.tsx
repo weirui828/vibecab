@@ -17,11 +17,13 @@ beforeAll(async () => {
   bridge = webBridge({ base: t.host.url, fetch: t.fetch, retryMs: 50 });
 }, 60_000);
 afterAll(async () => {
+  // Unmount and stop the event stream before the DOM goes away, or React's scheduled work finds no window.
   tl?.cleanup();
+  await t?.close();
+  await new Promise((resolve) => setTimeout(resolve, 100));
   dom?.window.close();
   for (const key of ["window", "document", "navigator", "localStorage", "HTMLElement", "Node"])
     Reflect.deleteProperty(globalThis, key);
-  await t?.close();
 });
 
 async function command<T>(type: string, payload: unknown): Promise<T> {
