@@ -15,10 +15,12 @@ const tarball = (await readdir(resolve("vendor")))
   .sort()
   .at(-1);
 if (!tarball) throw Error("npm pack did not create a design system tarball");
-const packagePath = resolve("apps/ui/package.json"),
-  appManifest = JSON.parse(await readFile(packagePath, "utf8"));
-appManifest.dependencies["@wei/design-system"] = `file:../../vendor/${tarball}`;
-await writeFile(packagePath, JSON.stringify(appManifest, null, 2) + "\n");
+for (const app of ["apps/ui", "apps/web"]) {
+  const packagePath = resolve(app, "package.json"),
+    appManifest = JSON.parse(await readFile(packagePath, "utf8"));
+  appManifest.dependencies["@wei/design-system"] = `file:../../vendor/${tarball}`;
+  await writeFile(packagePath, JSON.stringify(appManifest, null, 2) + "\n");
+}
 
 function run(command, args, cwd) {
   const result = spawnSync(command, args, {
