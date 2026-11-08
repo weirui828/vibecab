@@ -27,19 +27,20 @@ export function parseSessionRoute(route: string): { sessionId: string; artifactI
   return match[2] ? { sessionId: match[1], artifactId: match[2] } : { sessionId: match[1] };
 }
 
-export function SessionView({
-  session,
-  drafts,
-  artifactId,
-}: {
-  session: SessionRow;
-  /** Every Draft in the workspace; the session's own come from `session.artifactIds`, first attached first. */
-  drafts: DraftRow[];
-  artifactId?: string;
-}) {
-  const byId = new Map(drafts.map((d) => [d.artifactId, d]));
-  const ordered = session.artifactIds.map((id) => byId.get(id)).filter((d): d is DraftRow => d !== undefined);
+export function SessionView({ session, artifactId }: { session: SessionRow; artifactId?: string }) {
+  const drafts = useLiveQuery<DraftRow[]>("vc.Artifacts", { sessionId: session.sessionId });
+  // The primary Draft first, then the others in the order they were attached (the order the engine returns).
+  const ordered = [...(drafts.data ?? [])].sort((a, b) => Number(b.role === "primary") - Number(a.role === "primary"));
   const current = ordered.find((d) => d.artifactId === artifactId) ?? ordered[0];
+  if (drafts.loading)
+    return (
+      <div className="vc-session">
+        <SessionHeader session={session} drafts={[]} current={undefined} />
+        <div className="vc-doc-wrap">
+          <DocSkeleton />
+        </div>
+      </div>
+    );
   return (
     <div className="vc-session">
       <SessionHeader session={session} drafts={ordered} current={current} />

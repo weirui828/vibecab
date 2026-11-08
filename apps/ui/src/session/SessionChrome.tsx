@@ -154,7 +154,7 @@ export function SessionSidebar(props: {
                     .command("vc.AttachArtifact", {
                       sessionId: props.sessionId,
                       artifactId: item.artifactId,
-                      role: "supporting",
+                      role: "reference",
                     })
                     .then((result) => {
                       if (result.ok) {

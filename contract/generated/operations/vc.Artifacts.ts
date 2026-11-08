@@ -14,6 +14,6 @@ export interface VcArtifactsOperation {
     updatedAt: string;
     sessionIds: string[];
     projectIds?: string[];
-    role?: "primary" | "supporting";
+    role?: "primary" | "reference";
   }[];
 }

@@ -105,11 +105,7 @@ function Shell({
   else if (route === "/drafts") page = <DraftsView workspace={workspace} />;
   else if (sessionRoute)
     page = session ? (
-      <SessionView
-        session={session}
-        drafts={workspace.drafts ?? []}
-        {...(sessionRoute.artifactId ? { artifactId: sessionRoute.artifactId } : {})}
-      />
+      <SessionView session={session} {...(sessionRoute.artifactId ? { artifactId: sessionRoute.artifactId } : {})} />
     ) : workspace.sessions ? (
       <LaterView title={`${terms.session} not found`} line="It may have been moved to Trash." />
     ) : (

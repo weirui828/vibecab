@@ -10,6 +10,7 @@ import type {
   VcElementsOperation,
   VcDiffOperation,
   VcResolveAnchorsOperation,
+  SessionArtifact,
 } from "../../../contract/src/index.js";
 import { unsupportedGroups } from "../../../contract/src/catalog.js";
 import { outline, diffVersions, resolveAnchors } from "../content/diff.js";
@@ -62,12 +63,7 @@ export abstract class QueryOperations extends CommandOperations {
           ),
           links = store
             .feedbackList("attachment")
-            .map((raw) =>
-              this.contract.read<{ sessionId: string; artifactId: string; role: "primary" | "supporting" }>(
-                "session-artifact",
-                raw,
-              ),
-            ),
+            .map((raw) => this.contract.read<SessionArtifact>("session-artifact", raw)),
           ids = p.sessionId
             ? links.filter((link) => link.sessionId === p.sessionId).map((link) => link.artifactId)
             : store.artifactIds();

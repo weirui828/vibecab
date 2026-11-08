@@ -263,6 +263,27 @@ export function contractSuite(
       expect(await query("vc.Artifacts", {})).toMatchObject([
         { artifactId: a.artifactId, updatedAt: expect.any(String) },
       ]);
+      // A session lists every attached Draft with the role it was attached as, reference Drafts included.
+      const reference = await cmd("vc.CreateArtifact", { title: "Reference draft", mediaKind: "doc" });
+      if (!reference.ok) throw Error(reference.error.message);
+      const referenceId = schema.read<{ artifactId: string }>(
+        "operations/vc.CreateArtifact",
+        reference.result,
+        "#/properties/result",
+      ).artifactId;
+      expect((await cmd("vc.AttachArtifact", { sessionId, artifactId: referenceId, role: "reference" })).ok).toBe(true);
+      const listed = schema.read<Array<{ artifactId: string; role?: string }>>(
+        "operations/vc.Artifacts",
+        await query("vc.Artifacts", { sessionId }),
+        "#/properties/result",
+      );
+      expect(listed.map(({ artifactId, role }) => ({ artifactId, role }))).toEqual(
+        expect.arrayContaining([
+          { artifactId: a.artifactId, role: "primary" },
+          { artifactId: referenceId, role: "reference" },
+        ]),
+      );
+      expect((await cmd("vc.Trash", { target: { kind: "artifact", id: referenceId } })).ok).toBe(true);
       expect((await cmd("vc.RenameArtifact", { artifactId: a.artifactId, title: "Renamed draft" })).ok).toBe(true);
       expect(await query("vc.Artifact", { artifactId: a.artifactId })).toMatchObject({ title: "Renamed draft" });
       expect((await cmd("vc.RenameSession", { sessionId, title: "Renamed session" })).ok).toBe(true);
