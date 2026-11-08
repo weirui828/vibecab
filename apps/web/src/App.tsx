@@ -125,7 +125,10 @@ function Shell({
   // Decided once, when everything has loaded: saving a model during the first run must not end it halfway.
   useEffect(() => {
     if (firstRun !== "unknown" || !settings.data || !workspace.sessions || !workspace.drafts) return;
-    const empty = !settings.data.models?.default && workspace.sessions.length === 0 && workspace.drafts.length === 0;
+    const empty =
+      Object.keys(settings.data.models ?? {}).length === 0 &&
+      workspace.sessions.length === 0 &&
+      workspace.drafts.length === 0;
     setFirstRun(empty ? "show" : "hide");
   }, [firstRun, settings.data, workspace.sessions, workspace.drafts]);
   const nav: NavProps = {

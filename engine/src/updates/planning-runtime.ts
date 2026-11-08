@@ -19,6 +19,7 @@ import { BUILT_IN_AGENT } from "../gateway/types.js";
 /** What an Update's model call is for, by its prompt: planning, writing, or judging a conflict. */
 const purposeOf = (promptName: string): "plan" | "update" | "review" =>
   promptName === "plan" ? "plan" : promptName === "judge" ? "review" : "update";
+import { baseModelRef } from "../session-preferences.js";
 import { sessionPreferences } from "../session-preferences.js";
 
 export abstract class UpdatePlanningRuntime extends UpdatePreparationRuntime {
@@ -329,7 +330,9 @@ export abstract class UpdatePlanningRuntime extends UpdatePreparationRuntime {
         }),
       },
     ];
-    const alias = this.settings().models.planner ? "planner" : "default";
+    const alias = this.settings().models.planner
+      ? "planner"
+      : baseModelRef(this.settings(), this.updateSessionId(update));
     const output = await this.modelJson(alias, "update-plan", update, messages, "plan");
     if (output === undefined) return undefined;
     const plan = this.contract.read<import("../../../contract/src/index.js").UpdatePlan>("update-plan", output),

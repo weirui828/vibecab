@@ -1,7 +1,7 @@
 import { fail } from "../../../contract/src/index.js";
 import type { Json, AgentTurn, FeedbackComment, Job } from "../../../contract/src/index.js";
 import { AgentServicesRuntime } from "./services-runtime.js";
-import { sessionPreferences } from "../session-preferences.js";
+import { baseModelRef, sessionPreferences } from "../session-preferences.js";
 
 export abstract class AgentTriggerRuntime extends AgentServicesRuntime {
   protected askAgent(raw: unknown): { turnId: string } {
@@ -50,7 +50,7 @@ export abstract class AgentTriggerRuntime extends AgentServicesRuntime {
           ? chosen
           : settings.models.reply
             ? "reply"
-            : "default";
+            : baseModelRef(settings, sessionId);
     const turn = this.contract.read<AgentTurn>("agent-turn", {
       turnId,
       sessionId,

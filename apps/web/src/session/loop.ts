@@ -12,6 +12,12 @@ import { visibleComments } from "./threads.js";
 
 export type { Agreement, FeedbackConflict, Update };
 export type SessionAgent = "vibecab" | "claude-code" | "codex";
+/** The agents that can work here: the VibeCab agent when it has a default model, and Claude Code and Codex when on. */
+export function available(models: Record<string, unknown> | undefined): SessionAgent[] {
+  return (["vibecab", "claude-code", "codex"] as const).filter((id) =>
+    Boolean(models?.[id === "vibecab" ? "default" : id]),
+  );
+}
 export const agentWords: Record<SessionAgent, string> = {
   vibecab: "VibeCab agent",
   "claude-code": "Claude Code",
@@ -39,15 +45,16 @@ export function useLoop(sessionId: string, artifactId: string, enabled = true) {
     latest: list.at(-1),
     scheduledAt: updates.data?.scheduledAt,
     conflicts: (conflicts.data ?? []).filter((c) => c.state === "open"),
-    modelReady: settings.data ? Boolean(settings.data.models?.default) : true,
+    // Any agent with a model is enough to work with: the VibeCab agent's default model, or Claude Code / Codex alone.
+    modelReady: settings.data ? available(settings.data.models).length > 0 : true,
     planReview: settings.data?.sessions?.[sessionId]?.planReview === true,
-    // Who replies here (W12): the session's choice while that agent is set up, else the VibeCab agent.
-    agents: (["vibecab", "claude-code", "codex"] as const).filter(
-      (id) => id === "vibecab" || Boolean(settings.data?.models?.[id]),
-    ) as SessionAgent[],
+    // Who replies here (W12): the agents that are set up, and the session's choice among them — else the first
+    // one, as the engine does (the VibeCab agent when it has a model, else Claude Code, else Codex).
+    agents: settings.data ? available(settings.data.models) : (["vibecab"] as SessionAgent[]),
     agent: ((): SessionAgent => {
-      const chosen = settings.data?.sessions?.[sessionId]?.agent;
-      return chosen && chosen !== "vibecab" && settings.data?.models?.[chosen] ? chosen : "vibecab";
+      const set = settings.data ? available(settings.data.models) : (["vibecab"] as SessionAgent[]),
+        chosen = settings.data?.sessions?.[sessionId]?.agent;
+      return chosen && set.includes(chosen) ? chosen : (set[0] ?? "vibecab");
     })(),
     autoAgree: (grants.data ?? []).some(
       (g) =>

@@ -2,6 +2,7 @@ import { errorOf, fail } from "../../../contract/src/index.js";
 import type { Json, FeedbackComment, Agreement, Update } from "../../../contract/src/index.js";
 import type { ModelRequest as GatewayRequest } from "../gateway/types.js";
 import { UpdatePlanningRuntime } from "./planning-runtime.js";
+import { baseModelRef } from "../session-preferences.js";
 import { discussionFor } from "./helpers.js";
 
 export abstract class UpdateWritingRuntime extends UpdatePlanningRuntime {
@@ -36,7 +37,7 @@ export abstract class UpdateWritingRuntime extends UpdatePlanningRuntime {
       update = this.contract.read<Update>("update", this.available().feedback("update", update.updateId));
     }
     const aliases = this.settings().models,
-      alias = aliases.writer ? "writer" : "default",
+      alias = aliases.writer ? "writer" : baseModelRef(this.settings(), this.updateSessionId(update)),
       expected = new Set(remaining.map((x) => x.agreementId));
     const planned = new Set(plan.items.flatMap((item) => item.elementIds)),
       newUnder = new Set(plan.items.flatMap((item) => item.newUnder ?? []));

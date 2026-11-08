@@ -204,3 +204,64 @@ it("turns an SDK agent off by removing its model, but never the default model", 
     await f.close();
   }
 });
+
+it("needs no default model: with Claude Code alone, it replies in a session that chose no agent", async () => {
+  let threadId = "";
+  const runner: SdkRunner = async (run) =>
+    run.prompt.includes("Result of tool call")
+      ? { json: { text: "Done.", toolCalls: [], outputJson: "" } }
+      : {
+          json: {
+            text: "",
+            toolCalls: [{ name: "reply", argumentsJson: JSON.stringify({ threadId, body: "Only Claude Code here." }) }],
+            outputJson: "",
+          },
+        };
+  const f = await fixture({ modelProviders: { "claude-agent-sdk": new SdkAgentProvider(runner) } });
+  try {
+    const cmd = async <T>(type: string, payload: unknown) => {
+      const r = await f.engine.command(ctx, {
+        commandId: type,
+        type,
+        payload: new Contract().read<Json>("json", payload),
+      });
+      if (!r.ok) throw Error(`${type}: ${r.error.message}`);
+      return r.result as T;
+    };
+    await cmd("sys.SetSettings", {
+      patch: { models: { "claude-code": sdkModel("claude-agent-sdk") as unknown as Json } },
+    });
+    const { sessionId } = await cmd<{ sessionId: string }>("vc.StartSession", {
+      title: "Solo",
+      replyTrigger: "manual",
+    });
+    threadId = (await cmd<{ threadId: string }>("vc.Comment", { sessionId, body: "Anyone?" })).threadId;
+    await cmd("vc.AskAgent", { sessionId, threadIds: [threadId] });
+    let body: string | undefined;
+    for (let i = 0; i < 100 && !body; i++) {
+      const threads = (await f.engine.query(ctx, { name: "vc.Threads", args: { sessionId } })) as Array<{
+        comments: Array<{ author: { kind: string }; body: string }>;
+      }>;
+      body = threads[0]?.comments.find((c) => c.author.kind === "agent")?.body;
+      if (!body) await new Promise((r) => setTimeout(r, 20));
+    }
+    expect(body).toBe("Only Claude Code here.");
+  } finally {
+    await f.close();
+  }
+});
+
+it("picks the model for a session's work: the default, else its chosen agent, else any agent that is on", async () => {
+  const { baseModelRef } = await import("../src/session-preferences.js");
+  const settings = (models: string[], agent?: string) =>
+    ({
+      models: Object.fromEntries(models.map((m) => [m, {}])),
+      budgets: {},
+      sessions: agent ? { s1: { agent } } : {},
+    }) as unknown as import("../../contract/src/index.js").Settings;
+  expect(baseModelRef(settings(["default", "codex"]), "s1")).toBe("default");
+  expect(baseModelRef(settings(["claude-code", "codex"], "codex"), "s1")).toBe("codex");
+  expect(baseModelRef(settings(["codex"]), "s1")).toBe("codex");
+  expect(baseModelRef(settings(["claude-code", "codex"]))).toBe("claude-code");
+  expect(baseModelRef(settings([]))).toBe("default");
+});

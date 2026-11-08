@@ -213,3 +213,13 @@ describe("change history", () => {
     expect(historyEntries("ul", updates, agreements, [], slotOf)).toEqual([]);
   });
 });
+
+describe("who can work in a session", () => {
+  it("counts Claude Code or Codex alone as enough, and lists only the agents that are set up", async () => {
+    const { available } = await import("../src/session/loop.js");
+    expect(available({ default: {} })).toEqual(["vibecab"]);
+    expect(available({ "claude-code": {} })).toEqual(["claude-code"]);
+    expect(available({ default: {}, codex: {}, "claude-code": {} })).toEqual(["vibecab", "claude-code", "codex"]);
+    expect(available({})).toEqual([]);
+  });
+});
