@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Button, Icon } from "@wei/design-system";
 import type { ThreadFilter } from "./threads.js";
 import { defaultFilter } from "./threads.js";
+import { plural } from "../ui/time.js";
 
 // Outline glyphs in the design system's style (24px grid, 1.5 stroke, currentColor) for what it does not ship.
 function Glyph({ d }: { d: string }) {
@@ -195,7 +196,7 @@ export function ActionBar({
           </button>
         )}
         <BarButton
-          label={threadsShown ? "Hide threads" : "Show threads"}
+          label={`${threadsShown ? "Hide" : "Show"} ${threadCount > 0 ? plural(threadCount, "thread") : "threads"}`}
           pressed={threadsShown}
           onClick={onToggleThreads}
         >

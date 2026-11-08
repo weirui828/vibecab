@@ -186,3 +186,14 @@ it("asks the agent on request in Manual mode", async () => {
     expect((await query<unknown[]>("vc.AgentTurns", { sessionId })).length).toBe(before + 1),
   );
 });
+
+it("explains why a block is the way it is", async () => {
+  const { container } = await openSession();
+  const heading = container.querySelector<HTMLElement>(".vc-doc > h1")!;
+  tl.fireEvent.mouseMove(heading);
+  tl.fireEvent.click(await tl.screen.findByRole("button", { name: "Why is this here?" }));
+  const dialog = container.ownerDocument.querySelector("dialog.vc-dialog") as HTMLElement;
+  await tl.waitFor(() => expect(dialog.textContent).toContain("You agreed to the agent's option “Name the idea”"));
+  expect(dialog.textContent).toContain("Changed by an Update in version 2");
+  expect(dialog.textContent).toContain("The title feels flat.");
+});

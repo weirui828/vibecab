@@ -13,3 +13,4 @@ apps/macos/build/
 
 # graphify knowledge-graph output
 graphify-out/
+apps/web/test-results/

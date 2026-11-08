@@ -5,6 +5,7 @@ import type { Element, VcDeliveryStateOperation } from "../../../../contract/gen
 import { locatorForTextSelection } from "../../../ui/src/document/anchors.js";
 import { useLiveQuery } from "../live/LiveStore.js";
 import { ActionBar } from "./ActionBar.js";
+import { WhyDialog } from "./WhyDialog.js";
 import type { ReplyMode } from "./ActionBar.js";
 import { canDecide, threadStatus } from "./loop.js";
 import type { Loop } from "./loop.js";
@@ -76,7 +77,8 @@ export function CommentSurface({
     [focused, setFocused] = useState<string>(),
     [writing, setWriting] = useState<Writing>(),
     [picked, setPicked] = useState<{ selection: TextSelection; x: number; y: number }>(),
-    [gutter, setGutter] = useState<{ elementId: string; top: number }>();
+    [gutter, setGutter] = useState<{ elementId: string; top: number }>(),
+    [why, setWhy] = useState<string>();
 
   const all = useLiveQuery<Thread[]>("vc.Threads", { sessionId });
   const threads = useMemo(() => threadsForDraft(all.data ?? [], artifactId), [all.data, artifactId]);
@@ -332,7 +334,6 @@ export function CommentSurface({
         ref={doc}
         onClick={onDocClick}
         onMouseMove={(event) => {
-          if (readOnly) return;
           const block = (event.target as HTMLElement).closest<HTMLElement>(blockSelector),
             host = surface.current;
           if (!block?.dataset.elementId || !host) return;
@@ -342,17 +343,33 @@ export function CommentSurface({
         onMouseLeave={() => setGutter(undefined)}
       >
         {children}
-        {gutter && !readOnly && (
-          <button
-            type="button"
-            className="vc-gutter"
-            style={{ top: gutter.top }}
-            aria-label="Comment on this block"
-            title="Comment on this block"
-            onClick={() => startWriting({ anchor: { artifactId, elementId: gutter.elementId, seenVersion: version } })}
-          >
-            <Icon name="plus" size={16} />
-          </button>
+        {gutter && (
+          <>
+            {!readOnly && (
+              <button
+                type="button"
+                className="vc-gutter"
+                style={{ top: gutter.top }}
+                aria-label="Comment on this block"
+                title="Comment on this block"
+                onClick={() =>
+                  startWriting({ anchor: { artifactId, elementId: gutter.elementId, seenVersion: version } })
+                }
+              >
+                <Icon name="plus" size={16} />
+              </button>
+            )}
+            <button
+              type="button"
+              className="vc-gutter why"
+              style={{ top: gutter.top + (readOnly ? 0 : 34) }}
+              aria-label="Why is this here?"
+              title="Why is this here?"
+              onClick={() => setWhy(gutter.elementId)}
+            >
+              <Icon name="information-circle" size={16} />
+            </button>
+          </>
         )}
       </div>
       {picked && !writing && (
@@ -412,6 +429,13 @@ export function CommentSurface({
           {composer}
         </div>
       )}
+      <WhyDialog
+        artifactId={artifactId}
+        elementId={why}
+        loop={loop}
+        threads={all.data ?? []}
+        onClose={() => setWhy(undefined)}
+      />
       <ActionBar
         canComment={!readOnly}
         threadCount={shownThreads.length}
