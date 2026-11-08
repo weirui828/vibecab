@@ -7,5 +7,5 @@ export default defineConfig({
   root: resolve(import.meta.dirname),
   base: "/",
   plugins: [react(), tailwindcss()],
-  build: { outDir: "../../dist/apps/web/client", emptyOutDir: true },
+  build: { outDir: "../../dist/apps/web/client", emptyOutDir: true, chunkSizeWarningLimit: 5000 },
 });

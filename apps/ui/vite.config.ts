@@ -8,5 +8,5 @@ export default defineConfig({
   base: "./",
   plugins: [react(), tailwindcss()],
   server: { host: "127.0.0.1", port: 5173, strictPort: true },
-  build: { outDir: "../../dist/apps/ui", emptyOutDir: true },
+  build: { outDir: "../../dist/apps/ui", emptyOutDir: true, chunkSizeWarningLimit: 5000 },
 });
