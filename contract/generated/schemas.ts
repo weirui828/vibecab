@@ -10694,6 +10694,188 @@ export const schemasById: Record<string, AnySchema> = {
     ],
     "additionalProperties": false
   },
+  "https://vibecab.local/schemas/provider-catalog.json": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://vibecab.local/schemas/provider-catalog.json",
+    "title": "ProviderCatalog",
+    "description": "Built-in model providers: where each lives, and its models with prices as published on the provider's pricing page on a stated date.",
+    "type": "object",
+    "properties": {
+      "checkedAt": {
+        "type": "string",
+        "format": "date"
+      },
+      "providers": {
+        "type": "array",
+        "items": {
+          "$ref": "#/$defs/provider"
+        }
+      }
+    },
+    "required": [
+      "checkedAt",
+      "providers"
+    ],
+    "additionalProperties": false,
+    "$defs": {
+      "provider": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "baseUrl": {
+            "type": "string",
+            "minLength": 1,
+            "description": "OpenAI-compatible base address; {placeholders} are filled in by the person."
+          },
+          "placeholders": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string",
+                  "pattern": "^[a-zA-Z]+$"
+                },
+                "label": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "key",
+                "label"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "keyNeeded": {
+            "type": "boolean"
+          },
+          "local": {
+            "type": "boolean"
+          },
+          "docsUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "pricingUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "note": {
+            "type": "string"
+          },
+          "liveModels": {
+            "description": "A model list the web host may fetch without a key: OpenRouter's (with prices), or a local server's /models.",
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "format": {
+                "enum": [
+                  "openrouter",
+                  "openai"
+                ]
+              }
+            },
+            "required": [
+              "url",
+              "format"
+            ],
+            "additionalProperties": false
+          },
+          "models": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/model"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "baseUrl",
+          "keyNeeded",
+          "models"
+        ],
+        "additionalProperties": false
+      },
+      "model": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "contextTokens": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "tools": {
+            "type": "boolean"
+          },
+          "jsonSchemaOutput": {
+            "type": "boolean"
+          },
+          "price": {
+            "description": "USD micros per million tokens; null when the pricing page could not be read — the person enters it.",
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "inputMicrosPerMillion": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "outputMicrosPerMillion": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "cachedInputMicrosPerMillion": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "inputMicrosPerMillion",
+                  "outputMicrosPerMillion"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "contextTokens",
+          "tools",
+          "jsonSchemaOutput",
+          "price"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
   "https://vibecab.local/schemas/provider-model.json": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://vibecab.local/schemas/provider-model.json",
@@ -10761,6 +10943,19 @@ export const schemasById: Record<string, AnySchema> = {
           "outputMicrosPerMillion"
         ],
         "additionalProperties": false
+      },
+      "catalogProvider": {
+        "type": "string",
+        "minLength": 1,
+        "description": "The built-in provider (catalog id) this model was chosen from, if any."
+      },
+      "pricingSource": {
+        "enum": [
+          "catalog",
+          "live",
+          "custom"
+        ],
+        "description": "Where the price came from: the built-in catalog, a provider's live list, or the person."
       }
     },
     "required": [
@@ -12787,6 +12982,7 @@ export const schemasByPath: Record<string, string> = {
   "output-set.json": "https://vibecab.local/schemas/output-set.json",
   "principal.json": "https://vibecab.local/schemas/principal.json",
   "project.json": "https://vibecab.local/schemas/project.json",
+  "provider-catalog.json": "https://vibecab.local/schemas/provider-catalog.json",
   "provider-model.json": "https://vibecab.local/schemas/provider-model.json",
   "query-envelope.json": "https://vibecab.local/schemas/query-envelope.json",
   "reply-trigger.json": "https://vibecab.local/schemas/reply-trigger.json",

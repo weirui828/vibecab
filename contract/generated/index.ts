@@ -196,6 +196,7 @@ export type { Outline } from './outline.js';
 export type { OutputSet } from './output-set.js';
 export type { Principal } from './principal.js';
 export type { Project } from './project.js';
+export type { ProviderCatalog } from './provider-catalog.js';
 export type { ProviderModel } from './provider-model.js';
 export type { QueryEnvelope } from './query-envelope.js';
 export type { ReplyTrigger } from './reply-trigger.js';

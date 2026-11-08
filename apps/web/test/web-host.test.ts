@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { parseArgs } from "../server/main.js";
-import { raw, startTestHost } from "./helpers.js";
+import { fetched, raw, startTestHost } from "./helpers.js";
 import type { TestHost } from "./helpers.js";
 
 let t: TestHost, token: string;
@@ -181,5 +181,36 @@ describe("forwarding to the engine", () => {
       headers: { "Content-Type": "application/json", Cookie: t.cookie, Authorization: "Bearer not-the-token" },
     });
     expect(res.status).toBe(200);
+  });
+});
+
+describe("model lists", () => {
+  it("fetches a built-in provider's live list from the catalog's own address, never one the page sends", async () => {
+    fetched.length = 0;
+    const res = await t.fetch(t.host.url + "/app/provider-models?provider=openrouter");
+    expect(await res.json()).toEqual({
+      models: [
+        {
+          id: "acme/swift-1",
+          name: "Acme: Swift 1",
+          contextTokens: 200000,
+          price: { inputMicrosPerMillion: 500_000, outputMicrosPerMillion: 1_500_000 },
+        },
+      ],
+    });
+    expect(fetched).toEqual(["https://openrouter.ai/api/v1/models"]);
+    // A provider with no live list, or an address smuggled in, fetches nothing.
+    for (const provider of ["openai", "https://evil.test/models", ""]) {
+      const none = await t.fetch(t.host.url + "/app/provider-models?provider=" + encodeURIComponent(provider));
+      expect(await none.json()).toEqual({ models: [], error: "no_list" });
+    }
+    expect(fetched).toEqual(["https://openrouter.ai/api/v1/models"]);
+    // An unreachable server is said plainly.
+    const down = await t.fetch(t.host.url + "/app/provider-models?provider=lm-studio");
+    expect(await down.json()).toEqual({ models: [], error: "unreachable" });
+  });
+
+  it("needs the signed-in cookie like every /app endpoint", async () => {
+    expect((await raw(t.host.port, "GET", "/app/provider-models?provider=openrouter")).status).toBe(401);
   });
 });

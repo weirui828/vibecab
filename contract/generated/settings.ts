@@ -34,6 +34,14 @@ export interface ProviderModel {
     inputMicrosPerMillion: number;
     outputMicrosPerMillion: number;
   };
+  /**
+   * The built-in provider (catalog id) this model was chosen from, if any.
+   */
+  catalogProvider?: string;
+  /**
+   * Where the price came from: the built-in catalog, a provider's live list, or the person.
+   */
+  pricingSource?: "catalog" | "live" | "custom";
 }
 export interface SessionSettings {
   replyTrigger?: "realtime" | "batch" | "manual";

@@ -4,9 +4,34 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { stop } from "../../../host/src/control.js";
 import { startWebHost } from "../server/web-host.js";
-import type { WebHost } from "../server/web-host.js";
+import type { WebHost, WebHostOptions } from "../server/web-host.js";
 
 export const fakeProvider = resolve(import.meta.dirname, "../dev/fake-provider.json");
+
+/** Addresses the web host asked for (model lists): tests never reach the network. */
+export const fetched: string[] = [];
+/** Stands in for the network: OpenRouter's model list and a local Ollama with one model; anything else fails. */
+export const fakeNetwork: typeof fetch = async (input) => {
+  const url = String(input instanceof Request ? input.url : input);
+  fetched.push(url);
+  const body =
+    url === "https://openrouter.ai/api/v1/models"
+      ? {
+          data: [
+            {
+              id: "acme/swift-1",
+              name: "Acme: Swift 1",
+              context_length: 200000,
+              pricing: { prompt: "0.0000005", completion: "0.0000015" },
+            },
+            { id: 42 },
+          ],
+        }
+      : url === "http://localhost:11434/v1/models"
+        ? { data: [{ id: "llama-local:8b", object: "model" }] }
+        : undefined;
+  return body ? Response.json(body) : new Response("no", { status: 503 });
+};
 
 export interface RawResponse {
   status: number;
@@ -46,9 +71,15 @@ export interface TestHost {
 }
 
 /** A web host on a fresh workspace with a running engine (scripted fake model), signed in once. */
-export async function startTestHost(staticRoot?: string): Promise<TestHost> {
+export async function startTestHost(staticRoot?: string, extra: Partial<WebHostOptions> = {}): Promise<TestHost> {
   const workspace = await mkdtemp(join(tmpdir(), "vibecab-web-test-")),
-    host = await startWebHost({ workspace, fakeProvider, ...(staticRoot ? { staticRoot } : {}) });
+    host = await startWebHost({
+      workspace,
+      fakeProvider,
+      fetch: fakeNetwork,
+      ...extra,
+      ...(staticRoot ? { staticRoot } : {}),
+    });
   await host.engine.start();
   const launch = new URL(host.launchUrl()),
     signIn = await raw(host.port, "GET", launch.pathname + launch.search),
