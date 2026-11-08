@@ -43,3 +43,16 @@ Rules for every task (in addition to `AGENTS.md`):
 - Model-dependent behaviour is tested only with the scripted fake provider from task 03. No network in tests.
 - New outbox job kinds declare whether they are locally idempotent (re-run after lost lease) or may have been billed (`uncertain` after lost lease).
 - End each task with: what was built, test summary, new entries in `docs/decisions.md`, open items in `docs/questions.md`. Then stop.
+
+## Web app tasks
+
+A browser app that replaces the Electron renderer as the main way to use VibeCab. Same engine, same contract, same app rules (`AGENTS.md` §9); new visual design on `@wei/design-system`, theme `tundra`. Plan and visual direction: `W0-web-app-plan.md`.
+
+| # | Task | Depends on |
+|---|---|---|
+| W1 | Web host, browser bridge, app shell, Home | A4 |
+| W2 | Session view: Document, Drafts in a session, catching up | W1 |
+| W3 | Comments and margin threads | W2 |
+| W4 | Agreement, agent replies, conflicts, Updates and diffs | W3 |
+| W5 | History, Snapshots, export, Trash, Ideas and Projects | W4 |
+| W6 | Settings, first run, accessibility and visual review; retire `apps/ui` | W5 |
