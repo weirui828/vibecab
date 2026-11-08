@@ -148,6 +148,36 @@ it("restores from Trash, and deletes for good after showing what goes", async ()
   );
 });
 
+it("a restored Draft in no session shows in Drafts and opens in a new session", async () => {
+  const loose = (
+    await command<{ artifactId: string }>("vc.ImportContent", {
+      title: "Loose page",
+      format: "markdown",
+      content: "# Loose",
+    })
+  ).artifactId;
+  await command("vc.Trash", { target: { kind: "artifact", id: loose } });
+  const { container } = await open("/trash");
+  await tl.waitFor(() => expect(container.textContent).toContain("Loose page"));
+  const row = [...container.querySelectorAll<HTMLElement>(".vc-row")].find((r) =>
+    r.textContent?.includes("Loose page"),
+  )!;
+  tl.fireEvent.click(tl.within(row).getByRole("button", { name: "Restore" }));
+  // The toast says where it went back to.
+  tl.fireEvent.click(await tl.screen.findByRole("button", { name: "Show" }));
+  await tl.waitFor(() => expect(window.location.hash).toBe("#/drafts"));
+  const draftRow = await tl.waitFor(() => {
+    const found = [...container.querySelectorAll<HTMLElement>(".vc-row")].find((r) =>
+      r.textContent?.includes("Loose page"),
+    );
+    if (!found) throw new Error("not listed");
+    return found;
+  });
+  expect(draftRow.textContent).toContain("opens in a new one");
+  tl.fireEvent.click(tl.within(draftRow).getByRole("button", { name: "Loose page" }));
+  await tl.waitFor(() => expect(window.location.hash).toMatch(new RegExp(`^#/s/session_\\w+/d/${loose}$`)));
+});
+
 it("captures Ideas, starts a session from one, and gathers it into a Project", async () => {
   const { container } = await open("/ideas");
   const field = await tl.screen.findByLabelText("New idea");
