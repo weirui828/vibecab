@@ -267,6 +267,7 @@ it("edits an idea in place, and gathers several at once into a Project and a Dra
 it("starts a Draft from ideas as a list of them", async () => {
   const { markdownFromIdeas, titleFromIdeas } = await import("../src/home/IdeasProjects.js");
   expect(markdownFromIdeas([{ text: "One\nline" }, { text: "Two" }])).toBe("- One line\n- Two\n");
+  expect(markdownFromIdeas([{ text: "One" }], "My  plan")).toBe("# My plan\n\n- One\n");
   expect(titleFromIdeas([{ text: "Short" }])).toBe("Short");
   expect(titleFromIdeas([{ text: "word ".repeat(30) }]).endsWith("…")).toBe(true);
 });

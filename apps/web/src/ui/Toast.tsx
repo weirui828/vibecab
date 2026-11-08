@@ -23,12 +23,21 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!toast) return;
     const timer = setTimeout(() => setToast(undefined), toast.action ? 7000 : 3500);
-    // When its dialog closes, the toast moves out to the page.
-    const out = () => setToast((current) => (current === toast ? { ...toast, host: undefined } : current));
-    toast.host?.addEventListener("close", out);
+    // When its dialog closes, or leaves the page altogether, the toast moves out to the page.
+    const host = toast.host,
+      out = () => setToast((current) => (current === toast ? { ...toast, host: undefined } : current));
+    host?.addEventListener("close", out);
+    const gone =
+      host && typeof MutationObserver !== "undefined"
+        ? new MutationObserver(() => !host.isConnected && out())
+        : undefined;
+    gone?.observe(document.body, { childList: true, subtree: true });
+    // It may have gone in the very update that showed the toast.
+    if (host && (!host.isConnected || !host.open)) out();
     return () => {
       clearTimeout(timer);
-      toast.host?.removeEventListener("close", out);
+      host?.removeEventListener("close", out);
+      gone?.disconnect();
     };
   }, [toast]);
   return (
@@ -36,7 +45,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       {toast &&
         withHost(
-          toast.host,
+          // A dialog that already closed or left the page is no place for it.
+          toast.host?.isConnected && toast.host.open ? toast.host : undefined,
           <div
             className="vc-toast"
             role="status"
@@ -44,7 +54,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             // A popover joins the top layer when shown, so the toast sits above an open dialog and its backdrop.
             popover={canPop ? "manual" : undefined}
             ref={(node) => {
-              if (node && canPop && !node.matches(":popover-open")) node.showPopover();
+              // Only a toast on the page can be shown; showing a detached one throws and would take the app down.
+              if (!node || !canPop || !node.isConnected || node.matches(":popover-open")) return;
+              try {
+                node.showPopover();
+              } catch {
+                // It stays in the page flow, still readable.
+              }
             }}
           >
             <span>{toast.text}</span>

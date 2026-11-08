@@ -42,9 +42,10 @@ export function titleFromIdeas(ideas: Array<{ text: string }>): string {
   return (space > 30 ? cut.slice(0, space) : cut) + "…";
 }
 
-/** The ideas as the opening list of a new Draft, one item each, on one line each. */
-export function markdownFromIdeas(ideas: Array<{ text: string }>): string {
-  return ideas.map((idea) => "- " + idea.text.replace(/\s+/g, " ").trim()).join("\n") + "\n";
+/** A new Draft's opening: its title as a heading, then the ideas as a list, one line each. */
+export function markdownFromIdeas(ideas: Array<{ text: string }>, title?: string): string {
+  const list = ideas.map((idea) => "- " + idea.text.replace(/\s+/g, " ").trim()).join("\n") + "\n";
+  return title ? `# ${title.replace(/\s+/g, " ").trim()}\n\n${list}` : list;
 }
 
 /** Everything done with a set of ideas: make a Draft, gather into a Project, trash. */
@@ -61,7 +62,7 @@ export function useIdeaActions() {
       const draft = await run<{ artifactId: string }>("vc.ImportContent", {
         title,
         format: "markdown",
-        content: markdownFromIdeas(ideas),
+        content: markdownFromIdeas(ideas, title),
       });
       if (!draft) return false;
       const attached = await run("vc.AttachArtifact", {

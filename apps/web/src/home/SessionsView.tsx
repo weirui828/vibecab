@@ -3,7 +3,6 @@ import { Button } from "@wei/design-system";
 import { terms } from "../../../ui/src/copy/terms.js";
 import { sortSessions } from "../live/workspace.js";
 import type { SessionRow, useWorkspace } from "../live/workspace.js";
-import { plural } from "../ui/time.js";
 import { SessionRows } from "./Rows.js";
 import { useDialogs } from "./DialogHost.js";
 import { PageSkeleton } from "./Views.js";
@@ -35,11 +34,9 @@ export function SessionsView({
       <header className="vc-header">
         <h1 className="vc-display">{terms.session}s</h1>
         <p className="vc-facts">
-          {[
-            plural(count("active"), terms.active.toLowerCase()),
-            plural(count("paused"), terms.paused.toLowerCase()),
-            plural(count("ended"), terms.ended.toLowerCase()),
-          ].join(" · ")}
+          {(["active", "paused", "ended"] as const)
+            .map((state) => `${count(state)} ${heading[state].toLowerCase()}`)
+            .join(" · ")}
         </p>
         <div className="vc-actions">
           <div className="vc-segmented small" role="group" aria-label="Show">
