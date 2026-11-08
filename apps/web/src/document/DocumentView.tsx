@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, Fragment, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Icon } from "@wei/design-system";
 import type { IconName } from "@wei/design-system";
@@ -39,6 +39,12 @@ export interface DocDiff {
   removed: Element[];
 }
 const DiffContext = createContext<DiffResult | undefined>(undefined);
+
+/**
+ * What to show right under a block (top-level blocks and list items): comments, when they are shown in place.
+ * Not provided in the changes and version views.
+ */
+export const AfterBlock = createContext<((elementId: string) => ReactNode) | undefined>(undefined);
 
 /**
  * Word-level changes inside one element. Insertions and deletions carry a "+" / "−" marker and words for screen
@@ -141,6 +147,7 @@ export function DocumentView({
     return () => observer.disconnect();
   }, [more]);
 
+  const after = useContext(AfterBlock);
   const kids = (element: Element) => (tree.children.get(element.elementId) ?? []).map(block);
   function block(element: Element): ReactNode {
     const id = element.elementId;
@@ -186,6 +193,7 @@ export function DocumentView({
         return (
           <li key={id} data-element-id={id}>
             <Text id={id} text={element.text} />
+            {after?.(id)}
             {kids(element)}
           </li>
         );
@@ -267,7 +275,15 @@ export function DocumentView({
         : diff?.result.changed.includes(id)
           ? "Changed"
           : undefined;
-    if (!change) return block(element);
+    if (!change)
+      return after ? (
+        <Fragment key={id}>
+          {block(element)}
+          {after(id)}
+        </Fragment>
+      ) : (
+        block(element)
+      );
     return (
       <div key={id} className="vc-changed" data-change={change.toLowerCase()}>
         <span className="vc-change-label">{change}</span>

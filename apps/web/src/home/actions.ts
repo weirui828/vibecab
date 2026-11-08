@@ -60,6 +60,29 @@ export function useActions() {
       if (started) navigate("/s/" + started.sessionId);
       return started !== undefined;
     },
+    /**
+     * An ended session is read-only: carry on with the same Drafts in a new session, which opens on `open`.
+     * The ended one keeps its threads as they were.
+     */
+    async continueSession(
+      title: string,
+      drafts: Array<{ artifactId: string; role?: "primary" | "reference" | undefined }>,
+      open: string,
+    ): Promise<boolean> {
+      const started = await run<{ sessionId: string }>("vc.StartSession", { title });
+      if (!started) return false;
+      const primary = drafts.find((d) => d.role === "primary") ?? drafts[0];
+      for (const draft of drafts) {
+        const role = draft === primary ? "primary" : "reference";
+        if (
+          (await run("vc.AttachArtifact", { sessionId: started.sessionId, artifactId: draft.artifactId, role })) ===
+          undefined
+        )
+          return false;
+      }
+      navigate(`/s/${started.sessionId}/d/${open}`);
+      return true;
+    },
     async rename(kind: TrashKind, id: string, title: string): Promise<boolean> {
       return (
         (kind === "artifact"

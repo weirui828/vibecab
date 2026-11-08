@@ -49,3 +49,14 @@ export function useRoute(): string {
 export function navigate(path: string) {
   window.location.hash = path;
 }
+
+/** Where threads show on a wide screen: under each block (as covibe does) or in a margin beside the text. */
+export type CommentPlace = "below" | "beside";
+export function useCommentPlace(): [CommentPlace, (place: CommentPlace) => void] {
+  const [place, setPlace] = useState<CommentPlace>(() => (read("vc-comments") === "beside" ? "beside" : "below"));
+  const set = useCallback((next: CommentPlace) => {
+    write("vc-comments", next);
+    setPlace(next);
+  }, []);
+  return [place, set];
+}
