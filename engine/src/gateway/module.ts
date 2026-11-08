@@ -13,6 +13,14 @@ export function gatewayModule(host: EngineModuleHost) {
       "sys.CreateAccessToken",
       "sys.RevokeAccessToken",
     ],
-    ["sys.Capabilities", "sys.Settings", "sys.Usage", "sys.SpendingToday", "sys.Budgets", "sys.AccessTokens"],
+    [
+      "sys.Capabilities",
+      "sys.Settings",
+      "sys.Usage",
+      "sys.UsageStats",
+      "sys.SpendingToday",
+      "sys.Budgets",
+      "sys.AccessTokens",
+    ],
   );
 }

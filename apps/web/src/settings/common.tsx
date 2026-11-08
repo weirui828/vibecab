@@ -59,6 +59,13 @@ export function AgentGroup({
   );
 }
 
+/** Names for agent ids in Settings. */
+export const agentNames: Record<string, string> = {
+  vibecab: "VibeCab agent",
+  "claude-code": "Claude Code",
+  codex: "Codex",
+};
+
 /** Runs a command; errors become a toast. Returns the result, or undefined on failure. */
 export function useRun() {
   const bridge = useBridge(),

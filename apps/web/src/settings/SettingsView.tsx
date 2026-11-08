@@ -8,7 +8,8 @@ import { navigate } from "../shell/prefs.js";
 import type { ThemeChoice } from "../shell/prefs.js";
 import { relativeTime } from "../ui/time.js";
 import { AssistantSection, DataSection, GrantsSection, ToolsSection } from "./AccessSections.js";
-import { AgentGroup, Section, dollars, toMicros, useRun } from "./common.js";
+import { AgentGroup, Section, agentNames, dollars, toMicros, useRun } from "./common.js";
+import { UsageSection } from "./UsageSection.js";
 import { ModelForm } from "./ModelForm.js";
 import type { SettingsShape } from "./ModelForm.js";
 
@@ -32,12 +33,7 @@ interface CallLog {
 
 type Spend = { limitMicros: number | null; usedMicros: number; reservedMicros: number };
 type Today = { date: string; daily: Spend; agents: Array<Spend & { agentId: string }> };
-/** Names for agent ids; an agent paid by its own subscription (W12) is never charged here. */
-export const agentNames: Record<string, string> = {
-  vibecab: "VibeCab agent",
-  "claude-code": "Claude Code",
-  codex: "Codex",
-};
+/** An agent paid by its own subscription (W12) is never charged here. */
 const subscriptionAgents = new Set(["claude-code", "codex"]);
 
 /** One agent's line: today's use, and its own daily limit beside the overall one. */
@@ -422,7 +418,12 @@ export function SettingsView({
             </AgentGroup>
           </>
         )}
-        {tab === "spending" && <SpendingSection budgets={settings.data?.budgets} />}
+        {tab === "spending" && (
+          <>
+            <SpendingSection budgets={settings.data?.budgets} />
+            <UsageSection sessions={sessions} />
+          </>
+        )}
         {tab === "general" && (
           <>
             <DataSection workspace={state?.workspacePath ?? ""} retention={settings.data?.trashRetentionDays} />

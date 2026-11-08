@@ -15,6 +15,10 @@
     "toolName": "spending_today",
     "description": "Today's model spending, overall and per agent, against its limits."
   },
+  "sys.UsageStats": {
+    "toolName": "usage_stats",
+    "description": "Model calls in a time range, totalled and grouped by day, agent, model, session or purpose."
+  },
   "sys.Usage": {
     "toolName": "usage",
     "description": "Read usage."
