@@ -8,7 +8,7 @@ import type {
 } from "../../../contract/src/index.js";
 import { readFile } from "node:fs/promises";
 import { errorOf, fail } from "../../../contract/src/index.js";
-import { outline } from "../content/diff.js";
+import { outline } from "../content/index.js";
 import { estimateInputTokens, estimateReservationMicros } from "../gateway/ledger.js";
 import { createHash } from "node:crypto";
 import type { ModelEvent as GatewayEvent, ModelRequest as GatewayRequest } from "../gateway/types.js";
