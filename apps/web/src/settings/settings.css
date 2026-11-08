@@ -260,3 +260,45 @@
 .vc-form > .vc-link-button {
   align-self: flex-start;
 }
+
+/* Settings → Agents: each agent is a group under its name; its sections sit one step in, with lighter headings. */
+.vc-agent {
+  padding: 36px 0 8px;
+  border-top: 1px solid var(--color-border-subtle);
+  scroll-margin-top: 24px;
+}
+.vc-tab-panel > .vc-agent:first-child {
+  margin-top: 8px;
+  border-top: 0;
+}
+.vc-agent > header h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 450;
+  letter-spacing: -0.01em;
+}
+.vc-agent > header .lede {
+  max-width: 58ch;
+  margin: 6px 0 0;
+  color: var(--color-fg-muted);
+  font-size: 14.5px;
+  line-height: 1.55;
+}
+.vc-agent > header .vc-facts {
+  margin: 6px 0 0;
+}
+.vc-agent .vc-setting[data-level="3"] {
+  margin: 0;
+  padding: 28px 0 28px 20px;
+  border-top: 0;
+  border-left: 2px solid var(--color-border-subtle);
+}
+.vc-agent .vc-setting[data-level="3"]:first-of-type {
+  margin-top: 24px;
+}
+.vc-setting h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}

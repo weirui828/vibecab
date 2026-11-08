@@ -8,7 +8,7 @@ import { navigate } from "../shell/prefs.js";
 import type { ThemeChoice } from "../shell/prefs.js";
 import { relativeTime } from "../ui/time.js";
 import { AssistantSection, DataSection, GrantsSection, ToolsSection } from "./AccessSections.js";
-import { Section, dollars, toMicros, useRun } from "./common.js";
+import { AgentGroup, Section, dollars, toMicros, useRun } from "./common.js";
 import { ModelForm } from "./ModelForm.js";
 import type { SettingsShape } from "./ModelForm.js";
 
@@ -30,10 +30,17 @@ interface CallLog {
   createdAt: string;
 }
 
-function SpendingSection() {
+function SpendingSection({ budgets }: { budgets: SettingsShape["budgets"] }) {
   const usage = useLiveQuery<{ accounts: BudgetState[]; calls: CallLog[] }>("sys.Usage", {}),
     run = useRun(),
-    [limit, setLimit] = useState<string>();
+    [limit, setLimit] = useState<string>(),
+    [turn, setTurn] = useState<string>();
+  async function saveTurn() {
+    const value = turn?.trim() ? toMicros(turn) : undefined;
+    if (value === undefined) return;
+    if (await run("sys.SetSettings", { patch: { budgets: { ...budgets, defaultTurnLimitMicros: value } } }))
+      setTurn(undefined);
+  }
   const daily = usage.data?.accounts.find((a) => a.account.kind === "daily");
   const calls = [...(usage.data?.calls ?? [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 8);
   async function save() {
@@ -72,6 +79,24 @@ function SpendingSection() {
           Save
         </Button>
       </form>
+      <form
+        className="vc-inline-setting"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void saveTurn();
+        }}
+      >
+        <Field label="Most one reply may cost ($)" hint="A single agent reply stops at this.">
+          <Input
+            inputMode="decimal"
+            value={turn ?? (budgets?.defaultTurnLimitMicros != null ? dollars(budgets.defaultTurnLimitMicros) : "")}
+            onChange={(e) => setTurn(e.target.value)}
+          />
+        </Field>
+        <Button type="submit" variant="ghost" disabled={turn === undefined}>
+          Save
+        </Button>
+      </form>
       {calls.length > 0 && (
         <table className="vc-calls">
           <caption className="vc-label">Recent model calls</caption>
@@ -103,30 +128,28 @@ function SpendingSection() {
   );
 }
 
-function AgentSection({ budgets }: { budgets: SettingsShape["budgets"] }) {
+function RepliesSection({ budgets }: { budgets: SettingsShape["budgets"] }) {
   const run = useRun(),
     [delay, setDelay] = useState<string>(),
-    [turn, setTurn] = useState<string>(),
     [tools, setTools] = useState<string>();
   async function save() {
     const patch: Record<string, number> = {};
     if (delay !== undefined && Number.isInteger(Number(delay)) && Number(delay) >= 1)
       patch.realtimeDebounceSeconds = Number(delay);
-    if (turn !== undefined && toMicros(turn) !== undefined) patch.defaultTurnLimitMicros = toMicros(turn)!;
     if (tools !== undefined && Number.isInteger(Number(tools)) && Number(tools) >= 1)
       patch.toolCallLimit = Number(tools);
     if (!Object.keys(patch).length) return;
     if (await run("sys.SetSettings", { patch: { budgets: { ...budgets, ...patch } } })) {
       setDelay(undefined);
-      setTurn(undefined);
       setTools(undefined);
     }
   }
   return (
     <Section
-      id="agent"
-      title="The agent"
-      lede={`How quickly it answers in Realtime ${terms.session.toLowerCase()}s, and how much one answer may cost. Reply modes are set per ${terms.session.toLowerCase()}.`}
+      id="replies"
+      level={3}
+      title="How it replies"
+      lede={`How quickly it answers in Realtime ${terms.session.toLowerCase()}s. Reply modes are set per ${terms.session.toLowerCase()}; what a reply may cost is under Spending.`}
     >
       <form
         className="vc-form"
@@ -143,13 +166,6 @@ function AgentSection({ budgets }: { budgets: SettingsShape["budgets"] }) {
               onChange={(e) => setDelay(e.target.value)}
             />
           </Field>
-          <Field label="Most one reply may cost ($)">
-            <Input
-              inputMode="decimal"
-              value={turn ?? (budgets?.defaultTurnLimitMicros != null ? dollars(budgets.defaultTurnLimitMicros) : "")}
-              onChange={(e) => setTurn(e.target.value)}
-            />
-          </Field>
           <Field label="Tool uses per reply">
             <Input
               inputMode="numeric"
@@ -159,11 +175,7 @@ function AgentSection({ budgets }: { budgets: SettingsShape["budgets"] }) {
           </Field>
         </div>
         <div className="vc-form-actions start">
-          <Button
-            type="submit"
-            variant="secondary"
-            disabled={delay === undefined && turn === undefined && tools === undefined}
-          >
+          <Button type="submit" variant="secondary" disabled={delay === undefined && tools === undefined}>
             Save
           </Button>
         </div>
@@ -215,17 +227,23 @@ function AnotherBrowser() {
 }
 
 const tabs = [
-  ["model", "Model"],
+  ["agents", "Agents"],
   ["spending", "Spending"],
-  ["agent", "Agent"],
-  ["permissions", "Permissions"],
-  ["tools", "Tools"],
-  ["assistant", "Assistant"],
-  ["data", "Data"],
-  ["appearance", "Appearance"],
-  ["about", "About"],
+  ["general", "General"],
 ] as const;
 type Tab = (typeof tabs)[number][0];
+
+/** Addresses from before the three tabs: the tab each part now lives in, and the part to scroll to. */
+const moved: Record<string, [Tab, string]> = {
+  model: ["agents", "model"],
+  agent: ["agents", "replies"],
+  permissions: ["agents", "permissions"],
+  tools: ["agents", "tools"],
+  assistant: ["agents", "assistants-agent"],
+  data: ["general", "data"],
+  appearance: ["general", "appearance"],
+  about: ["general", "about"],
+};
 
 /** Settings as tabs, one section at a time; the tab is in the address (`#/settings/agent`), so it survives a reload. */
 export function SettingsView({
@@ -247,7 +265,14 @@ export function SettingsView({
   useEffect(() => {
     void bridge.app.state().then(setState, () => undefined);
   }, [bridge]);
-  const tab: Tab = tabs.find(([id]) => id === asked)?.[0] ?? "model";
+  const old = moved[asked],
+    tab: Tab = old?.[0] ?? tabs.find(([id]) => id === asked)?.[0] ?? "agents";
+  // An old address opens the tab where that part now lives, scrolled to it.
+  useEffect(() => {
+    if (!old) return;
+    navigate("/settings/" + old[0]);
+    setTimeout(() => document.getElementById(old[1])?.scrollIntoView?.({ block: "start" }), 50);
+  }, [old]);
   const go = (id: Tab, focus = false) => {
     navigate("/settings/" + id);
     if (focus) setTimeout(() => list.current?.querySelector<HTMLElement>(`[data-tab="${id}"]`)?.focus(), 0);
@@ -293,38 +318,50 @@ export function SettingsView({
         ))}
       </div>
       <div className="vc-tab-panel" role="tabpanel" id={"panel-" + tab} aria-labelledby={"tab-" + tab} key={tab}>
-        {tab === "model" && (
-          <Section
-            id="model"
-            title="Model"
-            lede="The model the agent thinks with. VibeCab sends it only what a reply or an Update needs."
-          >
-            <ModelForm />
-          </Section>
-        )}
-        {tab === "spending" && <SpendingSection />}
-        {tab === "agent" && <AgentSection budgets={settings.data?.budgets} />}
-        {tab === "permissions" && <GrantsSection sessions={sessions} />}
-        {tab === "tools" && <ToolsSection />}
-        {tab === "assistant" && (
-          <AssistantSection workspace={state?.workspacePath ?? ""} relayPath={state?.mcpRelayPath} />
-        )}
-        {tab === "data" && (
-          <DataSection workspace={state?.workspacePath ?? ""} retention={settings.data?.trashRetentionDays} />
-        )}
-        {tab === "appearance" && (
-          <Section id="appearance" title="Appearance" lede="Auto follows this computer's light and dark setting.">
-            <ThemeSwitch theme={theme} setTheme={setTheme} />
-          </Section>
-        )}
-        {tab === "about" && (
+        {tab === "agents" && (
           <>
+            <AgentGroup
+              id="vibecab-agent"
+              name="VibeCab agent"
+              about={`Replies to comments and writes ${terms.update}s in your ${terms.session.toLowerCase()}s.`}
+              facts={
+                settings.data?.models?.default ? `Thinks with ${settings.data.models.default.model}` : "No model yet"
+              }
+            >
+              <Section
+                id="model"
+                level={3}
+                title="Model"
+                lede={`The model it thinks with. VibeCab sends it only what a reply or an ${terms.update} needs.`}
+              >
+                <ModelForm />
+              </Section>
+              <RepliesSection budgets={settings.data?.budgets} />
+              <GrantsSection sessions={sessions} />
+              <ToolsSection />
+            </AgentGroup>
+            <AgentGroup
+              id="assistants-agent"
+              name="Your AI assistants"
+              about="Claude Desktop, Codex, Cursor or another MCP client can work here as you — read, comment and agree — through VibeCab's MCP server. They can never change settings, keys or permissions."
+            >
+              <AssistantSection workspace={state?.workspacePath ?? ""} relayPath={state?.mcpRelayPath} />
+            </AgentGroup>
+          </>
+        )}
+        {tab === "spending" && <SpendingSection budgets={settings.data?.budgets} />}
+        {tab === "general" && (
+          <>
+            <DataSection workspace={state?.workspacePath ?? ""} retention={settings.data?.trashRetentionDays} />
+            <Section id="appearance" title="Appearance" lede="Auto follows this computer's light and dark setting.">
+              <ThemeSwitch theme={theme} setTheme={setTheme} />
+            </Section>
+            <AnotherBrowser />
             <Section id="about" title="About">
               <p className="vc-facts">
                 VibeCab {state?.version ?? ""} · contract {caps.data?.contractVersion ?? "…"}
               </p>
             </Section>
-            <AnotherBrowser />
           </>
         )}
       </div>

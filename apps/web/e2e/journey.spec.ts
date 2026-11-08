@@ -83,8 +83,7 @@ test("Settings: the key is saved and never shown; the agent replies quickly", as
   await page.goto(host.url + "/#/settings");
   await expect(page.getByText(/Key saved/)).toBeVisible();
   expect(await page.content()).not.toContain("e2e-test-key");
-  await page.getByRole("tab", { name: "Agent" }).click();
-  const agent = page.getByRole("region", { name: "The agent" });
+  const agent = page.getByRole("region", { name: "How it replies" });
   await agent.getByLabel("Wait before replying (seconds)").fill("1");
   await agent.getByRole("button", { name: "Save", exact: true }).click();
   await accessible("Settings");

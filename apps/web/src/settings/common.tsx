@@ -10,18 +10,51 @@ export function Section({
   id,
   title,
   lede,
+  level = 2,
   children,
 }: {
   id: string;
   title: string;
   lede?: string;
+  /** 3 inside an agent's group, so the agent's name stays the heading above it. */
+  level?: 2 | 3;
+  children: ReactNode;
+}) {
+  const Heading = level === 3 ? "h3" : "h2";
+  return (
+    <section className="vc-setting" data-level={level} id={id} aria-labelledby={id + "-title"}>
+      <Heading id={id + "-title"}>{title}</Heading>
+      {lede && <p className="lede">{lede}</p>}
+      <div className="body">{children}</div>
+    </section>
+  );
+}
+
+/**
+ * One agent in Settings → Agents: its name and what it is, then its own sections (model, replies, permissions,
+ * tools...). A group with a heading, not a card, so nothing ends up as a card inside a card.
+ */
+export function AgentGroup({
+  id,
+  name,
+  about,
+  facts,
+  children,
+}: {
+  id: string;
+  name: string;
+  about: string;
+  facts?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <section className="vc-setting" id={id} aria-labelledby={id + "-title"}>
-      <h2 id={id + "-title"}>{title}</h2>
-      {lede && <p className="lede">{lede}</p>}
-      <div className="body">{children}</div>
+    <section className="vc-agent" id={id} aria-labelledby={id + "-name"}>
+      <header>
+        <h2 id={id + "-name"}>{name}</h2>
+        <p className="lede">{about}</p>
+        {facts && <p className="vc-facts">{facts}</p>}
+      </header>
+      {children}
     </section>
   );
 }
