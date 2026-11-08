@@ -61,7 +61,13 @@
 }
 
 /* Gutter + and the floating Comment button. */
+.vc-gutter-rail {
+  position: absolute;
+  left: -56px;
+  width: 56px;
+}
 .vc-gutter {
+  z-index: 1;
   position: absolute;
   left: -44px;
   display: grid;
@@ -456,7 +462,8 @@
   .vc-surface {
     font-size: 16.5px;
   }
-  .vc-gutter {
+  .vc-gutter,
+  .vc-gutter-rail {
     display: none;
   }
   .vc-bar-dock {
