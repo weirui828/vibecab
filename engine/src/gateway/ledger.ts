@@ -3,6 +3,8 @@ import type { BudgetState } from "../../../contract/src/index.js";
 import type { Clock } from "../dependencies.js";
 import type { Repository } from "../storage/repository.js";
 import type { BudgetReservation, BudgetScope, CallLog, ModelRequest, ProviderModel } from "./types.js";
+import { usageStats } from "./stats.js";
+import type { UsageGroupBy, UsageStats } from "./stats.js";
 
 export class BudgetLedger {
   constructor(
@@ -250,6 +252,21 @@ export class BudgetLedger {
   log(value: CallLog): void {
     const checked = this.contract.read<CallLog>("call-log", value);
     this.store.transaction(() => this.store.saveCallLog(checked));
+  }
+  /** A moment's day (YYYY-MM-DD) in the budget time zone, so stats and daily limits agree on where days end. */
+  dayOf(iso: string): string {
+    const parts = new Intl.DateTimeFormat("en", {
+      timeZone: this.timeZone(),
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date(iso));
+    const get = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
+    return `${get("year")}-${get("month")}-${get("day")}`;
+  }
+  stats(from: string, to: string, groupBy: UsageGroupBy): UsageStats {
+    if (!Number.isFinite(Date.parse(from)) || !Number.isFinite(Date.parse(to))) fail("invalid", "Invalid usage range");
+    return usageStats(this.calls(), { from, to, groupBy, dayOf: (iso) => this.dayOf(iso) });
   }
   calls(): CallLog[] {
     return this.store.callLogs().map((value) => this.contract.read<CallLog>("call-log", value));

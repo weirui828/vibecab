@@ -53,11 +53,11 @@ const map: Record<string, string[]> = {
   ],
   "sys.AccessTokenCreated": ["sys.AccessTokens"],
   "sys.AccessTokenRevoked": ["sys.AccessTokens"],
-  "sys.SettingsChanged": ["sys.Settings", "sys.Budgets", "sys.Usage", "sys.SpendingToday"],
+  "sys.SettingsChanged": ["sys.Settings", "sys.Budgets", "sys.Usage", "sys.SpendingToday", "sys.UsageStats"],
   "sys.ProviderKeyRefSet": ["sys.Settings"],
   "vc.ToolServerChanged": ["vc.ToolServers", "vc.Grants"],
   "vc.ToolPolicyChanged": ["vc.ToolServers", "vc.Grants"],
-  "sys.BudgetChanged": ["sys.Settings", "sys.Budgets", "sys.Usage", "sys.SpendingToday"],
+  "sys.BudgetChanged": ["sys.Settings", "sys.Budgets", "sys.Usage", "sys.SpendingToday", "sys.UsageStats"],
 };
 
 /** Events no screen of the web app shows yet (TMR runs, review requests, external tool calls). */

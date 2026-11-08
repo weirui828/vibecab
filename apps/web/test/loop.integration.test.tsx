@@ -206,3 +206,31 @@ it("shows a changed block's change history: each Update and what asked for it", 
   await tl.screen.findByRole("button", { name: "Comment on this block" });
   expect(tl.screen.queryByRole("button", { name: "Change history" })).toBeNull();
 });
+
+it("shows what the agent cost and did in Settings → Spending → Usage", async () => {
+  tl.cleanup();
+  window.location.hash = "/settings/spending";
+  const { App } = await import("../src/App.js");
+  tl.render(<App bridge={bridge} />);
+  const usage = await tl.screen.findByRole("region", { name: "Usage" });
+  // Replies and Updates ran earlier in this file, all on the VibeCab agent.
+  await tl.waitFor(() =>
+    expect(tl.within(usage).getByRole("table", { name: "By agent" }).textContent).toContain("VibeCab agent"),
+  );
+  const purposes = tl.within(usage).getByRole("table", { name: "By purpose" }).textContent ?? "";
+  expect(purposes).toContain("Replies");
+  expect(purposes).toMatch(/Updates \((writing|planning)\)/);
+  // Session titles arrive with the sessions list, a moment after the numbers.
+  await tl.waitFor(() =>
+    expect(tl.within(usage).getByRole("table", { name: "Costliest sessions" }).textContent).toContain("Tundra walk"),
+  );
+  const calls = Number(tl.within(usage).getByText("Calls", { selector: "dt" }).nextElementSibling?.textContent);
+  expect(calls).toBeGreaterThan(1);
+  // Today only, then 30 days: the period changes what is counted, never by less than today.
+  tl.fireEvent.click(tl.within(usage).getByRole("button", { name: "30 days" }));
+  await tl.waitFor(() =>
+    expect(
+      Number(tl.within(usage).getByText("Calls", { selector: "dt" }).nextElementSibling?.textContent),
+    ).toBeGreaterThanOrEqual(calls),
+  );
+});

@@ -106,6 +106,7 @@ export type { SysSetSettingsOperation } from './operations/sys.SetSettings.js';
 export type { SysSettingsOperation } from './operations/sys.Settings.js';
 export type { SysSpendingTodayOperation } from './operations/sys.SpendingToday.js';
 export type { SysUsageOperation } from './operations/sys.Usage.js';
+export type { SysUsageStatsOperation } from './operations/sys.UsageStats.js';
 export type { TmrCancelOperation } from './operations/tmr.Cancel.js';
 export type { TmrEventsOperation } from './operations/tmr.Events.js';
 export type { TmrExportOperation } from './operations/tmr.Export.js';

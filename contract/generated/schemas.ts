@@ -4976,6 +4976,175 @@ export const schemasById: Record<string, AnySchema> = {
       }
     }
   },
+  "https://vibecab.local/schemas/operations/sys.UsageStats.json": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://vibecab.local/schemas/operations/sys.UsageStats.json",
+    "title": "sysUsageStatsOperation",
+    "description": "Model calls between from (inclusive) and to (exclusive), totalled and grouped. Cost is what was settled, or what is still reserved for a call whose usage is unknown.",
+    "type": "object",
+    "properties": {
+      "payload": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "groupBy": {
+            "enum": [
+              "day",
+              "agent",
+              "model",
+              "session",
+              "purpose"
+            ]
+          }
+        },
+        "required": [
+          "from",
+          "to",
+          "groupBy"
+        ],
+        "additionalProperties": false
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "totals": {
+            "type": "object",
+            "properties": {
+              "calls": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "costMicros": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "inputTokens": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "outputTokens": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "cachedInputTokens": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "errors": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "medianDurationMs": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "p95DurationMs": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "calls",
+              "costMicros",
+              "inputTokens",
+              "outputTokens",
+              "cachedInputTokens",
+              "errors",
+              "medianDurationMs",
+              "p95DurationMs"
+            ],
+            "additionalProperties": false
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "calls": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "costMicros": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "inputTokens": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "outputTokens": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "cachedInputTokens": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "errors": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "medianDurationMs": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "p95DurationMs": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "required": [
+                "key",
+                "calls",
+                "costMicros",
+                "inputTokens",
+                "outputTokens",
+                "cachedInputTokens",
+                "errors",
+                "medianDurationMs",
+                "p95DurationMs"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "totals",
+          "groups"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "required": [
+      "payload",
+      "result"
+    ],
+    "additionalProperties": false,
+    "operation": {
+      "name": "sys.UsageStats",
+      "kind": "query",
+      "meta": {
+        "effect": "read",
+        "irreversible": false,
+        "channels": [
+          "in_process",
+          "http",
+          "cli",
+          "mcp"
+        ]
+      }
+    }
+  },
   "https://vibecab.local/schemas/operations/tmr.Cancel.json": {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://vibecab.local/schemas/operations/tmr.Cancel.json",
@@ -13031,6 +13200,7 @@ export const schemasByPath: Record<string, string> = {
   "operations/sys.Settings.json": "https://vibecab.local/schemas/operations/sys.Settings.json",
   "operations/sys.SpendingToday.json": "https://vibecab.local/schemas/operations/sys.SpendingToday.json",
   "operations/sys.Usage.json": "https://vibecab.local/schemas/operations/sys.Usage.json",
+  "operations/sys.UsageStats.json": "https://vibecab.local/schemas/operations/sys.UsageStats.json",
   "operations/tmr.Cancel.json": "https://vibecab.local/schemas/operations/tmr.Cancel.json",
   "operations/tmr.Events.json": "https://vibecab.local/schemas/operations/tmr.Events.json",
   "operations/tmr.Export.json": "https://vibecab.local/schemas/operations/tmr.Export.json",

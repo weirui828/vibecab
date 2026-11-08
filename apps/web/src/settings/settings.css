@@ -302,3 +302,118 @@
   font-size: 16px;
   font-weight: 600;
 }
+
+/* Usage (W11): headline figures, one bar series for cost per day, and quiet tables with a share bar. */
+.vc-figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 16px;
+  width: 100%;
+  margin: 0;
+}
+.vc-figures div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.vc-figures dt {
+  color: var(--color-fg-muted);
+  font-size: 12.5px;
+}
+.vc-figures dd {
+  margin: 0;
+  color: var(--color-fg-default);
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-variant-numeric: tabular-nums;
+}
+.vc-figures dd .vc-facts {
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+}
+.vc-usage-chart {
+  width: 100%;
+  margin: 8px 0 0;
+}
+.vc-usage-chart .plot {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 140px;
+  margin-top: 10px;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+.vc-usage-chart .col {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  align-items: flex-end;
+  height: 100%;
+  min-width: 4px;
+  outline: none;
+}
+.vc-usage-chart .bar {
+  width: 100%;
+  max-width: 28px;
+  margin: 0 auto;
+  border-radius: 4px 4px 0 0;
+  background: var(--color-accent-default);
+}
+.vc-usage-chart .col:hover .bar,
+.vc-usage-chart .col:focus-visible .bar {
+  opacity: 0.8;
+}
+.vc-usage-chart .col:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--color-accent-default);
+  border-radius: 4px;
+}
+.vc-tip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 10px;
+  transform: translateX(-50%);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 10px;
+  background: var(--color-surface-base);
+  box-shadow: var(--vc-shadow-pop);
+  color: var(--color-fg-default);
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.vc-usage-chart .axis {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  color: var(--color-fg-muted);
+  font-size: 11.5px;
+}
+.vc-as-table {
+  margin-top: 8px;
+  font-size: 13px;
+}
+.vc-as-table summary {
+  color: var(--color-fg-muted);
+  cursor: pointer;
+}
+.vc-breakdown .share {
+  display: inline-block;
+  width: 48px;
+  height: 6px;
+  margin-right: 8px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--color-surface-raised);
+  vertical-align: middle;
+}
+.vc-breakdown .share span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--color-accent-default);
+}

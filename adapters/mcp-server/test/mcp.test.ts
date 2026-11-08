@@ -81,6 +81,7 @@ describe("MCP server", () => {
         "update_detail",
         "updates",
         "usage",
+        "usage_stats",
         "versions",
       ],
       collaborate: [
@@ -159,6 +160,7 @@ describe("MCP server", () => {
         "update_detail",
         "updates",
         "usage",
+        "usage_stats",
         "versions",
       ],
     };
