@@ -2,7 +2,7 @@ import { diffWords } from "diff";
 import type { Anchor, AnchorResolution, DiffResult, Element, Outline } from "../../../contract/src/index.js";
 import type { Repository } from "../storage/repository.js";
 import { canonical } from "./hash.js";
-import { inlineMarkdownToPlainText } from "../../../contract/src/inline-markdown.js";
+import { inlineMarkdownToPlainText, locateQuote } from "../../../contract/src/inline-markdown.js";
 export function diffVersions(store: Repository, id: string, from: number, to: number): DiffResult {
   const a = store.version(id, from),
     b = store.version(id, to),
@@ -75,15 +75,8 @@ export function resolveAnchors(store: Repository, anchors: Anchor[]): AnchorReso
     if (anchor.locator) {
       const e = store.elements(anchor.artifactId).find((e) => e.elementId === anchor.elementId);
       if (e && "text" in e) {
-        const { quote, prefix, suffix } = anchor.locator;
-        const plain = inlineMarkdownToPlainText(e.text);
-        const unique = (value: string) => {
-          const at = plain.indexOf(value);
-          return at >= 0 && plain.indexOf(value, at + 1) < 0 ? at : undefined;
-        };
-        const context = unique(prefix + quote + suffix),
-          at = context === undefined ? unique(quote) : context + prefix.length;
-        if (at !== undefined) result.range = { start: at, end: at + quote.length };
+        const range = locateQuote(inlineMarkdownToPlainText(e.text), anchor.locator);
+        if (range) result.range = range;
       }
     }
     return result;

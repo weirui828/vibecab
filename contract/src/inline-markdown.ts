@@ -114,3 +114,21 @@ function inlineNodeText(nodes: InlineNode[]): string {
     )
     .join("");
 }
+
+/**
+ * Finds an anchor's quote in an element's plain text: the quote with its prefix and suffix if that context
+ * occurs exactly once, otherwise the quote alone if it occurs exactly once. Shared by the engine and clients.
+ */
+export function locateQuote(
+  plain: string,
+  locator: { quote: string; prefix: string; suffix: string },
+): { start: number; end: number } | undefined {
+  const { quote, prefix, suffix } = locator;
+  const unique = (value: string) => {
+    const at = plain.indexOf(value);
+    return at >= 0 && plain.indexOf(value, at + 1) < 0 ? at : undefined;
+  };
+  const context = unique(prefix + quote + suffix),
+    at = context === undefined ? unique(quote) : context + prefix.length;
+  return at === undefined ? undefined : { start: at, end: at + quote.length };
+}

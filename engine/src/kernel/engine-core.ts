@@ -100,7 +100,7 @@ export abstract class EngineCore {
     const store = this.available();
     this.lifecycleContext = {
       repository: store,
-      mutate: (action) => this.queue.run(() => store.transaction(action)),
+      mutate: (action) => this.queue.run(() => this.committed(store.transaction(action))),
       clock: this.deps.clock,
       ids: this.deps.ids,
       contract: {
@@ -118,6 +118,12 @@ export abstract class EngineCore {
 
   protected wake() {
     for (const fn of [...this.listeners]) fn();
+  }
+
+  /** After any committed write (commands, module work, jobs): subscribers read the events it appended. */
+  protected committed<T>(result: T): T {
+    this.wake();
+    return result;
   }
 
   protected activitySnapshot(): KernelActivitySnapshot {
@@ -206,7 +212,7 @@ export abstract class EngineCore {
       this.jobs = new JobRunner(
         this.store,
         this.deps.clock,
-        (action) => this.queue.run(() => this.available().transaction(action)),
+        (action) => this.queue.run(() => this.committed(this.available().transaction(action))),
         {
           leaseMs: 30000,
           handlers: Object.fromEntries(

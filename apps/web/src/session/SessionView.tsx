@@ -18,7 +18,9 @@ import { useToast } from "../ui/Toast.js";
 import { plural, relativeTime } from "../ui/time.js";
 import { navigate } from "../shell/prefs.js";
 import { CatchUp } from "./CatchUp.js";
+import { CommentSurface } from "./CommentSurface.js";
 import { useMarkSeen } from "./useMarkSeen.js";
+import { byElementId } from "./textRanges.js";
 
 /** `/s/:sessionId` or `/s/:sessionId/d/:artifactId`. */
 export function parseSessionRoute(route: string): { sessionId: string; artifactId?: string } | undefined {
@@ -47,7 +49,12 @@ export function SessionView({ session, artifactId }: { session: SessionRow; arti
       <ResumeStrip sessionId={session.sessionId} />
       <div className="vc-doc-wrap">
         {current ? (
-          <DraftDocument key={current.artifactId} artifactId={current.artifactId} />
+          <DraftDocument
+            key={current.artifactId}
+            sessionId={session.sessionId}
+            artifactId={current.artifactId}
+            readOnly={session.state === "ended"}
+          />
         ) : (
           <EmptySession session={session} />
         )}
@@ -177,7 +184,7 @@ function ResumeStrip({ sessionId }: { sessionId: string }) {
         markSeen();
       }}
       onJump={(elementId) => {
-        const node = document.querySelector(`[data-element-id="${CSS.escape(elementId)}"]`);
+        const node = document.querySelector(byElementId(elementId));
         node?.scrollIntoView({ behavior: "smooth", block: "center" });
         node?.classList.add("vc-flash");
         setTimeout(() => node?.classList.remove("vc-flash"), 1600);
@@ -186,7 +193,15 @@ function ResumeStrip({ sessionId }: { sessionId: string }) {
   );
 }
 
-function DraftDocument({ artifactId }: { artifactId: string }) {
+function DraftDocument({
+  sessionId,
+  artifactId,
+  readOnly,
+}: {
+  sessionId: string;
+  artifactId: string;
+  readOnly: boolean;
+}) {
   const bridge = useBridge(),
     toast = useToast(),
     elements = useLiveQuery<Element[]>("vc.Elements", { artifactId }),
@@ -212,7 +227,7 @@ function DraftDocument({ artifactId }: { artifactId: string }) {
   useLayoutEffect(() => {
     const saved = anchor.current;
     if (!saved) return;
-    const node = document.querySelector<HTMLElement>(`[data-element-id="${CSS.escape(saved.id)}"]`);
+    const node = document.querySelector<HTMLElement>(byElementId(saved.id));
     if (node) window.scrollBy(0, node.getBoundingClientRect().top - saved.top);
   }, [elements.data]);
   useEffect(() => {
@@ -222,7 +237,17 @@ function DraftDocument({ artifactId }: { artifactId: string }) {
     seenVersion.current = version;
   }, [artifact.data?.headVersion, toast]);
   if (!elements.data) return <DocSkeleton />;
-  return <DocumentView elements={elements.data} blobUrl={bridge.blobUrl} />;
+  return (
+    <CommentSurface
+      sessionId={sessionId}
+      artifactId={artifactId}
+      version={artifact.data?.headVersion ?? 1}
+      elements={elements.data}
+      readOnly={readOnly || !artifact.data}
+    >
+      <DocumentView elements={elements.data} blobUrl={bridge.blobUrl} />
+    </CommentSurface>
+  );
 }
 
 function EmptySession({ session }: { session: SessionRow }) {

@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "@wei/design-system/theme.css";
 @import "./document/document.css";
+@import "./session/comments.css";
 @source "../node_modules/@wei/design-system/dist";
 
 /* VibeCab web. Semantic design-system tokens only: no raw colours (a test enforces it).
@@ -857,9 +858,8 @@
 }
 .vc-doc-wrap {
   width: 100%;
-  max-width: calc(68ch + 64px);
   margin: 0 auto;
-  padding: clamp(40px, 8vh, 88px) 32px 160px;
+  padding: clamp(40px, 8vh, 88px) 32px 40px;
   font-size: 17px;
 }
 .vc-catchup {
@@ -1101,4 +1101,8 @@
     animation: none !important;
     transition: none !important;
   }
+}
+.vc-doc-wrap > :not(.vc-surface) {
+  max-width: 68ch;
+  margin-inline: auto;
 }

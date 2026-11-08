@@ -1,0 +1,472 @@
+/* Commenting: the margin, thread cards, composer, highlights and the floating bar. Tokens only. */
+
+.vc-surface {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 68ch);
+  justify-content: center;
+  column-gap: 56px;
+  font-size: 17px;
+}
+.vc-surface[data-margin] {
+  grid-template-columns: minmax(0, 68ch) 300px;
+}
+.vc-surface-doc {
+  position: relative;
+  min-width: 0;
+}
+.vc-margin {
+  position: relative;
+  min-height: var(--vc-margin-height, 0px);
+  font-size: 14px;
+}
+
+/* Highlights: painted by the CSS Custom Highlight API, so the text itself is never rewritten. */
+::highlight(vc-comment) {
+  background-color: var(--color-warning-subtle);
+  text-decoration: underline 2px var(--color-warning-border);
+  text-underline-offset: 4px;
+}
+::highlight(vc-revised) {
+  background-color: var(--color-info-subtle);
+}
+::highlight(vc-focus) {
+  background-color: var(--color-warning-border);
+  color: var(--color-fg-default);
+}
+/* A whole-block mark is a thin bar in the gutter, so the Document's colour stays calm. */
+.vc-doc [data-mark] {
+  position: relative;
+}
+.vc-doc [data-mark]::before {
+  content: "";
+  position: absolute;
+  top: 0.25em;
+  bottom: 0.25em;
+  left: -18px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--color-warning-border);
+}
+.vc-doc [data-mark="revised"]::before {
+  background: var(--color-info-border);
+}
+.vc-doc [data-mark-focus]::before {
+  left: -19px;
+  width: 5px;
+  background: var(--color-warning-default);
+}
+.vc-doc [data-mark="revised"][data-mark-focus]::before {
+  background: var(--color-info-default);
+}
+
+/* Gutter + and the floating Comment button. */
+.vc-gutter {
+  position: absolute;
+  left: -44px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-top: 2px;
+  padding: 0;
+  border: 1px solid var(--color-border-default);
+  border-radius: 999px;
+  background: var(--color-surface-base);
+  color: var(--color-fg-muted);
+  cursor: pointer;
+  animation: vc-pop var(--vc-fast) var(--vc-ease);
+}
+.vc-gutter:hover {
+  border-color: var(--color-accent-default);
+  color: var(--color-accent-fg);
+}
+.vc-pick {
+  position: absolute;
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  transform: translate(-50%, calc(-100% - 10px));
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-surface-inverse);
+  color: var(--color-fg-inverse);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: var(--vc-shadow-pop);
+  animation: vc-pop var(--vc-fast) var(--vc-ease);
+}
+.vc-pick .vc-facts {
+  color: inherit;
+  opacity: 0.6;
+  font-size: 11px;
+}
+
+/* Thread cards: quiet until focused. */
+.vc-thread {
+  padding: 14px 16px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  background: var(--color-surface-raised);
+  transition:
+    border-color var(--vc-fast) var(--vc-ease),
+    box-shadow var(--vc-fast) var(--vc-ease);
+  cursor: default;
+}
+.vc-thread:hover {
+  border-color: var(--color-border-default);
+}
+/* Cards glide to new places once placed; the first placement is instant. */
+.vc-thread[data-placed] {
+  transition:
+    transform var(--vc-base) var(--vc-ease),
+    border-color var(--vc-fast) var(--vc-ease),
+    box-shadow var(--vc-fast) var(--vc-ease);
+}
+.vc-thread[data-focused],
+.vc-thread:focus-visible {
+  border-color: var(--color-warning-border);
+  background: var(--color-surface-base);
+  box-shadow: var(--vc-shadow-pop);
+  outline: none;
+}
+.vc-thread .quote {
+  display: -webkit-box;
+  margin: 0 0 10px;
+  overflow: hidden;
+  padding-left: 10px;
+  border-left: 2px solid var(--color-warning-border);
+  color: var(--color-fg-muted);
+  font-family: var(--font-display);
+  font-size: 14.5px;
+  font-style: italic;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.vc-thread[data-resolution="revised"] .quote {
+  border-left-color: var(--color-info-border);
+}
+.vc-thread[data-resolution="removed"] .quote {
+  text-decoration: line-through;
+}
+.vc-thread .where {
+  margin: 0 0 8px;
+  color: var(--color-fg-muted);
+  font-size: 12px;
+}
+.vc-thread .comments {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.vc-comment .meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+}
+.vc-comment .who {
+  font-size: 13px;
+  font-weight: 600;
+}
+.vc-comment[data-author="agent"] .who {
+  color: var(--color-info-fg);
+}
+.vc-comment[data-author="system"] .who,
+.vc-comment[data-author="system"] .body {
+  color: var(--color-fg-muted);
+}
+.vc-comment .meta .vc-facts {
+  font-size: 11px;
+}
+.vc-comment .menu {
+  margin-left: auto;
+}
+.vc-comment .menu .vc-menu-trigger {
+  width: 26px;
+  height: 26px;
+  opacity: 0;
+}
+.vc-comment:hover .menu .vc-menu-trigger,
+.vc-comment .menu .vc-menu-trigger:focus-visible,
+.vc-comment .menu .vc-menu-trigger[aria-expanded="true"] {
+  opacity: 1;
+}
+.vc-comment .body {
+  margin: 2px 0 0;
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.vc-comment[data-author="agent"] {
+  padding-left: 10px;
+  border-left: 2px solid var(--color-info-border);
+}
+.vc-replace,
+.vc-proposal {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--color-surface-base);
+  font-size: 13.5px;
+}
+.vc-proposal ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.vc-proposal li + li {
+  margin-top: 4px;
+}
+.vc-thread .foot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  font-size: 12.5px;
+}
+.vc-thread .foot .status {
+  color: var(--color-fg-muted);
+}
+.vc-thread .foot .vc-link-button {
+  margin-left: auto;
+  font-size: 12.5px;
+}
+.vc-confirm {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  font-size: 13px;
+}
+.vc-confirm button {
+  padding: 2px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  font-size: 13px;
+  cursor: pointer;
+}
+.vc-confirm button.danger {
+  color: var(--color-danger-fg);
+  font-weight: 600;
+}
+.vc-thread-new {
+  border-color: var(--color-accent-muted);
+  background: var(--color-surface-base);
+  box-shadow: var(--vc-shadow-pop);
+}
+
+/* Composer */
+.vc-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+.vc-composer textarea {
+  width: 100%;
+  min-height: 72px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border-control);
+  border-radius: 10px;
+  background: var(--color-surface-base);
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+}
+.vc-composer textarea:focus-visible {
+  outline: 2px solid var(--color-accent-default);
+  outline-offset: 1px;
+}
+.vc-composer .vc-link-button {
+  align-self: flex-start;
+  font-size: 12.5px;
+}
+.vc-suggest {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-fg-muted);
+}
+.vc-suggest textarea {
+  min-height: 48px;
+  color: var(--color-fg-default);
+}
+.vc-composer .row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+.vc-composer .hint {
+  margin-right: auto;
+  font-size: 11px;
+}
+
+/* Below the wide breakpoint: threads in a sheet from the right; writing in a sheet from the bottom. */
+.vc-sheet-threads {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  width: min(420px, 100vw);
+  border-left: 1px solid var(--color-border-subtle);
+  background: var(--color-surface-base);
+  box-shadow: var(--vc-shadow-pop);
+  font-size: 14px;
+  animation: vc-from-right var(--vc-base) var(--vc-ease);
+}
+.vc-sheet-threads header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 12px 8px 20px;
+}
+.vc-sheet-threads .list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  padding: 4px 16px 96px;
+}
+@keyframes vc-from-right {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+.vc-write-sheet {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  z-index: 45;
+  width: min(560px, calc(100vw - 24px));
+  padding: 16px;
+  transform: translateX(-50%);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 18px;
+  background: var(--color-surface-base);
+  box-shadow: var(--vc-shadow-pop);
+  font-size: 14px;
+  animation: vc-rise var(--vc-base) var(--vc-ease);
+}
+.vc-write-sheet .quote {
+  margin: 0 0 8px;
+  padding-left: 10px;
+  border-left: 2px solid var(--color-warning-border);
+  color: var(--color-fg-muted);
+  font-family: var(--font-display);
+  font-style: italic;
+}
+
+/* The floating bar: one quiet row of icons at the bottom of the Document. */
+.vc-bar-dock {
+  position: sticky;
+  bottom: 24px;
+  z-index: 25;
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  margin-top: 48px;
+  pointer-events: none;
+}
+.vc-bar {
+  position: relative;
+  display: flex;
+  gap: 2px;
+  padding: 5px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-surface-base) 92%, transparent);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--vc-shadow-pop);
+  pointer-events: auto;
+}
+.vc-bar-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 40px;
+  height: 38px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--color-fg-muted);
+  cursor: pointer;
+  transition:
+    background var(--vc-fast) var(--vc-ease),
+    color var(--vc-fast) var(--vc-ease);
+}
+.vc-bar-button:hover,
+.vc-bar-button[aria-pressed="true"] {
+  background: var(--color-surface-raised);
+  color: var(--color-fg-default);
+}
+.vc-bar-button .count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.vc-bar-button .dot {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-accent-default);
+}
+.vc-filter {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px;
+  transform: translateX(-50%);
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 16px;
+  background: var(--color-surface-base);
+  box-shadow: var(--vc-shadow-pop);
+  animation: vc-pop var(--vc-fast) var(--vc-ease);
+}
+
+@media (max-width: 719px) {
+  .vc-surface {
+    font-size: 16.5px;
+  }
+  .vc-gutter {
+    display: none;
+  }
+  .vc-bar-dock {
+    bottom: 16px;
+  }
+}
+
+@media (hover: none) {
+  .vc-composer .hint,
+  .vc-pick .vc-facts {
+    display: none;
+  }
+}
