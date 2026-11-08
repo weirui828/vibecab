@@ -560,3 +560,23 @@
     padding-right: 452px;
   }
 }
+.vc-why {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 0;
+  padding: 0 0 0 16px;
+  border-left: 2px solid var(--color-border-default);
+  list-style: none;
+}
+.vc-why li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 14px;
+}
+.vc-why .detail {
+  color: var(--color-fg-muted);
+  font-family: var(--font-display);
+  font-style: italic;
+}

@@ -113,12 +113,19 @@ function Shell({
       writeFlag("vc-first-run-done");
       setFirstRunDone(true);
     }, []),
+    [firstRun, setFirstRun] = useState<"unknown" | "show" | "hide">("unknown"),
     sheet = useRef<HTMLDialogElement>(null);
   const needsYou = useMemo(
     () => [...workspace.attention.values()].filter((items) => items.length > 0).length,
     [workspace.attention],
   );
   useEffect(() => sheet.current?.close?.(), [route]);
+  // Decided once, when everything has loaded: saving a model during the first run must not end it halfway.
+  useEffect(() => {
+    if (firstRun !== "unknown" || !settings.data || !workspace.sessions || !workspace.drafts) return;
+    const empty = !settings.data.models?.default && workspace.sessions.length === 0 && workspace.drafts.length === 0;
+    setFirstRun(empty ? "show" : "hide");
+  }, [firstRun, settings.data, workspace.sessions, workspace.drafts]);
   const nav: NavProps = {
     route,
     sessions: workspace.sessions,
@@ -152,14 +159,7 @@ function Shell({
     page = (
       <ProjectView projectId={route.slice(3)} sessions={workspace.sessions ?? []} drafts={workspace.drafts ?? []} />
     );
-  else if (
-    !firstRunDone &&
-    settings.data &&
-    !settings.data.models?.default &&
-    workspace.sessions?.length === 0 &&
-    workspace.drafts?.length === 0
-  )
-    page = <FirstRun onDone={finishFirstRun} />;
+  else if (firstRun === "show" && !firstRunDone) page = <FirstRun onDone={finishFirstRun} />;
   else page = <HomeView workspace={workspace} />;
   const banner =
     connection === "Engine stopped" || connection === "Engine unreachable" ? (
