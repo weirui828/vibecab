@@ -108,6 +108,17 @@ More in the [design notes](https://example.com/vibecab/design).`,
   const retro = await draft("Q3 retrospective", "# Q3 retrospective\n\nWhat worked, what did not, what we change.");
   await draft("Interview questions", "# Interview questions\n\nFor the writing-tools study.");
 
+  // Paused and ended sessions first, before any model exists: pausing or ending queues a session digest, which
+  // would otherwise take a step of the scripted model at an unpredictable moment.
+  const papers = await session("Reading notes");
+  await attach(papers.sessionId, reading.artifactId);
+  await cmd("vc.PauseSession", { sessionId: papers.sessionId });
+
+  const q3 = await session("Q3 retro");
+  await attach(q3.sessionId, retro.artifactId);
+  await cmd("vc.EndSession", { sessionId: q3.sessionId });
+  await delay(800);
+
   const covibe = await session("Covibe explainer", "realtime");
   await attach(covibe.sessionId, explainer.artifactId);
   await cmd("sys.SetSettings", {
@@ -160,17 +171,34 @@ More in the [design notes](https://example.com/vibecab/design).`,
     body: "Maybe say this earlier — it is the whole point.",
   });
   await cmd("vc.Comment", { sessionId: covibe.sessionId, body: "Overall: shorter is better. Aim for one screen." });
+  // One agreed change waiting for the next Update (the scripted model plans and writes it on "Update now").
+  type Item = { commentId: string; body: string };
+  const items = await query<Item[]>("vc.FeedbackItems", { sessionId: covibe.sessionId });
+  const earlier = items.find((c) => c.body.startsWith("Maybe say this earlier"));
+  if (earlier) await cmd("vc.Agree", { commentId: earlier.commentId, kind: "as_written" });
 
   const ship = await session("Launch week");
   await attach(ship.sessionId, launch.artifactId);
   await attach(ship.sessionId, faq.artifactId, "reference");
   await cmd("vc.Comment", { sessionId: ship.sessionId, body: "Lead with the one thing people can do on day one." });
-
-  const papers = await session("Reading notes");
-  await attach(papers.sessionId, reading.artifactId);
-  await cmd("vc.PauseSession", { sessionId: papers.sessionId });
-
-  const q3 = await session("Q3 retro");
-  await attach(q3.sessionId, retro.artifactId);
-  await cmd("vc.EndSession", { sessionId: q3.sessionId });
+  // Two agreed changes to the same paragraph: a conflict to settle.
+  const launchElements = await query<Array<{ elementId: string; type: string }>>("vc.Elements", {
+    artifactId: launch.artifactId,
+  });
+  const dayOne = launchElements.filter((e) => e.type === "paragraph")[1];
+  if (dayOne) {
+    const anchor = { artifactId: launch.artifactId, elementId: dayOne.elementId, seenVersion: 1 };
+    const first = await cmd<{ commentId: string }>("vc.Comment", {
+      sessionId: ship.sessionId,
+      anchor,
+      body: "Make this one sentence.",
+    });
+    const second = await cmd<{ commentId: string }>("vc.Comment", {
+      sessionId: ship.sessionId,
+      anchor,
+      body: "Expand this with an example of a first comment.",
+    });
+    await cmd("vc.Agree", { commentId: first.commentId, kind: "as_written" });
+    await cmd("vc.Agree", { commentId: second.commentId, kind: "as_written" });
+  }
 }

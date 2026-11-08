@@ -16,10 +16,29 @@ const closed = new Set(["applied", "declined", "superseded"]);
 
 export const anchorOf = (thread: Thread) => thread.comments[0]?.anchor;
 export const resolutionOf = (thread: Thread): AnchorResolution | undefined => thread.anchorResolutions[0];
-export const visibleComments = (thread: Thread) => thread.comments.filter((c) => !c.deleted);
+// System notices the card already says in words (its status line), written by the engine with internal ids.
+const restated = [/^Conflict conflict_/, /^Agreed item applied in version \d+\.?$/];
+export const visibleComments = (thread: Thread) =>
+  thread.comments.filter((c) => !c.deleted && !(c.author.kind === "system" && restated.some((r) => r.test(c.body))));
 
-/** The thread's state is its opening comment's state. */
-export const threadState = (thread: Thread) => thread.comments[0]?.state ?? "open";
+const progress: Array<FeedbackComment["state"]> = [
+  "open",
+  "discussing",
+  "agreed",
+  "scheduled",
+  "declined",
+  "superseded",
+  "applied",
+];
+/** The thread's state is the furthest any of its human or agent comments has come (an agreed reply counts). */
+export function threadState(thread: Thread): FeedbackComment["state"] {
+  return thread.comments
+    .filter((c) => c.author.kind !== "system" && !c.deleted)
+    .reduce<FeedbackComment["state"]>(
+      (best, c) => (progress.indexOf(c.state) > progress.indexOf(best) ? c.state : best),
+      "open",
+    );
+}
 
 /** Threads on this Draft, plus the session's general ones (no anchor). */
 export function threadsForDraft(threads: Thread[], artifactId: string | undefined): Thread[] {

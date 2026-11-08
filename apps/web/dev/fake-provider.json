@@ -89,25 +89,17 @@
     ],
     [
       {
-        "type": "tool_call",
-        "call": {
-          "id": "r2",
-          "name": "reply",
-          "arguments": {
-            "threadId": "$first_thread",
-            "body": "Good point. I can move that sentence up so it opens the page."
-          }
+        "type": "output",
+        "json": {
+          "items": [
+            {
+              "itemId": "$first_item",
+              "action": "edit",
+              "elementIds": ["$first_element"],
+              "note": "Put the promise in the title, where it is read first."
+            }
+          ]
         }
-      },
-      {
-        "type": "done",
-        "finishReason": "tool_calls"
-      }
-    ],
-    [
-      {
-        "type": "text_delta",
-        "text": "Reply recorded."
       },
       {
         "type": "done",
@@ -116,25 +108,29 @@
     ],
     [
       {
-        "type": "tool_call",
-        "call": {
-          "id": "r3",
-          "name": "reply",
-          "arguments": {
-            "threadId": "$first_thread",
-            "body": "Agreed: one screen. I would cut the table first."
-          }
+        "type": "output",
+        "json": {
+          "changes": [
+            {
+              "op": "update",
+              "elementId": "$first_element",
+              "element": {
+                "type": "heading",
+                "props": {
+                  "level": 1
+                },
+                "text": "Covibe: nothing changes until you agree"
+              }
+            }
+          ],
+          "itemResults": [
+            {
+              "itemId": "$first_item",
+              "status": "addressed",
+              "elementIds": ["$first_element"]
+            }
+          ]
         }
-      },
-      {
-        "type": "done",
-        "finishReason": "tool_calls"
-      }
-    ],
-    [
-      {
-        "type": "text_delta",
-        "text": "Reply recorded."
       },
       {
         "type": "done",

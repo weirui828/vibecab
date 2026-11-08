@@ -39,5 +39,12 @@ export function useCommentActions(sessionId: string) {
         ...(replacement !== undefined ? { suggestion: { replacement } } : {}),
       }),
     remove: (commentId: string) => run("vc.DeleteComment", { commentId }),
+    agree: (
+      commentId: string,
+      choice: { kind: "as_written" | "agent_proposal" } | { kind: "option"; optionLabel: string },
+    ) => run("vc.Agree", { commentId, ...choice }),
+    decline: (commentId: string, reason?: string) => run("vc.Decline", { commentId, ...(reason ? { reason } : {}) }),
+    setReplyMode: (mode: "realtime" | "batch" | "manual") => run("vc.SetReplyTrigger", { sessionId, mode }),
+    ask: (threadIds?: string[]) => run("vc.AskAgent", { sessionId, ...(threadIds ? { threadIds } : {}) }),
   };
 }

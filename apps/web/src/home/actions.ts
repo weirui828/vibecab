@@ -66,6 +66,9 @@ export function useActions() {
           : await run("vc.RenameSession", { sessionId: id, title })) !== undefined
       );
     },
+    async setSessionSettings(sessionId: string, patch: { planReview?: boolean }) {
+      await run("sys.SetSettings", { patch: { sessions: { [sessionId]: patch } } });
+    },
     async setSessionState(sessionId: string, to: "pause" | "resume" | "end") {
       const type = to === "pause" ? "vc.PauseSession" : to === "resume" ? "vc.ResumeSession" : "vc.EndSession";
       await run(type, { sessionId });

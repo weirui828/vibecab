@@ -1,0 +1,416 @@
+/* The loop: agreement, Updates, conflicts and the changes view. Tokens only. */
+
+/* One strip above the Document, saying only what applies now. */
+.vc-strip {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  width: 100%;
+  max-width: 68ch;
+  margin: 0 auto 40px;
+  padding: 10px 10px 10px 16px;
+  border-radius: 16px;
+  background: var(--color-accent-subtle);
+  font-size: 14px;
+  animation: vc-pop var(--vc-base) var(--vc-ease);
+}
+.vc-strip[data-tone="agent"] {
+  background: var(--color-info-subtle);
+}
+.vc-strip[data-tone="warning"] {
+  background: var(--color-warning-subtle);
+}
+.vc-strip[data-tone="danger"] {
+  background: var(--color-danger-subtle);
+}
+.vc-strip[data-tone="done"] {
+  background: var(--color-surface-raised);
+}
+.vc-strip .dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-accent-default);
+}
+.vc-strip[data-tone="agent"] .dot {
+  background: var(--color-info-default);
+}
+.vc-strip[data-tone="warning"] .dot {
+  background: var(--color-warning-default);
+}
+.vc-strip[data-tone="danger"] .dot {
+  background: var(--color-danger-default);
+}
+.vc-strip .dot.pulse {
+  animation: vc-pulse 1.6s var(--vc-ease) infinite;
+}
+@keyframes vc-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+.vc-strip .text {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  min-width: 0;
+}
+.vc-strip .lead {
+  font-weight: 600;
+}
+.vc-strip .actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+}
+.vc-steps-inline {
+  display: flex;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+.vc-steps-inline li {
+  color: var(--color-fg-muted);
+}
+.vc-steps-inline li[data-state="done"]::before {
+  content: "✓ ";
+}
+.vc-steps-inline li[data-state="now"] {
+  color: var(--color-info-fg);
+  font-weight: 600;
+}
+.vc-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  margin: 4px 0 2px;
+  padding: 10px 0 0;
+  border-top: 1px solid color-mix(in srgb, var(--color-fg-default) 10%, transparent);
+  list-style: none;
+}
+.vc-plan li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+.vc-plan .action {
+  min-width: 64px;
+  color: var(--color-fg-muted);
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.vc-plan .what {
+  flex: 1;
+}
+.vc-plan .note {
+  width: 100%;
+  padding-left: 74px;
+  color: var(--color-fg-muted);
+  font-size: 13px;
+}
+.vc-chip {
+  max-width: 220px;
+  overflow: hidden;
+  padding: 2px 8px;
+  border: 1px solid var(--color-border-default);
+  border-radius: 999px;
+  background: var(--color-surface-base);
+  color: var(--color-fg-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.vc-chip:hover {
+  color: var(--color-fg-default);
+  border-color: var(--color-border-strong);
+}
+
+/* Decisions in thread cards. */
+.vc-status {
+  margin: 12px 0 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-accent-fg);
+}
+.vc-status[data-tone="applied"] {
+  color: var(--color-success-fg);
+}
+.vc-status[data-tone="declined"],
+.vc-status[data-tone="muted"] {
+  color: var(--color-fg-muted);
+}
+.vc-status[data-tone="warning"] {
+  color: var(--color-warning-fg);
+}
+.vc-status .vc-link-button {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.vc-thread[data-status="applied"] .quote,
+.vc-thread[data-status="declined"] .quote {
+  opacity: 0.7;
+}
+.vc-decide {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+}
+.vc-decline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+.vc-decline input {
+  flex: 1 1 100%;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--color-border-control);
+  border-radius: 8px;
+  background: var(--color-surface-base);
+  font-size: 13.5px;
+}
+.vc-proposal li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.vc-proposal li .text {
+  flex: 1;
+}
+.vc-agree-option {
+  flex: none;
+  padding: 2px 10px;
+  border: 1px solid var(--color-accent-default);
+  border-radius: 999px;
+  background: none;
+  color: var(--color-accent-fg);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.vc-agree-option:hover {
+  background: var(--color-accent-default);
+  color: var(--color-fg-on-accent);
+}
+.vc-thread .foot .reply {
+  margin-left: auto;
+}
+.vc-thread .foot .vc-link-button:not(.reply) {
+  margin-left: 0;
+}
+
+/* Agent panel and the labelled Ask agent button in the bar. */
+.vc-agent-panel {
+  width: 280px;
+}
+.vc-agent-panel .hint {
+  margin: 0;
+  color: var(--color-fg-muted);
+  font-size: 12.5px;
+}
+.vc-bar-button.labelled {
+  padding: 0 14px;
+  background: var(--color-accent-subtle);
+  color: var(--color-accent-fg);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Conflict dialog: the options side by side. */
+.vc-dialog.vc-conflict {
+  width: min(720px, calc(100vw - 32px));
+}
+.vc-conflict .inner {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 28px;
+}
+.vc-conflict h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 400;
+}
+.vc-conflict .lede,
+.vc-judge {
+  margin: -8px 0 0;
+  color: var(--color-fg-muted);
+  font-size: 14px;
+}
+.vc-judge {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--color-info-subtle);
+  color: var(--color-info-fg);
+}
+.vc-conflict .options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+.vc-conflict .option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--color-surface-raised);
+}
+.vc-conflict .option .quote {
+  margin: 0;
+  padding-left: 10px;
+  border-left: 2px solid var(--color-warning-border);
+  color: var(--color-fg-muted);
+  font-family: var(--font-display);
+  font-style: italic;
+}
+.vc-conflict .option .body {
+  flex: 1;
+  margin: 0;
+  font-size: 14.5px;
+}
+.vc-conflict .buttons {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Changes view. */
+.vc-changes {
+  max-width: 68ch;
+  margin: 0 auto;
+  font-size: 17px;
+}
+.vc-results {
+  margin: 0 0 48px;
+  font-size: 14px;
+}
+.vc-results ul {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.vc-results li {
+  display: flex;
+  gap: 12px;
+}
+.vc-results .mark {
+  flex: none;
+  width: 18px;
+  color: var(--color-success-fg);
+  font-weight: 700;
+}
+.vc-results li[data-status="not_addressed"] .mark {
+  color: var(--color-warning-fg);
+}
+.vc-results .what {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+}
+.vc-results .body {
+  width: 100%;
+}
+.vc-doc .vc-ins {
+  background: var(--color-success-subtle);
+  text-decoration: underline 2px var(--color-success-default);
+  text-underline-offset: 3px;
+}
+.vc-doc .vc-ins::before {
+  content: "+";
+  margin-right: 1px;
+  color: var(--color-success-fg);
+  font-size: 0.75em;
+  vertical-align: super;
+}
+.vc-doc .vc-del {
+  color: var(--color-danger-fg);
+  text-decoration: line-through 1.5px;
+}
+.vc-doc .vc-del::before {
+  content: "−";
+  margin-right: 1px;
+  font-size: 0.75em;
+  vertical-align: super;
+}
+.vc-doc .vc-changed {
+  position: relative;
+}
+.vc-doc .vc-changed::before {
+  content: "";
+  position: absolute;
+  top: 0.3em;
+  bottom: 0.3em;
+  left: -18px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--color-success-default);
+}
+.vc-doc .vc-changed[data-change="moved"]::before {
+  background: var(--color-info-default);
+}
+.vc-doc .vc-changed[data-change="changed"]::before {
+  background: var(--color-accent-muted);
+}
+.vc-change-label {
+  position: absolute;
+  top: 0.35em;
+  left: -86px;
+  width: 60px;
+  color: var(--color-fg-muted);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-align: right;
+  text-transform: uppercase;
+}
+.vc-doc .vc-removed {
+  margin: 1em 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--color-danger-subtle);
+  color: var(--color-danger-fg);
+  font-size: 14px;
+}
+.vc-doc .vc-removed summary {
+  cursor: pointer;
+}
+.vc-doc .vc-removed p {
+  margin: 8px 0 0;
+  text-decoration: line-through;
+}
+@media (max-width: 1023px) {
+  .vc-change-label {
+    position: static;
+    display: block;
+    width: auto;
+    margin-bottom: 2px;
+    text-align: left;
+  }
+}
+/* Sits right under the "Since you were here" strip instead of a full page margin away. */
+.vc-catchup + .vc-doc-wrap > .vc-strip:first-child {
+  margin-top: calc(12px - clamp(40px, 8vh, 88px));
+}
