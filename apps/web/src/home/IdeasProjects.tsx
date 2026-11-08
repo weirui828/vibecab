@@ -91,11 +91,11 @@ export function IdeasView({ sessions }: { sessions: SessionRow[] }) {
       <header className="vc-header">
         <h1 className="vc-display">{terms.idea}s</h1>
         <p className="vc-facts">
-          {list.length ? plural(list.length, ideaWord) : "Write things down before they slip away."}
+          {list.length ? plural(list.length, ideaWord) : "Save ideas here before you forget them."}
         </p>
       </header>
       <Capture
-        label={`Write an ${ideaWord} down, then press ↩`}
+        label={`Type an ${ideaWord}. Press ↩ to save it.`}
         onSave={async (text) => (await act.run("vc.CaptureIdea", { text })) !== undefined}
       />
       {list.length > 0 && (
@@ -189,7 +189,7 @@ export function ProjectsView() {
     <div className="vc-page">
       <header className="vc-header">
         <h1 className="vc-display">{terms.project}s</h1>
-        <p className="vc-facts">{list.length ? plural(list.length, projectWord) : "Nothing gathered yet."}</p>
+        <p className="vc-facts">{list.length ? plural(list.length, projectWord) : "No projects."}</p>
         <div className="vc-actions">
           <Button variant="primary" leadingIcon={<Icon name="plus" />} onClick={() => setCreating(true)}>
             New {projectWord}

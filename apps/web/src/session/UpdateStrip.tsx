@@ -12,9 +12,9 @@ import { startsIn, waitingAgreements } from "./loop.js";
 import type { Thread } from "./threads.js";
 
 const steps: Array<[Update["status"], string]> = [
-  ["planning", "Planning"],
-  ["writing", "Writing"],
-  ["checking", "Checking"],
+  ["planning", "Plan"],
+  ["writing", "Write"],
+  ["checking", "Check"],
 ];
 
 interface PlanItem {
@@ -152,7 +152,7 @@ export function UpdateStrip({
             <>
               <span className="vc-facts">Stop this {terms.update}?</span>
               <Button size="sm" variant="ghost" onClick={() => setConfirmCancel(false)}>
-                Keep going
+                Continue
               </Button>
               <Button
                 size="sm"
@@ -290,10 +290,10 @@ export function UpdateStrip({
         <span className="actions">
           <div className="vc-segmented small" role="group" aria-label="View">
             <button type="button" aria-pressed={changesShown} onClick={() => !changesShown && onToggleChanges(latest)}>
-              Changes
+              Show changes
             </button>
             <button type="button" aria-pressed={!changesShown} onClick={() => changesShown && onToggleChanges(latest)}>
-              Clean
+              Hide changes
             </button>
           </div>
           <Button size="sm" variant="ghost" onClick={() => onDismiss(latest.updateId)}>

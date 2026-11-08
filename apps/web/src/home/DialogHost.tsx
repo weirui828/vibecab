@@ -107,7 +107,7 @@ export function DialogHost({
         open={open?.kind === "end"}
         children={null}
         title={`End “${open?.kind === "end" ? open.session.title : ""}”?`}
-        lede={`An ended ${terms.session.toLowerCase()} is kept as a record and can no longer change: no new comments or ${terms.update}s, and it cannot be resumed. To stop for a while instead, pause it.`}
+        lede={`VibeCab keeps an ended ${terms.session.toLowerCase()} as a record. You cannot change or resume it. To stop for a short time, pause the ${terms.session.toLowerCase()}.`}
         onClose={close}
         onSubmit={() => {
           if (open?.kind === "end") void actions.setSessionState(open.session.sessionId, "end");

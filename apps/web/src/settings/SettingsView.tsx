@@ -47,7 +47,7 @@ function AgentLimit({ agent }: { agent: Spend & { agentId: string } }) {
       <li>
         <span className="what">
           {name}
-          <span className="vc-facts">Paid by its own subscription — not counted here</span>
+          <span className="vc-facts">Its subscription pays. VibeCab does not count its cost.</span>
         </span>
       </li>
     );
@@ -112,7 +112,7 @@ function SpendingSection({ budgets }: { budgets: SettingsShape["budgets"] }) {
     <Section
       id="spending"
       title="Spending"
-      lede="VibeCab reserves the most a call could cost before making it, and stops at your daily limit."
+      lede="Before each model call, VibeCab reserves the maximum cost of that call. VibeCab stops calls at your daily limit."
     >
       <p className="vc-stat">
         <span className="big">${dollars(daily?.usedMicros ?? 0)}</span>
@@ -146,7 +146,7 @@ function SpendingSection({ budgets }: { budgets: SettingsShape["budgets"] }) {
           void saveTurn();
         }}
       >
-        <Field label="Most one reply may cost ($)" hint="A single agent reply stops at this.">
+        <Field label="Maximum cost of one reply ($)" hint="An agent reply stops at this cost.">
           <Input
             inputMode="decimal"
             value={turn ?? (budgets?.defaultTurnLimitMicros != null ? dollars(budgets.defaultTurnLimitMicros) : "")}
@@ -219,7 +219,7 @@ function RepliesSection({ budgets }: { budgets: SettingsShape["budgets"] }) {
       id="replies"
       level={3}
       title="How it replies"
-      lede={`How quickly it answers in Realtime ${terms.session.toLowerCase()}s. Reply modes are set per ${terms.session.toLowerCase()}; what a reply may cost is under Spending.`}
+      lede={`How quickly it replies in Realtime ${terms.session.toLowerCase()}s. You set the reply mode in each ${terms.session.toLowerCase()}. Set the maximum cost of a reply in Spending.`}
     >
       <form
         className="vc-form"
@@ -229,7 +229,7 @@ function RepliesSection({ budgets }: { budgets: SettingsShape["budgets"] }) {
         }}
       >
         <div className="vc-form-row">
-          <Field label="Wait before replying (seconds)">
+          <Field label="Delay before a reply (seconds)">
             <Input
               inputMode="numeric"
               value={delay ?? String(budgets?.realtimeDebounceSeconds ?? 10)}
@@ -262,7 +262,7 @@ function AnotherBrowser() {
     <Section
       id="browser"
       title="Open on another browser"
-      lede="Each browser signs in once with its own link. The link works one time."
+      lede="Each browser signs in with its own link. You can use the link one time."
     >
       {link ? (
         <div className="vc-secret">
@@ -414,7 +414,7 @@ export function SettingsView({
             <AgentGroup
               id="assistants-agent"
               name="Your AI assistants"
-              about="Claude Desktop, Codex, Cursor or another MCP client can work here as you — read, comment and agree — through VibeCab's MCP server. They can never change settings, keys or permissions."
+              about="Claude Desktop, Codex, Cursor and other MCP clients can work here as you, through the MCP server of VibeCab. They can read, comment and agree. They cannot change settings, keys or permissions."
             >
               <AssistantSection workspace={state?.workspacePath ?? ""} relayPath={state?.mcpRelayPath} />
             </AgentGroup>
@@ -429,7 +429,7 @@ export function SettingsView({
         {tab === "general" && (
           <>
             <DataSection workspace={state?.workspacePath ?? ""} retention={settings.data?.trashRetentionDays} />
-            <Section id="appearance" title="Appearance" lede="Auto follows this computer's light and dark setting.">
+            <Section id="appearance" title="Appearance" lede="Auto uses the light or dark setting of this computer.">
               <ThemeSwitch theme={theme} setTheme={setTheme} />
             </Section>
             <AnotherBrowser />

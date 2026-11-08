@@ -160,8 +160,8 @@ describe("threads", () => {
   });
 
   it("only says the agent is replying while its turn runs", () => {
-    expect(deliveryLabel("queued", undefined)).toBe("Waiting for the agent");
-    expect(deliveryLabel("delivered", "running")).toBe("The agent is replying…");
+    expect(deliveryLabel("queued", undefined)).toBe("The agent has not replied");
+    expect(deliveryLabel("delivered", "running")).toBe("The agent writes a reply…");
     expect(deliveryLabel("delivered", "completed")).toBeUndefined();
     expect(deliveryLabel("delivered", "failed")).toBe("The agent could not reply");
     expect(deliveryLabel("replied", "completed")).toBeUndefined();

@@ -78,11 +78,11 @@ it("refreshes the Document live when a new version lands and says so", async () 
   // Importing into an existing Draft appends and commits the next version, as an Update would.
   await command("vc.ImportContent", { artifactId: notes, format: "markdown", content: "The hut is by the lake." });
   await tl.waitFor(() => expect(container.textContent).toContain("The hut is by the lake."), { timeout: 5000 });
-  expect(await tl.screen.findByText("Updated to version 2")).toBeTruthy();
+  expect(await tl.screen.findByText("Version 2 is ready")).toBeTruthy();
   expect(container.querySelector(".vc-session-head .vc-facts")?.textContent).toContain("version 2");
 });
 
-it("shows what happened since the last visit, and Got it marks the session seen", async () => {
+it("shows what happened since the last visit, and Close marks the session seen", async () => {
   const { container } = await open("/s/" + sessionId);
   const strip = await tl.screen.findByRole("region", { name: "Since you were here" });
   expect(strip.textContent).toContain("1 comment");
@@ -90,7 +90,7 @@ it("shows what happened since the last visit, and Got it marks the session seen"
   expect(container.querySelector(".vc-catchup-panel")?.textContent).toContain(
     "You commented: “Say where the walk starts.”",
   );
-  tl.fireEvent.click(tl.within(strip).getByRole("button", { name: "Got it" }));
+  tl.fireEvent.click(tl.within(strip).getByRole("button", { name: "Close" }));
   expect(tl.screen.queryByRole("region", { name: "Since you were here" })).toBeNull();
   await tl.waitFor(async () => {
     const resume = await bridge.query<{ comments: unknown[] }>("vc.ResumeView", { sessionId });

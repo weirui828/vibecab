@@ -106,7 +106,7 @@ it("picks a built-in provider and model: address, context and price come from th
   await tl.screen.findByText("Model saved");
   // A price changed by hand is kept as yours.
   tl.fireEvent.click(model.getByRole("button", { name: "More details" }));
-  tl.fireEvent.change(model.getByLabelText("$ per million tokens in"), { target: { value: "0.2" } });
+  tl.fireEvent.change(model.getByLabelText("Input price ($ per 1 million tokens)"), { target: { value: "0.2" } });
   save();
 
   await tl.waitFor(async () =>
@@ -137,7 +137,7 @@ it("lists a local server's models and needs no key; an address with blanks is re
   tl.fireEvent.change(model.getByLabelText("Model"), { target: { value: "@cf/openai/gpt-oss-20b" } });
   tl.fireEvent.change(model.getByLabelText("API key"), { target: { value: "cf-token" } });
   tl.fireEvent.click(model.getByRole("button", { name: "Save" }));
-  expect((await model.findByRole("alert")).textContent).toBe("Fill in Cloudflare account ID.");
+  expect((await model.findByRole("alert")).textContent).toBe("Type the Cloudflare account ID.");
 });
 
 it("sets the daily limit and agent limits from Settings", async () => {
@@ -153,7 +153,7 @@ it("sets the daily limit and agent limits from Settings", async () => {
     expect(usage.accounts.find((a) => a.account.kind === "daily")?.limitMicros).toBe(7_500_000);
   });
   // What one reply may cost is with the rest of the money.
-  tl.fireEvent.change(spending.getByLabelText("Most one reply may cost ($)"), { target: { value: "0.4" } });
+  tl.fireEvent.change(spending.getByLabelText("Maximum cost of one reply ($)"), { target: { value: "0.4" } });
   tl.fireEvent.click(spending.getAllByRole("button", { name: "Save" })[1]!);
   await tl.waitFor(async () => {
     const settings = await bridge.query<{ budgets?: { defaultTurnLimitMicros?: number } }>("sys.Settings", {});
@@ -161,7 +161,7 @@ it("sets the daily limit and agent limits from Settings", async () => {
   });
   tl.fireEvent.click(tl.screen.getByRole("tab", { name: "Agents" }));
   const agent = tl.within(await tl.screen.findByRole("region", { name: "How it replies" }));
-  tl.fireEvent.change(agent.getByLabelText("Wait before replying (seconds)"), { target: { value: "4" } });
+  tl.fireEvent.change(agent.getByLabelText("Delay before a reply (seconds)"), { target: { value: "4" } });
   tl.fireEvent.click(agent.getByRole("button", { name: "Save" }));
   await tl.waitFor(async () => {
     const settings = await bridge.query<{
@@ -265,7 +265,7 @@ it("turns Claude Code on and off, and a session can choose who replies", async (
   await tl.waitFor(async () =>
     expect((await models())["claude-code"]).toMatchObject({ provider: "claude-agent-sdk", model: "default" }),
   );
-  await tl.waitFor(() => expect(claude.getByText(/^On · /)).toBeTruthy());
+  await tl.waitFor(() => expect(claude.getByText(/^On\. /)).toBeTruthy());
   // A session can now pick it in its Agent panel.
   const started = await bridge.command("vc.StartSession", { title: "Pick an agent" });
   if (!started.ok) throw Error(started.error.message);

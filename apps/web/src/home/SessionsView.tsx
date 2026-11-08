@@ -12,7 +12,7 @@ const heading: Record<SessionRow["state"], string> = { active: terms.active, pau
 const blurb: Record<SessionRow["state"], string> = {
   active: "The agent replies and Updates run.",
   paused: "Kept as they are until you resume them.",
-  ended: `Read-only records. Carry one on in a new ${terms.session.toLowerCase()} from its menu.`,
+  ended: `Read-only records. To continue one, open its menu and start a new ${terms.session.toLowerCase()}.`,
 };
 
 /** Every session, by state: where paused and ended ones are found. */

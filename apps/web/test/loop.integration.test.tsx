@@ -105,7 +105,7 @@ it("agrees to an agent option, runs an Update, and shows exactly what changed", 
     expect(container.querySelector(".vc-doc h1")?.textContent).toBe("Covibe: shaping one piece of work together"),
   );
   tl.fireEvent.click(
-    tl.within(container.querySelector(".vc-strip") as HTMLElement).getByRole("button", { name: "Changes" }),
+    tl.within(container.querySelector(".vc-strip") as HTMLElement).getByRole("button", { name: "Show changes" }),
   );
   await tl.waitFor(() => expect(container.querySelector(".vc-changes .vc-doc")).not.toBeNull());
   const changed = [...container.querySelectorAll(".vc-changes .vc-changed")].map((n) =>
@@ -136,7 +136,7 @@ it("declines with a reason, and switches the agent to Manual", async () => {
   });
 });
 
-it("surfaces a conflict and resolves it with Keep this one", async () => {
+it("surfaces a conflict and resolves it with Choose this one", async () => {
   const paragraph = (await elements()).find((e) => e.type === "paragraph")!,
     anchor = { artifactId, elementId: paragraph.elementId, seenVersion: 2 };
   const a = await command<{ commentId: string }>("vc.Comment", { sessionId, anchor, body: "One sentence." });
@@ -149,7 +149,7 @@ it("surfaces a conflict and resolves it with Keep this one", async () => {
   );
   expect((await card(container, "One sentence.")).textContent).toContain("Conflicts with another agreed change");
   tl.fireEvent.click(tl.screen.getByRole("button", { name: "Choose" }));
-  const [keep] = await tl.screen.findAllByRole("button", { name: "Keep this one" });
+  const [keep] = await tl.screen.findAllByRole("button", { name: "Choose this one" });
   tl.fireEvent.click(keep!);
   await tl.waitFor(async () => {
     const open = (await query<FeedbackConflict[]>("vc.Conflicts", { sessionId, artifactId })).filter(

@@ -31,8 +31,8 @@ export function FirstRun({ onDone }: { onDone(): void }) {
           <Hills />
           <h1 className="vc-display">Welcome to VibeCab.</h1>
           <p>
-            You write by commenting. The agent replies, and rewrites only what you agree to. Nothing changes until you
-            say so.
+            You write comments. The agent replies. It changes only the text that you agree to. Nothing changes until you
+            agree.
           </p>
           <Button variant="primary" size="lg" onClick={next}>
             Get started
@@ -62,7 +62,9 @@ export function FirstRun({ onDone }: { onDone(): void }) {
         >
           <p className="vc-label">2 of 3</p>
           <h1 className="vc-display">A daily limit</h1>
-          <p className="vc-muted">VibeCab stops calling the model once a day's spending reaches it. Optional.</p>
+          <p className="vc-muted">
+            When you reach this limit, VibeCab stops model calls for the day. This limit is optional.
+          </p>
           <Field label="Dollars per day">
             <Input
               inputSize="lg"
@@ -86,7 +88,7 @@ export function FirstRun({ onDone }: { onDone(): void }) {
         <div className="vc-step">
           <p className="vc-label">3 of 3</p>
           <h1 className="vc-display">Your first {terms.draft.toLowerCase()}</h1>
-          <p className="vc-muted">Start from a blank page or bring in a Markdown file.</p>
+          <p className="vc-muted">Start from a blank page or import a Markdown file.</p>
           <div className="vc-form-actions start">
             <Button
               variant="primary"

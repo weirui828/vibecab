@@ -3,8 +3,8 @@ import { Button } from "@wei/design-system";
 
 /** Covibe's quick marks: one click says it, with any words typed added after. */
 export const quickMarks = [
-  { label: "Like", body: "I like this. Keep it." },
-  { label: "Dislike", body: "I don't like this." },
+  { label: "Like", body: "I like this. Do not change it." },
+  { label: "Dislike", body: "I do not like this." },
   { label: "Explain", body: "Explain this in more detail." },
   { label: "Delete", body: "Delete this." },
 ] as const;
