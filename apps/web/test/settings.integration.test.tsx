@@ -279,7 +279,7 @@ it("groups Settings in four tabs: the agents, their roles, then Spending and Gen
   expect(await tl.screen.findByRole("region", { name: "Spending" })).toBeTruthy();
   tl.fireEvent.keyDown(tl.screen.getByRole("tab", { name: "Spending" }), { key: "End" });
   await tl.waitFor(() => expect(window.location.hash).toBe("#/settings/general"));
-  for (const part of ["Your data", "Appearance", "Open on another browser", "About"])
+  for (const part of ["Your data", "Appearance", "About"])
     expect(await tl.screen.findByRole("region", { name: part })).toBeTruthy();
 });
 
@@ -300,12 +300,6 @@ it("shows when the engine started in General → About, with a way to restart it
   const about = tl.within(await tl.screen.findByRole("region", { name: "About" }));
   expect(await about.findByText("Engine started")).toBeTruthy();
   expect(about.getByRole("button", { name: "Restart engine" })).toBeTruthy();
-});
-
-it("makes a sign-in link for another browser", async () => {
-  await open("/settings/general");
-  tl.fireEvent.click(await tl.screen.findByRole("button", { name: "Make a sign-in link" }));
-  await tl.waitFor(() => expect(document.querySelector("#browser pre")?.textContent).toMatch(/\?launch=/));
 });
 
 it("adds Claude Code to the pool, a session can choose it, and removing it leaves the pool", async () => {

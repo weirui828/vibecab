@@ -256,48 +256,6 @@ function RepliesSection({ budgets }: { budgets: SettingsShape["budgets"] }) {
   );
 }
 
-function AnotherBrowser() {
-  const bridge = useBridge(),
-    [link, setLink] = useState<string>(),
-    [copied, setCopied] = useState(false);
-  return (
-    <Section
-      id="browser"
-      title="Open on another browser"
-      lede="Each browser signs in with its own link. You can use the link one time."
-    >
-      {link ? (
-        <div className="vc-secret">
-          <pre>{link}</pre>
-          <div className="vc-form-actions start">
-            <Button
-              variant="secondary"
-              onClick={() => void navigator.clipboard?.writeText(link).then(() => setCopied(true))}
-            >
-              {copied ? "Copied" : "Copy link"}
-            </Button>
-          </div>
-        </div>
-      ) : (
-        <Button
-          variant="secondary"
-          onClick={() =>
-            void bridge.app.launchLink().then((url) => {
-              setLink(url);
-              setCopied(false);
-            })
-          }
-        >
-          Make a sign-in link
-        </Button>
-      )}
-      <p className="vc-muted small">
-        From a terminal: <code>node apps/web/bin/vibecab-web.mjs link</code>
-      </p>
-    </Section>
-  );
-}
-
 const tabs = [
   ["agents", "Agents"],
   ["roles", "Roles"],
@@ -422,7 +380,6 @@ export function SettingsView({
             <Section id="appearance" title="Appearance" lede="Auto uses the light or dark setting of this computer.">
               <ThemeSwitch theme={theme} setTheme={setTheme} />
             </Section>
-            <AnotherBrowser />
             <Section id="about" title="About">
               <p className="vc-facts">
                 VibeCab {state?.version ?? ""} · contract {caps.data?.contractVersion ?? "…"}
