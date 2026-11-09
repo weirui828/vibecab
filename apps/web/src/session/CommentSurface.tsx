@@ -476,13 +476,12 @@ export function CommentSurface({
           focusThread(next.threadId, true);
           void actions.markRead(unreadReplies(next).map((c) => c.commentId));
         }}
-        threadsShown={shown}
-        place={place}
+        layout={shown ? place : "hidden"}
         marginFits={wide}
-        onPlace={setPlace}
         filter={filter}
         onComment={() => startWriting({})}
-        onToggleThreads={() => setShown((v) => !v)}
+        // Hidden lasts for this visit; the place (under or beside) is remembered per browser.
+        onLayout={(next) => (setShown(next !== "hidden"), next !== "hidden" && setPlace(next))}
         onFilter={setFilter}
         replyMode={replyMode}
         modelReady={loop.modelReady}
