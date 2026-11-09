@@ -202,6 +202,13 @@ export async function startWebHost(options: WebHostOptions): Promise<WebHost> {
     if (!sameOrigin(req, port)) return error(res, 403, "forbidden", "Origin is not permitted");
     const url = new URL(req.url ?? "/", "http://127.0.0.1:" + port),
       path = url.pathname;
+    // The sign-in cookie belongs to 127.0.0.1; a page opened on localhost (SkyEye's Open, a typed address) is
+    // another site to the browser and would never be signed in. Page loads move over; API calls stay as they are.
+    const page = !path.startsWith("/v1/") && !path.startsWith("/app/");
+    if ((req.method === "GET" || req.method === "HEAD") && page && req.headers.host === "localhost:" + port) {
+      res.writeHead(307, { Location: "http://127.0.0.1:" + port + path + url.search, "Cache-Control": "no-store" });
+      return res.end();
+    }
     const launch = url.searchParams.get("launch");
     if (req.method === "GET" && path === "/" && launch !== null) {
       const session = gate.redeem(launch);

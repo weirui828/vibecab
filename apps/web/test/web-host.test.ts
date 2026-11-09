@@ -49,6 +49,27 @@ describe("browser access", () => {
     expect(origin.status).toBe(403);
   });
 
+  it("sends a page opened on localhost to 127.0.0.1, where the browser's sign-in cookie lives", async () => {
+    // SkyEye and others open http://localhost:<port>; the cookie is set on http://127.0.0.1:<port>, another site.
+    const page = await raw(t.host.port, "GET", "/s/abc?x=1", { headers: { Host: "localhost:" + t.host.port } });
+    expect(page.status).toBe(307);
+    expect(page.headers.location).toBe(`http://127.0.0.1:${t.host.port}/s/abc?x=1`);
+    expect(page.headers["set-cookie"]).toBeUndefined();
+    // A sign-in link opened on localhost is redeemed on 127.0.0.1, so the cookie lands where it is used.
+    const launch = new URL(t.host.launchUrl()),
+      link = await raw(t.host.port, "GET", launch.pathname + launch.search, {
+        headers: { Host: "localhost:" + t.host.port },
+      });
+    expect(link.status).toBe(307);
+    expect(link.headers.location).toBe(`http://127.0.0.1:${t.host.port}/${launch.search}`);
+    expect(link.headers["set-cookie"]).toBeUndefined();
+    const signed = await raw(t.host.port, "GET", launch.pathname + launch.search);
+    expect(signed.headers["set-cookie"]?.[0]).toMatch(/HttpOnly/);
+    // Calls from a page are not moved: only page loads are.
+    const call = await raw(t.host.port, "GET", "/app/state", { headers: { Host: "localhost:" + t.host.port } });
+    expect(call.status).toBe(401);
+  });
+
   it("refuses development flags without VIBECAB_DEV=1", () => {
     const before = process.env.VIBECAB_DEV;
     process.env.VIBECAB_DEV = "0";
