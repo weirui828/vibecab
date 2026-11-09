@@ -7,6 +7,9 @@ import { plural } from "../ui/time.js";
 import type { SessionAgent } from "./loop.js";
 import type { CommentPlace } from "../shell/prefs.js";
 
+/** How threads show: in one of the two places, or not at all. */
+export type ThreadLayout = CommentPlace | "hidden";
+
 // Outline glyphs in the design system's style (24px grid, 1.5 stroke, currentColor) for what it does not ship.
 function Glyph({ d }: { d: string }) {
   return (
@@ -25,7 +28,76 @@ function Glyph({ d }: { d: string }) {
 }
 const bubble =
   "M4.5 6.5A2.5 2.5 0 0 1 7 4h10a2.5 2.5 0 0 1 2.5 2.5v7A2.5 2.5 0 0 1 17 16h-6l-4.5 4v-4h0A2.5 2.5 0 0 1 4.5 13.5v-7Z";
-const margin = "M4.5 5.5h15v13h-15zM14.5 5.5v13";
+// The Threads button shows the layout in use: a block with its threads under it, or a page with a right column.
+const underBlock = "M4.5 4.5h15v9h-15zM4.5 17.5h15M4.5 20.5h9";
+const besideText = "M4.5 5.5h15v13h-15zM14.5 5.5v13M7 9h5M7 12h5M7 15h3";
+const layouts: Array<[ThreadLayout, string]> = [
+  ["below", "Under each block"],
+  ["beside", "Beside the text"],
+  ["hidden", "Hidden"],
+];
+function LayoutIcon({ layout }: { layout: ThreadLayout }) {
+  if (layout === "hidden") return <Icon name="eye-slash" size={20} />;
+  return <Glyph d={layout === "below" ? underBlock : besideText} />;
+}
+
+/** "Show threads": where threads go, as a menu of three choices with the current one checked. */
+function LayoutMenu({
+  layout,
+  marginFits,
+  onLayout,
+}: {
+  layout: ThreadLayout;
+  marginFits: boolean;
+  onLayout(layout: ThreadLayout): void;
+}) {
+  const menu = useRef<HTMLDivElement>(null);
+  // Opened from the keyboard or the mouse, focus starts on the current choice; ↑ ↓ Home End move between choices.
+  useEffect(() => {
+    menu.current?.querySelector<HTMLElement>('[aria-checked="true"]')?.focus();
+  }, []);
+  const onKey = (event: React.KeyboardEvent) => {
+    const items = [...(menu.current?.querySelectorAll<HTMLElement>('[role="menuitemradio"]') ?? [])],
+      at = items.indexOf(document.activeElement as HTMLElement),
+      to =
+        event.key === "ArrowDown"
+          ? (at + 1) % items.length
+          : event.key === "ArrowUp"
+            ? (at - 1 + items.length) % items.length
+            : event.key === "Home"
+              ? 0
+              : event.key === "End"
+                ? items.length - 1
+                : -1;
+    if (to < 0) return;
+    event.preventDefault();
+    items[to]?.focus();
+  };
+  return (
+    <div className="vc-filter vc-layout-menu" role="menu" aria-label="Show threads" ref={menu} onKeyDown={onKey}>
+      <p className="vc-label" aria-hidden="true">
+        Show threads
+      </p>
+      {layouts.map(([value, label]) => (
+        <button
+          key={value}
+          type="button"
+          role="menuitemradio"
+          aria-checked={layout === value}
+          tabIndex={layout === value ? 0 : -1}
+          onClick={() => onLayout(value)}
+        >
+          <LayoutIcon layout={value} />
+          <span>{label}</span>
+          {layout === value && <Icon name="check" size={16} className="vc-layout-check" />}
+        </button>
+      ))}
+      {!marginFits && (
+        <p className="hint">The margin needs a wider window. Until then, threads show under each block.</p>
+      )}
+    </div>
+  );
+}
 const bookmark = "M7 4.5h10v15.5l-5-3.6-5 3.6z";
 const spark =
   "M12 3.5l1.9 5.1 5.1 1.9-5.1 1.9L12 17.5l-1.9-5.1-5.1-1.9 5.1-1.9zM18.5 15.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z";
@@ -113,19 +185,7 @@ function BarButton(props: {
   );
 }
 
-function FilterPanel({
-  filter,
-  onChange,
-  place,
-  marginFits,
-  onPlace,
-}: {
-  marginFits: boolean;
-  filter: ThreadFilter;
-  onChange(f: ThreadFilter): void;
-  place: CommentPlace;
-  onPlace(place: CommentPlace): void;
-}) {
+function FilterPanel({ filter, onChange }: { filter: ThreadFilter; onChange(f: ThreadFilter): void }) {
   const seg = <K extends keyof ThreadFilter>(key: K, options: Array<[ThreadFilter[K], string]>) => (
     <div className="vc-segmented small" role="group">
       {options.map(([value, label]) => (
@@ -141,26 +201,8 @@ function FilterPanel({
     </div>
   );
   return (
-    <div className="vc-filter" role="dialog" aria-label="Thread options">
-      <>
-        <p className="vc-label">Show threads</p>
-        <div className="vc-segmented small" role="group" aria-label="Show threads">
-          {(
-            [
-              ["below", "Under each block"],
-              ["beside", "Beside the text"],
-            ] as const
-          ).map(([value, label]) => (
-            <button key={value} type="button" aria-pressed={place === value} onClick={() => onPlace(value)}>
-              {label}
-            </button>
-          ))}
-        </div>
-        {place === "beside" && !marginFits && (
-          <p className="hint">The margin needs a wider window. Until then, threads show under each block.</p>
-        )}
-        <p className="vc-label">Which threads</p>
-      </>
+    <div className="vc-filter" role="dialog" aria-label="Filter threads">
+      <p className="vc-label">Which threads</p>
       {seg("status", [
         ["open", "Open"],
         ["all", "All"],
@@ -184,10 +226,10 @@ export function ActionBar({
   threadCount,
   unreadCount,
   onNextUnread,
-  threadsShown,
+  layout,
   filter,
   onComment,
-  onToggleThreads,
+  onLayout,
   onFilter,
   replyMode,
   modelReady,
@@ -198,14 +240,10 @@ export function ActionBar({
   onAsk,
   onHistory,
   onSnapshot,
-  place,
   marginFits,
-  onPlace,
 }: {
-  /** Where threads show, as chosen; the margin is used only while it fits (`marginFits`). */
-  place: CommentPlace;
+  /** Whether the margin fits now; "beside" shows threads under each block until it does. */
   marginFits: boolean;
-  onPlace(place: CommentPlace): void;
   onHistory(): void;
   onSnapshot(): void;
   replyMode: ReplyMode;
@@ -221,17 +259,19 @@ export function ActionBar({
   /** Threads with agent replies not looked at yet. */
   unreadCount: number;
   onNextUnread(): void;
-  threadsShown: boolean;
+  /** How threads show (the Threads button's menu). */
+  layout: ThreadLayout;
   filter: ThreadFilter;
   onComment(): void;
-  onToggleThreads(): void;
+  onLayout(layout: ThreadLayout): void;
   onFilter(filter: ThreadFilter): void;
 }) {
-  const [panel, setPanel] = useState<"filter" | "agent">(),
+  const [panel, setPanel] = useState<"filter" | "agent" | "layout">(),
     filtering = panel === "filter",
     setFiltering = (on: boolean | ((v: boolean) => boolean)) =>
       setPanel((current) => ((typeof on === "function" ? on(current === "filter") : on) ? "filter" : undefined)),
-    root = useRef<HTMLDivElement>(null);
+    root = useRef<HTMLDivElement>(null),
+    threadsButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!panel) return;
     const away = (event: PointerEvent) => !root.current?.contains(event.target as Node) && setPanel(undefined);
@@ -266,14 +306,20 @@ export function ActionBar({
             Ask agent
           </button>
         )}
-        <BarButton
-          label={`${threadsShown ? "Hide" : "Show"} ${threadCount > 0 ? plural(threadCount, "thread") : "threads"}`}
-          pressed={threadsShown}
-          onClick={onToggleThreads}
+        <button
+          type="button"
+          className="vc-bar-button"
+          aria-label={`Threads: ${(layouts.find(([v]) => v === layout)?.[1] ?? "").toLowerCase()}, ${threadCount > 0 ? plural(threadCount, "thread") : "no threads"}`}
+          title="Show threads"
+          ref={threadsButton}
+          aria-haspopup="menu"
+          aria-expanded={panel === "layout"}
+          data-layout={layout}
+          onClick={() => setPanel((current) => (current === "layout" ? undefined : "layout"))}
         >
-          <Glyph d={margin} />
+          <LayoutIcon layout={layout} />
           {threadCount > 0 && <span className="count">{threadCount}</span>}
-        </BarButton>
+        </button>
         {unreadCount > 0 && (
           <button type="button" className="vc-bar-button labelled vc-unread-jump" onClick={onNextUnread}>
             {unreadCount === 1 ? "1 new reply" : `${unreadCount} new replies`} ↓
@@ -289,12 +335,21 @@ export function ActionBar({
           </BarButton>
         )}
         <span className="vc-bar-sep" aria-hidden="true" />
-        <BarButton label="Thread options" pressed={filtering || filtered} onClick={() => setFiltering((v) => !v)}>
+        <BarButton label="Filter threads" pressed={filtering || filtered} onClick={() => setFiltering((v) => !v)}>
           <Icon name="funnel" size={20} />
           {filtered && <span className="dot" aria-hidden="true" />}
         </BarButton>
-        {filtering && (
-          <FilterPanel filter={filter} onChange={onFilter} place={place} marginFits={marginFits} onPlace={onPlace} />
+        {filtering && <FilterPanel filter={filter} onChange={onFilter} />}
+        {panel === "layout" && (
+          <LayoutMenu
+            layout={layout}
+            marginFits={marginFits}
+            onLayout={(next) => {
+              setPanel(undefined);
+              onLayout(next);
+              threadsButton.current?.focus();
+            }}
+          />
         )}
         {panel === "agent" && (
           <AgentPanel

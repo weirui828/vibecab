@@ -189,8 +189,8 @@ it("replies, edits and deletes in a thread", async () => {
 it("filters threads to those the agent answered", async () => {
   const { container } = await openSession();
   await tl.waitFor(() => expect(container.querySelectorAll(".vc-margin .vc-thread").length).toBe(3));
-  tl.fireEvent.click(tl.screen.getByRole("button", { name: "Thread options" }));
-  const filter = await tl.screen.findByRole("dialog", { name: "Thread options" });
+  tl.fireEvent.click(tl.screen.getByRole("button", { name: "Filter threads" }));
+  const filter = await tl.screen.findByRole("dialog", { name: "Filter threads" });
   tl.fireEvent.click(tl.within(filter).getByRole("button", { name: "Agent" }));
   await tl.waitFor(() => expect(container.querySelectorAll(".vc-margin .vc-thread").length).toBe(1));
   expect(container.querySelector(".vc-margin .vc-thread")?.textContent).toContain("Name the rock.");
@@ -226,15 +226,32 @@ it("shows threads under each block, as covibe does: a click on a block opens a c
     const first = container.querySelector(".vc-surface-doc")!.firstElementChild as HTMLElement;
     expect(first.classList.contains("vc-inline")).toBe(true);
     expect(first.querySelector('form[aria-label="Comment on the whole session"]')).not.toBeNull();
-    // The margin is one choice away, and remembered.
-    tl.fireEvent.click(tl.screen.getByRole("button", { name: "Thread options" }));
-    const options = await tl.screen.findByRole("dialog", { name: "Thread options" });
-    tl.fireEvent.click(tl.within(options).getByRole("button", { name: "Beside the text" }));
+    // The margin is one choice away in the Threads button's menu, and remembered.
+    const choose = (name: string) => {
+      tl.fireEvent.click(tl.screen.getByRole("button", { name: /^Threads:/ }));
+      const menu = tl.screen.getByRole("menu", { name: "Show threads" });
+      tl.fireEvent.click(tl.within(menu).getByRole("menuitemradio", { name }));
+    };
+    expect(tl.screen.getByRole("button", { name: /^Threads: under each block, \d+ threads$/ })).toBeTruthy();
+    choose("Beside the text");
     await tl.waitFor(() =>
       expect(container.querySelector(".vc-margin")?.textContent).toContain("Say where the lake is."),
     );
     expect(container.querySelector(".vc-inline .vc-comment")).toBeNull();
     expect(localStorage.getItem("vc-comments")).toBe("beside");
+    expect(tl.screen.getByRole("button", { name: /^Threads: beside the text,/ })).toBeTruthy();
+    // Hidden takes every thread away, for this visit only: the place stays remembered.
+    choose("Hidden");
+    await tl.waitFor(() => expect(container.querySelector(".vc-margin")).toBeNull());
+    expect(container.querySelector(".vc-thread")).toBeNull();
+    expect(tl.screen.getByRole("button", { name: /^Threads: hidden,/ })).toBeTruthy();
+    expect(localStorage.getItem("vc-comments")).toBe("beside");
+    choose("Under each block");
+    await tl.waitFor(() => {
+      const block = container.querySelector<HTMLElement>(`[data-element-id="${id}"]`);
+      expect(block?.nextElementSibling?.textContent).toContain("Say where the lake is.");
+    });
+    expect(localStorage.getItem("vc-comments")).toBe("below");
   } finally {
     localStorage.setItem("vc-comments", "beside");
   }
