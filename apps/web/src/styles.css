@@ -792,28 +792,7 @@
   fill: var(--color-accent-default);
 }
 
-/* ---------- Gate and placeholders ---------- */
-.vc-gate {
-  display: grid;
-  place-items: center;
-  min-height: 100dvh;
-  padding: 32px;
-  text-align: center;
-}
-.vc-gate .inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-  max-width: 420px;
-}
-.vc-gate code {
-  padding: 6px 12px;
-  border-radius: var(--vc-radius-sm);
-  background: var(--color-surface-raised);
-  font-family: var(--font-mono);
-  font-size: 13px;
-}
+/* ---------- Placeholders ---------- */
 .vc-banner {
   margin-bottom: 32px;
 }

@@ -70,7 +70,7 @@ export interface TestHost {
   close(): Promise<void>;
 }
 
-/** A web host on a fresh workspace with a running engine (scripted fake model), signed in once. */
+/** A web host on a fresh workspace with a running engine (scripted fake model). */
 export async function startTestHost(staticRoot?: string, extra: Partial<WebHostOptions> = {}): Promise<TestHost> {
   const workspace = await mkdtemp(join(tmpdir(), "vibecab-web-test-")),
     host = await startWebHost({
@@ -81,17 +81,12 @@ export async function startTestHost(staticRoot?: string, extra: Partial<WebHostO
       ...(staticRoot ? { staticRoot } : {}),
     });
   await host.engine.start();
-  const launch = new URL(host.launchUrl()),
-    signIn = await raw(host.port, "GET", launch.pathname + launch.search),
-    setCookie = signIn.headers["set-cookie"]?.[0];
-  if (!setCookie) throw new Error("Sign-in did not set a cookie");
-  const cookie = setCookie.split(";")[0] ?? "";
+  // No browser sign-in (2026-11-08): tests call the host as a browser tab would, with no cookie.
+  const cookie = "";
   const signedFetch: typeof fetch = (input, init) => {
     const url =
       typeof input === "string" ? new URL(input, host.url) : input instanceof URL ? input : new URL(input.url);
-    const headers = new Headers(init?.headers);
-    headers.set("Cookie", cookie);
-    return fetch(url, { ...init, headers });
+    return fetch(url, init);
   };
   return {
     host,

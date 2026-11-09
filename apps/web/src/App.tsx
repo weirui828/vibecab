@@ -2,12 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Button, Icon, IconButton } from "@wei/design-system";
 import { terms } from "../../ui/src/copy/terms.js";
 import type { ConnectionState } from "../../ui/src/connection.js";
-import { BridgeError, webBridge } from "./bridge/webBridge.js";
+import { webBridge } from "./bridge/webBridge.js";
 import type { WebBridge } from "./bridge/webBridge.js";
 import { LiveStoreProvider } from "./live/LiveStore.js";
 import { useWorkspace } from "./live/workspace.js";
 import { ToastProvider } from "./ui/Toast.js";
-import { Mark, Wordmark } from "./ui/Brand.js";
+import { Wordmark } from "./ui/Brand.js";
 import { useRoute, useSidebarRail, useTheme } from "./shell/prefs.js";
 import { Sidebar } from "./shell/Navigation.js";
 import type { NavProps } from "./shell/Navigation.js";
@@ -22,7 +22,7 @@ import { TrashView } from "./home/TrashView.js";
 import { IdeasView, ProjectView, ProjectsView } from "./home/IdeasProjects.js";
 import { SessionsView } from "./home/SessionsView.js";
 
-type Access = "checking" | "signed-out" | "ready";
+type Access = "checking" | "ready";
 
 // Per-browser flags; storage can be unavailable (private windows), and everything still works without it.
 function readFlag(key: string): boolean {
@@ -55,9 +55,8 @@ export function App({ bridge = defaultBridge() }: { bridge?: WebBridge }) {
       setConnection(state.connection);
       setVersion(state.version);
       setAccess("ready");
-    } catch (error) {
-      if (error instanceof BridgeError && error.error.code === "unauthenticated") setAccess("signed-out");
-      else setConnection("Engine unreachable");
+    } catch {
+      setConnection("Engine unreachable");
     }
   }, [bridge]);
   useEffect(() => {
@@ -78,7 +77,6 @@ export function App({ bridge = defaultBridge() }: { bridge?: WebBridge }) {
       setConnection("Engine unreachable");
     }
   }, [bridge]);
-  if (access === "signed-out") return <SignedOut />;
   return (
     <LiveStoreProvider bridge={bridge}>
       <ToastProvider>
@@ -221,29 +219,5 @@ function Shell({
         </main>
       </div>
     </DialogHost>
-  );
-}
-
-function SignedOut() {
-  return (
-    <div className="vc-gate">
-      <div className="inner">
-        <Mark height={36} />
-        <h1 className="vc-display" style={{ fontSize: 34, marginTop: 12 }}>
-          Sign in this browser
-        </h1>
-        <p className="vc-muted" style={{ margin: 0 }}>
-          This browser is not signed in. Each browser signs in one time with a one-time link. This stops other programs
-          on this computer from using VibeCab as you.
-        </p>
-        <p className="vc-muted" style={{ margin: 0 }}>
-          Open the link that VibeCab showed when it started. To get a new link while VibeCab runs, use this command:
-        </p>
-        <code>node apps/web/bin/vibecab-web.mjs link</code>
-        <p className="vc-muted small" style={{ margin: 0 }}>
-          If VibeCab does not run, start it with <code>pnpm web</code>.
-        </p>
-      </div>
-    </div>
   );
 }

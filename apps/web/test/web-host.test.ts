@@ -18,56 +18,43 @@ const json = (body: unknown) => ({
 });
 
 describe("browser access", () => {
-  it("accepts the launch secret once and answers with an HttpOnly, SameSite=Strict cookie", async () => {
-    const launch = new URL(t.host.launchUrl()),
-      first = await raw(t.host.port, "GET", launch.pathname + launch.search),
-      second = await raw(t.host.port, "GET", launch.pathname + launch.search);
-    expect(first.status).toBe(303);
-    expect(first.headers["set-cookie"]?.[0]).toMatch(/HttpOnly; SameSite=Strict; Path=\//);
-    expect(second.status).toBe(303);
-    expect(second.headers["set-cookie"]).toBeUndefined();
-  });
-
-  it("refuses /v1 and /app without the cookie, and a guessed secret signs nothing in", async () => {
-    expect((await raw(t.host.port, "POST", "/v1/queries/vc.Sessions", json({ args: {} }))).status).toBe(401);
-    expect((await raw(t.host.port, "GET", "/app/state")).status).toBe(401);
-    const guess = await raw(t.host.port, "GET", "/?launch=" + "A".repeat(43));
-    expect(guess.headers["set-cookie"]).toBeUndefined();
-    const forged = await raw(t.host.port, "GET", "/app/state", { headers: { Cookie: t.cookie + "x" } });
-    expect(forged.status).toBe(401);
-  });
-
-  it("rejects a foreign Host (DNS rebinding) and a foreign Origin, even with the cookie", async () => {
-    const host = await raw(t.host.port, "GET", "/app/state", {
-      headers: { Host: "evil.example:" + t.host.port, Cookie: t.cookie },
-    });
-    expect(host.status).toBe(403);
-    const origin = await raw(t.host.port, "POST", "/v1/queries/vc.Sessions", {
+  it("needs no sign-in: VibeCab's own pages reach /v1 and /app with no cookie", async () => {
+    expect((await raw(t.host.port, "GET", "/app/state")).status).toBe(200);
+    const query = await raw(t.host.port, "POST", "/v1/queries/vc.Sessions", {
       ...json({ args: {} }),
-      headers: { "Content-Type": "application/json", Origin: "https://evil.example", Cookie: t.cookie },
+      headers: { "Content-Type": "application/json", Origin: "http://127.0.0.1:" + t.host.port },
     });
-    expect(origin.status).toBe(403);
+    expect(query.status).toBe(200);
+    // An old sign-in link still opens VibeCab, and sets nothing.
+    const old = await raw(t.host.port, "GET", "/?launch=" + "A".repeat(43));
+    expect(old.status).toBe(303);
+    expect(old.headers.location).toBe("/");
+    expect(old.headers["set-cookie"]).toBeUndefined();
   });
 
-  it("sends a page opened on localhost to 127.0.0.1, where the browser's sign-in cookie lives", async () => {
-    // SkyEye and others open http://localhost:<port>; the cookie is set on http://127.0.0.1:<port>, another site.
+  it("keeps other websites out: a foreign Host (DNS rebinding) and a foreign Origin (CSRF)", async () => {
+    const host = await raw(t.host.port, "GET", "/app/state", { headers: { Host: "evil.example:" + t.host.port } });
+    expect(host.status).toBe(403);
+    const csrf = await raw(t.host.port, "POST", "/v1/commands/vc.StartSession", {
+      headers: { "Content-Type": "application/json", Origin: "https://evil.example" },
+      body: JSON.stringify({ commandId: "csrf", payload: { title: "Not mine" } }),
+    });
+    expect(csrf.status).toBe(403);
+    // Another local app is another origin too.
+    const otherPort = await raw(t.host.port, "POST", "/v1/queries/vc.Sessions", {
+      ...json({ args: {} }),
+      headers: { "Content-Type": "application/json", Origin: "http://localhost:3000" },
+    });
+    expect(otherPort.status).toBe(403);
+  });
+
+  it("sends a page opened on localhost to 127.0.0.1, so a browser keeps one set of preferences", async () => {
     const page = await raw(t.host.port, "GET", "/s/abc?x=1", { headers: { Host: "localhost:" + t.host.port } });
     expect(page.status).toBe(307);
     expect(page.headers.location).toBe(`http://127.0.0.1:${t.host.port}/s/abc?x=1`);
-    expect(page.headers["set-cookie"]).toBeUndefined();
-    // A sign-in link opened on localhost is redeemed on 127.0.0.1, so the cookie lands where it is used.
-    const launch = new URL(t.host.launchUrl()),
-      link = await raw(t.host.port, "GET", launch.pathname + launch.search, {
-        headers: { Host: "localhost:" + t.host.port },
-      });
-    expect(link.status).toBe(307);
-    expect(link.headers.location).toBe(`http://127.0.0.1:${t.host.port}/${launch.search}`);
-    expect(link.headers["set-cookie"]).toBeUndefined();
-    const signed = await raw(t.host.port, "GET", launch.pathname + launch.search);
-    expect(signed.headers["set-cookie"]?.[0]).toMatch(/HttpOnly/);
     // Calls from a page are not moved: only page loads are.
     const call = await raw(t.host.port, "GET", "/app/state", { headers: { Host: "localhost:" + t.host.port } });
-    expect(call.status).toBe(401);
+    expect(call.status).toBe(200);
   });
 
   it("refuses development flags without VIBECAB_DEV=1", () => {
@@ -85,31 +72,14 @@ describe("browser access", () => {
   });
 });
 
-describe("sign-in links for another browser", () => {
-  it("makes a fresh link for a signed-in tab, and for the workspace owner's terminal, but not for anyone else", async () => {
-    const fromTab = await raw(t.host.port, "POST", "/app/launch-link", { headers: { Cookie: t.cookie } });
-    expect(fromTab.status).toBe(200);
-    expect((JSON.parse(fromTab.body) as { url: string }).url).toMatch(/\/\?launch=[\w-]{43}$/);
-    const runtime = JSON.parse(await readFile(join(t.workspace, ".vibecab", "web.json"), "utf8")) as {
-      url: string;
-      control: string;
-    };
+describe("finding the running host", () => {
+  it("writes its address for `vibecab-web link`, and no secret", async () => {
+    const runtime = JSON.parse(await readFile(join(t.workspace, ".vibecab", "web.json"), "utf8")) as Record<
+      string,
+      unknown
+    >;
     expect(runtime.url).toBe(t.host.url);
-    const fromTerminal = await raw(t.host.port, "POST", "/app/launch-link", {
-      headers: { "x-vibecab-control": runtime.control },
-    });
-    expect(fromTerminal.status).toBe(200);
-    const link = new URL((JSON.parse(fromTerminal.body) as { url: string }).url);
-    const signIn = await raw(t.host.port, "GET", link.pathname + link.search);
-    expect(signIn.headers["set-cookie"]?.[0]).toMatch(/HttpOnly/);
-    expect((await raw(t.host.port, "POST", "/app/launch-link")).status).toBe(401);
-    expect(
-      (await raw(t.host.port, "POST", "/app/launch-link", { headers: { "x-vibecab-control": "A".repeat(43) } })).status,
-    ).toBe(401);
-    // The control secret only opens the link endpoint, nothing else.
-    expect(
-      (await raw(t.host.port, "GET", "/app/state", { headers: { "x-vibecab-control": runtime.control } })).status,
-    ).toBe(401);
+    expect(Object.keys(runtime).sort()).toEqual(["pid", "url"]);
   });
 });
 
@@ -231,8 +201,11 @@ describe("model lists", () => {
     expect(await down.json()).toEqual({ models: [], error: "unreachable" });
   });
 
-  it("needs the signed-in cookie like every /app endpoint", async () => {
-    expect((await raw(t.host.port, "GET", "/app/provider-models?provider=openrouter")).status).toBe(401);
+  it("refuses another website like every /app endpoint (CSRF)", async () => {
+    const res = await raw(t.host.port, "GET", "/app/provider-models?provider=openrouter", {
+      headers: { Origin: "https://evil.example" },
+    });
+    expect(res.status).toBe(403);
   });
 });
 

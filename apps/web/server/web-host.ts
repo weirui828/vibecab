@@ -1,4 +1,3 @@
-import { randomBytes, timingSafeEqual } from "node:crypto";
 import { existsSync } from "node:fs";
 import { createServer, request as httpRequest } from "node:http";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
@@ -6,7 +5,7 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, extname, join, normalize, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AddressInfo } from "node:net";
-import { Access, sameHost, sameOrigin } from "./access.js";
+import { sameHost, sameOrigin } from "./access.js";
 import { providerCatalog, readLiveModels } from "../../../contract/src/provider-catalog.js";
 import { EngineLink } from "./engine.js";
 
@@ -28,7 +27,6 @@ export interface WebHostOptions {
 export interface WebHost {
   url: string;
   port: number;
-  launchUrl(): string;
   engine: EngineLink;
   close(): Promise<void>;
 }
@@ -72,13 +70,6 @@ async function readBody(req: IncomingMessage): Promise<Buffer> {
 export async function startWebHost(options: WebHostOptions): Promise<WebHost> {
   const engine = new EngineLink(options.workspace, options.fakeProvider ? { fakeProvider: options.fakeProvider } : {});
   let port = 0;
-  const gate = new Access(),
-    control = randomBytes(32);
-  const launchUrl = () => "http://127.0.0.1:" + port + "/?launch=" + gate.renew();
-  const controlled = (req: IncomingMessage) => {
-    const given = Buffer.from(String(req.headers["x-vibecab-control"] ?? ""), "base64url");
-    return given.length === control.length && timingSafeEqual(given, control);
-  };
   const relayPath = () => {
     if (options.mcpRelayPath) return options.mcpRelayPath;
     let dir = dirname(fileURLToPath(import.meta.url));
@@ -156,8 +147,6 @@ export async function startWebHost(options: WebHostOptions): Promise<WebHost> {
         workspacePath: options.workspace,
         mcpRelayPath: relayPath(),
       });
-    // A fresh single-use sign-in link, for another browser (asked by a signed-in tab or by `vibecab-web link`).
-    if (req.method === "POST" && path === "/app/launch-link") return json({ url: launchUrl() });
     if (req.method === "GET" && path === "/app/provider-models")
       return json(await providerModels(url.searchParams.get("provider") ?? ""));
     if (req.method === "POST" && path === "/app/restart-engine") {
@@ -202,26 +191,20 @@ export async function startWebHost(options: WebHostOptions): Promise<WebHost> {
     if (!sameOrigin(req, port)) return error(res, 403, "forbidden", "Origin is not permitted");
     const url = new URL(req.url ?? "/", "http://127.0.0.1:" + port),
       path = url.pathname;
-    // The sign-in cookie belongs to 127.0.0.1; a page opened on localhost (SkyEye's Open, a typed address) is
-    // another site to the browser and would never be signed in. Page loads move over; API calls stay as they are.
+    // One address: a browser keeps preferences (theme, where threads show) per site, and localhost is another
+    // site to it. Page loads opened on localhost (SkyEye's Open, a typed address) move over; API calls stay.
     const page = !path.startsWith("/v1/") && !path.startsWith("/app/");
     if ((req.method === "GET" || req.method === "HEAD") && page && req.headers.host === "localhost:" + port) {
       res.writeHead(307, { Location: "http://127.0.0.1:" + port + path + url.search, "Cache-Control": "no-store" });
       return res.end();
     }
-    const launch = url.searchParams.get("launch");
-    if (req.method === "GET" && path === "/" && launch !== null) {
-      const session = gate.redeem(launch);
-      res.writeHead(303, {
-        Location: "/",
-        "Cache-Control": "no-store",
-        ...(session ? { "Set-Cookie": gate.cookie(session) } : {}),
-      });
+    // Sign-in links from before there was no sign-in still open VibeCab.
+    if (req.method === "GET" && path === "/" && url.searchParams.has("launch")) {
+      res.writeHead(303, { Location: "/", "Cache-Control": "no-store" });
       return res.end();
     }
+    // No browser sign-in: the Host check (DNS rebinding) and the Origin check (CSRF) above keep websites out.
     if (path.startsWith("/v1/") || path.startsWith("/app/")) {
-      if (!(path === "/app/launch-link" && controlled(req)) && !gate.authorized(req))
-        return error(res, 401, "unauthenticated", "Open VibeCab from the link printed by the web host");
       if (path.startsWith("/app/")) return app(req, res, path, url);
       sockets.add(res);
       res.on("close", () => sockets.delete(res));
@@ -240,20 +223,15 @@ export async function startWebHost(options: WebHostOptions): Promise<WebHost> {
     server.listen(options.port ?? 0, "127.0.0.1", () => resolveListen());
   });
   port = (server.address() as AddressInfo).port;
-  gate.bind(port);
   const url = "http://127.0.0.1:" + port;
-  // `vibecab-web link` finds this host and proves it may ask for a sign-in link with a secret only the
-  // workspace owner can read (file mode 0600, like the app token).
+  // `vibecab-web link` finds this host's address here.
   const runtimeFile = join(options.workspace, ".vibecab", "web.json");
   await mkdir(dirname(runtimeFile), { recursive: true, mode: 0o700 });
-  await writeFile(runtimeFile, JSON.stringify({ url, pid: process.pid, control: control.toString("base64url") }), {
-    mode: 0o600,
-  });
+  await writeFile(runtimeFile, JSON.stringify({ url, pid: process.pid }), { mode: 0o600 });
   return {
     url,
     port,
     engine,
-    launchUrl,
     close: async () => {
       await rm(runtimeFile, { force: true });
       for (const res of sockets) res.destroy();

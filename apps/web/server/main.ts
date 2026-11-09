@@ -49,22 +49,17 @@ export function parseArgs(argv: string[]): Args {
   return args;
 }
 
-/** `vibecab-web link`: a fresh single-use sign-in link from the web host already running for the workspace. */
+/** `vibecab-web link`: the address of the web host already running for the workspace. */
 async function link(argv: string[]): Promise<void> {
   const at = argv.indexOf("--workspace"),
     workspace = at >= 0 && argv[at + 1] ? resolve(argv[at + 1]!) : defaultWorkspace();
-  let runtime: { url: string; control: string };
+  let runtime: { url: string };
   try {
     runtime = JSON.parse(await readFile(join(workspace, ".vibecab", "web.json"), "utf8")) as typeof runtime;
   } catch {
     throw new Error("VibeCab is not running for this workspace. Start it with `pnpm web`.");
   }
-  const res = await fetch(runtime.url + "/app/launch-link", {
-    method: "POST",
-    headers: { "x-vibecab-control": runtime.control },
-  });
-  if (!res.ok) throw new Error("The running web host refused to make a link.");
-  process.stdout.write(((await res.json()) as { url: string }).url + "\n");
+  process.stdout.write(runtime.url + "/\n");
 }
 
 export async function main(argv: string[]): Promise<void> {
@@ -92,10 +87,9 @@ export async function main(argv: string[]): Promise<void> {
   const host = await startWebHost(options);
   const state = await host.engine.start();
   if (args.seed) await seedWorkspace(host.engine);
-  const launch = host.launchUrl();
   process.stdout.write(`VibeCab is running at ${host.url} (engine: ${state}, workspace: ${workspace})\n`);
-  process.stdout.write(`Open this link once to sign in this browser:\nVIBECAB_WEB_READY ${launch}\n`);
-  if (args.open && process.platform === "darwin") execFile("open", [launch], () => undefined);
+  process.stdout.write(`VIBECAB_WEB_READY ${host.url}/\n`);
+  if (args.open && process.platform === "darwin") execFile("open", [host.url + "/"], () => undefined);
   const stop = () => void host.close().then(() => process.exit(0));
   process.once("SIGINT", stop);
   process.once("SIGTERM", stop);
