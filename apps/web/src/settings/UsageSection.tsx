@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Glider } from "../ui/Glider.js";
 import { terms } from "../../../ui/src/copy/terms.js";
 import { useLiveQuery } from "../live/LiveStore.js";
 import type { SessionRow } from "../live/workspace.js";
@@ -201,6 +202,7 @@ export function UsageSection({ sessions }: { sessions: SessionRow[] }) {
   return (
     <Section id="usage" title="Usage" lede="What the agents cost, how much they read and wrote, and where it went.">
       <div className="vc-segmented small" role="group" aria-label="Period">
+        <Glider selector='[aria-pressed="true"],[aria-current="page"]' />
         {(
           [
             [1, "Today"],

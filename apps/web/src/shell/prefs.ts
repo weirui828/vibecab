@@ -34,6 +34,10 @@ export function useTheme(): [ThemeChoice, (choice: ThemeChoice) => void] {
   }, [choice]);
   const set = useCallback((next: ThemeChoice) => {
     write("vc-theme", next);
+    // Summer and Polar night fade into each other instead of snapping.
+    const root = document.documentElement;
+    root.classList.add("vc-theme-fade");
+    setTimeout(() => root.classList.remove("vc-theme-fade"), 420);
     setChoice(next);
   }, []);
   return [choice, set];

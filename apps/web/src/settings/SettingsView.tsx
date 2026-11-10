@@ -14,6 +14,7 @@ import { EngineFacts } from "./EngineFacts.js";
 import type { AppState } from "../bridge/webBridge.js";
 import { AgentPool } from "./AgentPool.js";
 import { Roles } from "./Roles.js";
+import { Glider } from "../ui/Glider.js";
 import type { SettingsShape } from "./ModelForm.js";
 
 interface BudgetState {
@@ -332,6 +333,7 @@ export function SettingsView({
         <h1 className="vc-display">Settings</h1>
       </header>
       <div className="vc-tabs" role="tablist" aria-label="Settings" ref={list} onKeyDown={onKey}>
+        <Glider selector='[aria-selected="true"]' />
         {tabs.map(([id, label]) => (
           <button
             key={id}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Glider } from "../ui/Glider.js";
 import { Button, Icon } from "@wei/design-system";
 import type {
   Element,
@@ -142,6 +143,7 @@ function SessionHeader({
           className="vc-segmented vc-draft-tabs"
           aria-label={`${terms.draft}s in this ${terms.session.toLowerCase()}`}
         >
+          <Glider selector='[aria-current="page"]' />
           {drafts.map((d) => (
             <a
               key={d.artifactId}

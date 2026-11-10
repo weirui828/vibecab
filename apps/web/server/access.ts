@@ -21,3 +21,21 @@ export function sameOrigin(req: IncomingMessage, port: number): boolean {
   const origin = req.headers.origin;
   return origin === undefined || origin === "http://127.0.0.1:" + port || origin === "http://localhost:" + port;
 }
+
+/**
+ * A second wall behind the Origin check. Browsers add `Sec-Fetch-Site` themselves and a page cannot change it:
+ * only VibeCab's own pages ("same-origin") and an address the person typed ("none") may call. Another website is
+ * "cross-site"; another port on this computer is "same-site". Programs send no such header and pass.
+ */
+export function ownFetch(req: IncomingMessage): boolean {
+  const site = req.headers["sec-fetch-site"];
+  return site === undefined || site === "same-origin" || site === "none";
+}
+
+/**
+ * Commands and queries must be JSON. A page on another site can post `text/plain` or a form without asking the
+ * browser first; JSON needs a preflight, which VibeCab never grants.
+ */
+export function jsonBody(req: IncomingMessage): boolean {
+  return /^application\/json\s*(;|$)/i.test(req.headers["content-type"] ?? "");
+}

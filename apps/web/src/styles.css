@@ -4,6 +4,7 @@
 @import "./session/comments.css";
 @import "./session/loop.css";
 @import "./settings/settings.css";
+@import "./motion.css";
 @source "../node_modules/@wei/design-system/dist";
 
 /* VibeCab web. Semantic design-system tokens only: no raw colours (a test enforces it).
@@ -779,14 +780,15 @@
 .vc-hills {
   color: var(--color-accent-default);
 }
+/* The same tundra as the Home horizon: one hue, nearer hills darker. */
+.vc-hills .h4 {
+  fill: color-mix(in srgb, var(--color-accent-default) 9%, var(--color-surface-base));
+}
 .vc-hills .h2 {
-  fill: var(--color-accent-muted);
+  fill: color-mix(in srgb, var(--color-accent-default) 20%, var(--color-surface-base));
 }
 .vc-hills .h3 {
-  fill: var(--color-warning-border);
-}
-.vc-hills .h4 {
-  fill: var(--color-info-border);
+  fill: color-mix(in srgb, var(--color-accent-default) 36%, var(--color-surface-base));
 }
 .vc-hills .h1 {
   fill: var(--color-accent-default);
