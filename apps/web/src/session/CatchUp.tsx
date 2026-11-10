@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@wei/design-system";
 import type { SessionDigest, VcResumeViewOperation } from "../../../../contract/generated/index.js";
-import { terms } from "../../../ui/src/copy/terms.js";
+import { terms } from "../copy/terms.js";
 import { plural } from "../ui/time.js";
 
 type Resume = VcResumeViewOperation["result"];

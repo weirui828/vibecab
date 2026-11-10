@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button, Field, Input } from "@wei/design-system";
-import { terms } from "../../../ui/src/copy/terms.js";
+import { terms } from "../copy/terms.js";
 import { Dialog } from "../ui/Dialog.js";
 import type { DraftRow, SessionRow } from "../live/workspace.js";
 import type { NewDraft } from "./actions.js";

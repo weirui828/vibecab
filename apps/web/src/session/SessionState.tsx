@@ -1,4 +1,4 @@
-import { terms } from "../../../ui/src/copy/terms.js";
+import { terms } from "../copy/terms.js";
 import { useActions } from "../home/actions.js";
 import { useDialogs } from "../home/DialogHost.js";
 import type { SessionRow } from "../live/workspace.js";

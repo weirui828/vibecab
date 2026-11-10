@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { DiffResult, Element } from "../../../../contract/generated/index.js";
-import { terms } from "../../../ui/src/copy/terms.js";
+import { terms } from "../copy/terms.js";
 import { useLiveQuery } from "../live/LiveStore.js";
 import { DocumentView } from "../document/DocumentView.js";
 import type { Loop, Update } from "./loop.js";

@@ -25,6 +25,8 @@ export class EngineLink {
     readonly workspace: string,
     private readonly options: {
       fakeProvider?: string;
+      /** The Node and host entry that run the engine; the Mac app passes its packaged ones. */
+      host?: { nodePath: string; hostEntry: string };
       /** When the engine code on disk was built (ms); found from the build output when not given (tests set it). */
       builtAt?: () => number | undefined;
     } = {},
@@ -46,7 +48,7 @@ export class EngineLink {
   /** What Settings → About shows: when the engine started, when its code was built, and whether it is older. */
   async info(): Promise<EngineInfo | undefined> {
     const running = await status(this.workspace),
-      builtAt = (this.options.builtAt ?? engineBuiltAt)();
+      builtAt = this.builtAt();
     if (!running.running) return undefined;
     return {
       startedAt: running.startedAt,
@@ -66,11 +68,11 @@ export class EngineLink {
     this.invalidate();
     // An engine still running from before an update would refuse what the new app sends: replace it.
     const running = await status(this.workspace),
-      builtAt = (this.options.builtAt ?? engineBuiltAt)();
+      builtAt = this.builtAt();
     if (running.running && builtAt !== undefined && Date.parse(running.startedAt) < builtAt) await stop(this.workspace);
     await start(this.workspace, {
-      nodePath: process.execPath,
-      hostEntry: hostEntry(),
+      nodePath: this.options.host?.nodePath ?? process.execPath,
+      hostEntry: this.options.host?.hostEntry ?? hostEntry(),
       ...(this.options.fakeProvider ? { fakeProvider: this.options.fakeProvider } : {}),
     });
     return this.state();
@@ -91,6 +93,11 @@ export class EngineLink {
     }
   }
 
+  private builtAt(): number | undefined {
+    if (this.options.builtAt) return this.options.builtAt();
+    return engineBuiltAtFrom(this.options.host?.hostEntry ?? hostEntry());
+  }
+
   private async readToken(): Promise<string> {
     return (await readFile(join(this.workspace, ".vibecab", "app-token"), "utf8")).trim();
   }
@@ -106,7 +113,6 @@ export function engineBuiltAtFrom(entry: string): number | undefined {
     if (existsSync(file)) return statSync(file).mtimeMs;
   return undefined;
 }
-const engineBuiltAt = () => engineBuiltAtFrom(hostEntry());
 
 /** The host entry script, found from either the source tree (tests) or the build output. */
 function hostEntry(): string {

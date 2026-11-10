@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button, Field, Icon, Input } from "@wei/design-system";
-import { terms } from "../../../ui/src/copy/terms.js";
+import { terms } from "../copy/terms.js";
 import { Hills } from "../ui/Brand.js";
 import { useDialogs } from "../home/DialogHost.js";
 import { ModelForm } from "./ModelForm.js";

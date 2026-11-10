@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Button } from "@wei/design-system";
 import type { DiffResult, Element } from "../../../../contract/generated/index.js";
-import { errorMessage } from "../../../ui/src/copy/errors.js";
+import { errorMessage } from "../copy/errors.js";
 import { useBridge, useLiveQuery } from "../live/LiveStore.js";
 import { DocumentView } from "../document/DocumentView.js";
 import { useToast } from "../ui/Toast.js";

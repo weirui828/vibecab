@@ -5,7 +5,7 @@ import type {
   Update,
   VcUpdatesOperation,
 } from "../../../../contract/generated/index.js";
-import { terms } from "../../../ui/src/copy/terms.js";
+import { terms } from "../copy/terms.js";
 import { useLiveQuery } from "../live/LiveStore.js";
 import type { Thread } from "./threads.js";
 import { visibleComments } from "./threads.js";

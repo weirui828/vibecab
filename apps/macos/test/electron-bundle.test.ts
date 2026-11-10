@@ -10,16 +10,17 @@ import { bundleElectron } from "../scripts/bundle-electron.mjs";
 
 const builtinNames = new Set(builtinModules.flatMap((name) => [name, `node:${name}`]));
 
-it("bundles Electron entry points without bare imports besides Electron and Node built-ins", async () => {
+it("bundles the shell's main entry, and no preload, without bare imports besides Electron and Node built-ins", async () => {
   const outdir = await mkdtemp(join(tmpdir(), "vibecab-electron-bundle-"));
   try {
     const result = await bundleElectron(join(import.meta.dirname, "../src"), outdir);
     const outputs = Object.entries(result.metafile.outputs),
-      main = outputs.find(([path]) => path.endsWith("/main.mjs"))?.[1],
-      preload = outputs.find(([path]) => path.endsWith("/preload.cjs"))?.[1];
+      main = outputs.find(([path]) => path.endsWith("/main.mjs"))?.[1];
     expect(main).toBeDefined();
-    expect(preload).toBeDefined();
-    for (const output of [main!, preload!]) {
+    expect(outputs.some(([path]) => /preload/.test(path))).toBe(false);
+    // The web host runs inside main, so its code is part of the bundle.
+    expect(Object.keys(result.metafile.inputs).some((path) => path.endsWith("web/server/web-host.ts"))).toBe(true);
+    for (const output of [main!]) {
       for (const imported of output.imports) {
         const bare = !imported.path.startsWith(".") && !imported.path.startsWith("/");
         if (bare) expect(["electron", ...builtinNames]).toContain(imported.path);

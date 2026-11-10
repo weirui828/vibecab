@@ -11,7 +11,6 @@ for (const name of [
   "engine",
   "host",
   "apps/macos",
-  "apps/ui",
   "adapters/in-process",
   "adapters/http",
   "adapters/cli",

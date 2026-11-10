@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Button } from "@wei/design-system";
-import { errorMessage } from "../../../ui/src/copy/errors.js";
-import { terms } from "../../../ui/src/copy/terms.js";
+import { errorMessage } from "../copy/errors.js";
+import { terms } from "../copy/terms.js";
 import { useBridge } from "../live/LiveStore.js";
 import { useToast } from "../ui/Toast.js";
 import { newCommandId } from "../bridge/webBridge.js";

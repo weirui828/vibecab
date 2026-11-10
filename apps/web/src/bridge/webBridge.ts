@@ -1,7 +1,6 @@
 import type { CommandResult, ContractError, EventEnvelope } from "../../../../contract/src/index.js";
-import type { ContractBridge } from "../../../ui/src/api.js";
 import type { LiveModel } from "../../../../contract/src/provider-catalog.js";
-import type { ConnectionState } from "../../../ui/src/connection.js";
+import type { ConnectionState } from "../connection.js";
 
 export interface AppState {
   connection: ConnectionState;
@@ -12,7 +11,7 @@ export interface AppState {
   engine?: { startedAt: string; builtAt?: string; outdated: boolean } | null;
 }
 
-/** What only the web host can do; the Electron-only members of `ContractBridge.app` do not exist here. */
+/** What only the web host can do, beside the contract. */
 export interface WebAppBridge {
   state(): Promise<AppState>;
   startEngine(): Promise<ConnectionState>;
@@ -22,7 +21,20 @@ export interface WebAppBridge {
   providerModels(providerId: string): Promise<{ models: LiveModel[]; error?: string }>;
 }
 
-export type WebBridge = Omit<ContractBridge, "app"> & { app: WebAppBridge };
+/**
+ * The renderer's only way to the engine (AGENTS.md §9.1): the contract's five calls, plus what the web host adds.
+ * The renderer never holds a token, opens a socket of its own, or imports engine code.
+ */
+export interface ContractBridge {
+  command(type: string, payload: unknown, commandId?: string): Promise<CommandResult>;
+  query<T = unknown>(name: string, args: unknown): Promise<T>;
+  subscribe(afterSeq: number, filter: unknown, onEvent: (event: EventEnvelope) => void): () => void;
+  putBlob(bytes: Uint8Array, mediaType: string): Promise<string>;
+  getBlob(hash: string): Promise<Uint8Array>;
+  blobUrl(hash: string): string;
+}
+
+export type WebBridge = ContractBridge & { app: WebAppBridge };
 
 export class BridgeError extends Error {
   constructor(readonly error: ContractError) {

@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Button, Field, Icon, Input } from "@wei/design-system";
 import type { VcPurgePreviewOperation } from "../../../../contract/generated/index.js";
-import { errorMessage } from "../../../ui/src/copy/errors.js";
-import { terms } from "../../../ui/src/copy/terms.js";
+import { errorMessage } from "../copy/errors.js";
+import { terms } from "../copy/terms.js";
 import { useBridge, useLiveQuery } from "../live/LiveStore.js";
 import { navigate } from "../shell/prefs.js";
 import { Dialog } from "../ui/Dialog.js";

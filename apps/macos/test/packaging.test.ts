@@ -19,12 +19,14 @@ it("declares an arm64 macOS app and a one-command packaging script", async () =>
 
 const packagedApp = process.env.VIBECAB_PACKAGED_APP;
 
-it.skipIf(!packagedApp)("packs the bundled main, preload, and renderer into app.asar", async () => {
+it.skipIf(!packagedApp)("packs only the shell's main into app.asar; the web app ships beside the engine", async () => {
   const archive = join(packagedApp!, "Contents/Resources/app.asar"),
     files = listPackage(archive, { isPack: false }).map((path) => path.replace(/^\//, ""));
   expect(files).toContain("dist/apps/macos/src/main.mjs");
-  expect(files).toContain("dist/apps/macos/src/preload.cjs");
-  expect(files).toContain("dist/apps/ui/index.html");
+  expect(files.some((path) => /preload/.test(path))).toBe(false);
+  expect((await stat(join(packagedApp!, "Contents/Resources/engine/dist/apps/web/client/index.html"))).isFile()).toBe(
+    true,
+  );
 });
 
 it.skipIf(!packagedApp)("runs the packaged Node CLI against a fresh temporary workspace", async () => {

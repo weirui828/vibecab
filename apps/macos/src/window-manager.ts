@@ -1,10 +1,12 @@
-import { app, BrowserWindow, nativeTheme, shell } from "electron";
-import { join } from "node:path";
+import { app, BrowserWindow, shell } from "electron";
+import { external, insideApp, macClassScript } from "./shell-page.js";
 import { recordSmokeConsoleMessage } from "./smoke-lifecycle.js";
 
 export type WindowPreferences = { width?: number; height?: number; x?: number; y?: number };
 
 export function createWindowManager(options: {
+  /** The web host inside this app: the only thing the window shows. */
+  appUrl: () => string;
   preferences: () => Promise<WindowPreferences>;
   savePreferences: (patch: WindowPreferences) => Promise<void>;
   getWindow: () => BrowserWindow | undefined;
@@ -39,8 +41,8 @@ export function createWindowManager(options: {
         minWidth: 960,
         minHeight: 640,
         titleBarStyle: "hiddenInset",
+        // No preload: the page is the web app and gets nothing from Electron.
         webPreferences: {
-          preload: join(import.meta.dirname, "preload.cjs"),
           contextIsolation: true,
           sandbox: true,
           nodeIntegration: false,
@@ -51,7 +53,6 @@ export function createWindowManager(options: {
     window.on("closed", () => {
       if (options.getWindow() === window) options.setWindow(undefined);
     });
-    nativeTheme.on("updated", () => window.webContents.send("app:theme", nativeTheme.shouldUseDarkColors));
     window.on("close", (event) => {
       if (!options.isQuitting()) {
         event.preventDefault();
@@ -64,21 +65,18 @@ export function createWindowManager(options: {
     };
     window.on("resize", saveBounds);
     window.on("move", saveBounds);
-    window.webContents.on("did-finish-load", () =>
-      window.webContents.send("app:theme", nativeTheme.shouldUseDarkColors),
-    );
+    window.webContents.on("dom-ready", () => void window.webContents.executeJavaScript(macClassScript));
     window.webContents.on("console-message", (_event, _level, message) =>
       recordSmokeConsoleMessage(process.env, message),
     );
     window.webContents.setWindowOpenHandler(({ url }) => {
-      if (/^https:|^mailto:/.test(url)) void shell.openExternal(url);
+      if (external(url)) void shell.openExternal(url);
       return { action: "deny" };
     });
     window.webContents.on("will-navigate", (event, url) => {
-      if (url !== window.webContents.getURL()) event.preventDefault();
+      if (!insideApp(url, options.appUrl())) event.preventDefault();
     });
-    if (process.env.VITE_DEV_SERVER_URL) await window.loadURL(process.env.VITE_DEV_SERVER_URL);
-    else await window.loadFile(join(import.meta.dirname, "../../ui/index.html"));
+    await window.loadURL(options.appUrl() + "/");
     app.dock?.show();
   }
 

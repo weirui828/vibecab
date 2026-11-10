@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react";
-import wordmarkInk from "../../../ui/src/assets/brand/wordmark-ink.svg?url";
-import wordmarkAccent from "../../../ui/src/assets/brand/wordmark-accent.svg?url";
-import vcMark from "../../../ui/src/assets/brand/vc-mark.svg?url";
+import wordmarkInk from "../assets/brand/wordmark-ink.svg?url";
+import wordmarkAccent from "../assets/brand/wordmark-accent.svg?url";
+import vcMark from "../assets/brand/vc-mark.svg?url";
 
 // Brand art is drawn as CSS masks so the theme tints it in Summer and Polar night.
 const mask = (url: string): CSSProperties => ({ WebkitMaskImage: `url("${url}")`, maskImage: `url("${url}")` });

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type { ReactNode } from "react";
 import { Icon } from "@wei/design-system";
 import type { Element, VcDeliveryStateOperation } from "../../../../contract/generated/index.js";
-import { locatorForTextSelection } from "../../../ui/src/document/anchors.js";
+import { locatorForTextSelection } from "../document/anchors.js";
 import { AfterBlock } from "../document/DocumentView.js";
 import { useLiveQuery } from "../live/LiveStore.js";
 import { useCommentPlace } from "../shell/prefs.js";

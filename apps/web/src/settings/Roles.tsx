@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button, Field, Input } from "@wei/design-system";
-import { terms } from "../../../ui/src/copy/terms.js";
+import { terms } from "../copy/terms.js";
 import type { SessionRow } from "../live/workspace.js";
 import { sessionAgent } from "../session/loop.js";
 import { GrantsSection, ToolsSection } from "./AccessSections.js";

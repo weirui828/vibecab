@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Glider } from "../ui/Glider.js";
-import { terms } from "../../../ui/src/copy/terms.js";
+import { terms } from "../copy/terms.js";
 import { useLiveQuery } from "../live/LiveStore.js";
 import type { SessionRow } from "../live/workspace.js";
 import { Section, dollars, useAgentName } from "./common.js";

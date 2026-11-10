@@ -5,39 +5,21 @@ import { build } from "esbuild";
 
 const externalBuiltins = builtinModules.flatMap((name) => [name, `node:${name}`]);
 
+/** Bundles the shell's one entry, main. There is no preload: the page gets nothing from Electron. */
 export async function bundleElectron(sourceDirectory, outputDirectory) {
   const source = resolve(sourceDirectory),
-    output = resolve(outputDirectory),
-    external = ["electron", ...externalBuiltins];
+    output = resolve(outputDirectory);
   await mkdir(output, { recursive: true });
-  const [main, preload] = await Promise.all([
-    build({
-      absWorkingDir: source,
-      entryPoints: [join(source, "main.ts")],
-      outfile: join(output, "main.mjs"),
-      bundle: true,
-      platform: "node",
-      target: "node26",
-      format: "esm",
-      external,
-      metafile: true,
-    }),
-    build({
-      absWorkingDir: source,
-      entryPoints: [join(source, "preload.cts")],
-      outfile: join(output, "preload.cjs"),
-      bundle: true,
-      platform: "node",
-      target: "node26",
-      format: "cjs",
-      external,
-      metafile: true,
-    }),
-  ]);
-  return {
-    metafile: {
-      inputs: { ...main.metafile.inputs, ...preload.metafile.inputs },
-      outputs: { ...main.metafile.outputs, ...preload.metafile.outputs },
-    },
-  };
+  const main = await build({
+    absWorkingDir: source,
+    entryPoints: [join(source, "main.ts")],
+    outfile: join(output, "main.mjs"),
+    bundle: true,
+    platform: "node",
+    target: "node26",
+    format: "esm",
+    external: ["electron", ...externalBuiltins],
+    metafile: true,
+  });
+  return { metafile: main.metafile };
 }

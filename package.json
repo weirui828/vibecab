@@ -14,7 +14,7 @@
     "format:check": "prettier --check .",
     "test": "pnpm build && vitest run",
     "test:prop": "FC_NUM_RUNS=1000 vitest run engine/test/properties",
-    "build": "tsc -p tsconfig.build.json && node scripts/copy-schemas.mjs && pnpm --filter @vibecab/ui build && pnpm --filter @vibecab/web build",
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-schemas.mjs && pnpm --filter @vibecab/web build",
     "test:build": "pnpm build && node scripts/smoke-built.mjs",
     "app:dev": "node apps/macos/dev.mjs",
     "test:e2e": "pnpm build && pnpm --filter @vibecab/macos test:e2e",
