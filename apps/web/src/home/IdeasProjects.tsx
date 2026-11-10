@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { Glider } from "../ui/Glider.js";
 import { Button, Icon } from "@wei/design-system";
 import type { Idea, Project } from "../../../../contract/generated/index.js";
 import { terms } from "../../../ui/src/copy/terms.js";
 import { useLiveQuery } from "../live/LiveStore.js";
 import type { DraftRow, SessionRow } from "../live/workspace.js";
+import { Hills } from "../ui/Brand.js";
 import { Menu } from "../ui/Menu.js";
 import { plural, relativeTime } from "../ui/time.js";
 import { PageSkeleton } from "./Views.js";
@@ -106,6 +108,7 @@ export function IdeasView({ sessions }: { sessions: SessionRow[] }) {
           </p>
           {projectList.length > 0 && (
             <div className="vc-segmented small" role="group" aria-label="Arrange">
+              <Glider selector='[aria-pressed="true"],[aria-current="page"]' />
               <button type="button" aria-pressed={group === "newest"} onClick={() => setGroup("newest")}>
                 Newest first
               </button>
@@ -196,6 +199,15 @@ export function ProjectsView() {
           </Button>
         </div>
       </header>
+      {list.length === 0 && (
+        <div className="vc-empty-note">
+          <Hills />
+          <p>
+            A {projectWord} keeps the {terms.draft.toLowerCase()}s, {terms.session.toLowerCase()}s and ideas of one
+            piece of work together.
+          </p>
+        </div>
+      )}
       {list.length > 0 && (
         <section className="vc-section" aria-label={`${terms.project}s`}>
           <ul className="vc-list">

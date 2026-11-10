@@ -8,6 +8,7 @@ import { LiveStoreProvider } from "./live/LiveStore.js";
 import { useWorkspace } from "./live/workspace.js";
 import { ToastProvider } from "./ui/Toast.js";
 import { Wordmark } from "./ui/Brand.js";
+import { PageBoundary } from "./ui/PageBoundary.js";
 import { useRoute, useSidebarRail, useTheme } from "./shell/prefs.js";
 import { Sidebar } from "./shell/Navigation.js";
 import type { NavProps } from "./shell/Navigation.js";
@@ -215,7 +216,7 @@ function Shell({
             />
           </div>
           {banner}
-          {page}
+          <PageBoundary key={route}>{page}</PageBoundary>
         </main>
       </div>
     </DialogHost>

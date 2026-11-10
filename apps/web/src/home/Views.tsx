@@ -4,6 +4,7 @@ import { terms } from "../../../ui/src/copy/terms.js";
 import { sortSessions } from "../live/workspace.js";
 import type { useWorkspace } from "../live/workspace.js";
 import { Hills } from "../ui/Brand.js";
+import { Horizon } from "../ui/Horizon.js";
 import { greeting, plural } from "../ui/time.js";
 import { AttentionRows, DraftRows, SessionRows } from "./Rows.js";
 import { useDialogs } from "./DialogHost.js";
@@ -29,7 +30,8 @@ export function HomeView({ workspace }: { workspace: Workspace }) {
   ].join(" · ");
   return (
     <div className="vc-page">
-      <header className="vc-header">
+      <header className="vc-header with-horizon">
+        <Horizon />
         <h1 className="vc-display">{greeting()}</h1>
         <p className="vc-facts">{facts}</p>
         <div className="vc-actions">

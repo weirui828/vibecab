@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { Glider } from "../ui/Glider.js";
+import { Count } from "../ui/Count.js";
 import type { ReactNode } from "react";
 import { Button, Icon } from "@wei/design-system";
 import type { ThreadFilter } from "./threads.js";
@@ -135,6 +137,7 @@ function AgentPanel({
             <>
               <p className="vc-label">Who replies</p>
               <div className="vc-segmented small" role="group" aria-label="Who replies">
+                <Glider selector='[aria-pressed="true"],[aria-current="page"]' />
                 {agents.map((a) => (
                   <button key={a.id} type="button" aria-pressed={agent === a.id} onClick={() => onAgent(a.id)}>
                     {a.name}
@@ -145,6 +148,7 @@ function AgentPanel({
           )}
           <p className="vc-label">{name} replies</p>
           <div className="vc-segmented small" role="group" aria-label="Reply mode">
+            <Glider selector='[aria-pressed="true"],[aria-current="page"]' />
             {options.map(([value, label]) => (
               <button key={value} type="button" aria-pressed={mode === value} onClick={() => onMode(value)}>
                 {label}
@@ -188,6 +192,7 @@ function BarButton(props: {
 function FilterPanel({ filter, onChange }: { filter: ThreadFilter; onChange(f: ThreadFilter): void }) {
   const seg = <K extends keyof ThreadFilter>(key: K, options: Array<[ThreadFilter[K], string]>) => (
     <div className="vc-segmented small" role="group">
+      <Glider selector='[aria-pressed="true"],[aria-current="page"]' />
       {options.map(([value, label]) => (
         <button
           key={String(value)}
@@ -318,7 +323,7 @@ export function ActionBar({
           onClick={() => setPanel((current) => (current === "layout" ? undefined : "layout"))}
         >
           <LayoutIcon layout={layout} />
-          {threadCount > 0 && <span className="count">{threadCount}</span>}
+          {threadCount > 0 && <Count value={threadCount} />}
         </button>
         {unreadCount > 0 && (
           <button type="button" className="vc-bar-button labelled vc-unread-jump" onClick={onNextUnread}>

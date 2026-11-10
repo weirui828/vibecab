@@ -1,0 +1,401 @@
+/* Motion and finish. One quiet language for the whole app: things arrive by rising a few pixels, the current
+   place glides instead of jumping, and what waits for you breathes. Semantic tokens only; the reduced-motion
+   rule in styles.css turns every animation and transition here off. */
+
+:root {
+  --vc-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --vc-slow: 420ms;
+}
+
+/* ---------- Arriving ---------- */
+@keyframes vc-arrive {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+  }
+}
+@keyframes vc-fade {
+  from {
+    opacity: 0;
+  }
+}
+/* A page's header and sections come in one after another; rows follow inside their section. `backwards` so
+   nothing stays transformed afterwards (a transform would trap fixed children such as dialogs). */
+.vc-page > * {
+  animation: vc-arrive var(--vc-slow) var(--vc-ease-out) backwards;
+}
+.vc-page > :nth-child(2) {
+  animation-delay: 60ms;
+}
+.vc-page > :nth-child(3) {
+  animation-delay: 120ms;
+}
+.vc-page > :nth-child(n + 4) {
+  animation-delay: 180ms;
+}
+.vc-list > .vc-row {
+  animation: vc-arrive var(--vc-slow) var(--vc-ease-out) backwards;
+}
+.vc-list > .vc-row:nth-child(2) {
+  animation-delay: 35ms;
+}
+.vc-list > .vc-row:nth-child(3) {
+  animation-delay: 70ms;
+}
+.vc-list > .vc-row:nth-child(4) {
+  animation-delay: 105ms;
+}
+.vc-list > .vc-row:nth-child(5) {
+  animation-delay: 140ms;
+}
+.vc-list > .vc-row:nth-child(n + 6) {
+  animation-delay: 175ms;
+}
+/* The Document only fades: the floating bar and the margin are placed against it. */
+.vc-doc-wrap {
+  animation: vc-fade var(--vc-slow) var(--vc-ease-out) backwards;
+}
+.vc-tab-panel {
+  animation: vc-arrive 320ms var(--vc-ease-out) backwards;
+}
+/* The session's bar floats up after the page has settled. */
+.vc-bar {
+  animation: vc-arrive 520ms var(--vc-ease-out) 160ms backwards;
+}
+
+/* ---------- Loading: a slow light across the placeholder lines ---------- */
+@keyframes vc-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+.vc-skeleton-line {
+  background: linear-gradient(
+    100deg,
+    var(--color-surface-raised) 40%,
+    color-mix(in srgb, var(--color-surface-raised) 55%, var(--color-surface-base)) 50%,
+    var(--color-surface-raised) 60%
+  );
+  background-size: 200% 100%;
+  animation: vc-shimmer 1.8s linear infinite;
+}
+
+/* ---------- The current place glides ---------- */
+.vc-glider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  border-radius: var(--vc-radius-sm);
+  background: var(--color-surface-raised);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 340ms var(--vc-ease-out),
+    width 340ms var(--vc-ease-out),
+    height 340ms var(--vc-ease-out),
+    opacity var(--vc-base) var(--vc-ease);
+}
+.vc-glider[data-on] {
+  opacity: 1;
+}
+/* Sidebar: the glider is the highlight; links sit above it. */
+.vc-sidebar .vc-nav-link,
+.vc-sidebar .vc-session-link,
+.vc-sidebar .vc-sidebar-brand,
+.vc-sidebar .vc-nav-section,
+.vc-sidebar .vc-sidebar-foot,
+.vc-sidebar .vc-nav-more,
+.vc-sidebar .vc-rail-mark {
+  position: relative;
+  z-index: 1;
+}
+.vc-sidebar:has(> .vc-glider[data-on]) .vc-nav-link[aria-current="page"],
+.vc-sidebar:has(> .vc-glider[data-on]) .vc-session-link[aria-current="page"] {
+  background: transparent;
+}
+/* Settings tabs: the same glider, drawn as the underline. */
+.vc-tabs {
+  position: relative;
+}
+.vc-tabs > .vc-glider {
+  border-radius: 0;
+  background: none;
+}
+.vc-tabs > .vc-glider::after {
+  content: "";
+  position: absolute;
+  right: 12px;
+  bottom: 0;
+  left: 12px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--color-accent-default);
+}
+.vc-tabs:has(> .vc-glider[data-on]) [role="tab"][aria-selected="true"]::after {
+  background: transparent;
+}
+/* Segmented controls (theme, reply mode, who replies): the thumb slides. */
+.vc-segmented {
+  position: relative;
+}
+.vc-segmented > button,
+.vc-segmented > a {
+  position: relative;
+  z-index: 1;
+}
+.vc-segmented > .vc-glider {
+  border-radius: 999px;
+  background: var(--color-surface-base);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--color-fg-default) 12%, transparent);
+}
+.vc-segmented:has(> .vc-glider[data-on]) > [aria-pressed="true"],
+.vc-segmented:has(> .vc-glider[data-on]) > [aria-current="page"] {
+  background: transparent;
+  box-shadow: none;
+}
+
+/* ---------- Touch ---------- */
+.vc-nav-link > svg,
+.vc-bar-button > svg {
+  transition: translate var(--vc-base) var(--vc-ease-out);
+}
+.vc-nav-link:hover > svg {
+  translate: 1px 0;
+}
+.vc-bar-button:hover > svg {
+  translate: 0 -1px;
+}
+.vc-row .end > svg {
+  transition: translate var(--vc-base) var(--vc-ease-out);
+}
+.vc-row:hover .end > svg {
+  translate: 3px 0;
+}
+.vc-row .lead {
+  transition: translate var(--vc-base) var(--vc-ease-out);
+}
+.vc-row:hover .lead {
+  translate: 2px 0;
+}
+/* Pressing gives a little. */
+button:not(:disabled):active,
+.vc-nav-link:active,
+.vc-session-link:active {
+  scale: 0.975;
+}
+.vc-bar-button,
+.vc-nav-link,
+.vc-session-link,
+.vc-segmented > button {
+  transition-property: background, color, box-shadow, scale;
+  transition-duration: var(--vc-fast);
+  transition-timing-function: var(--vc-ease);
+}
+/* Links draw their underline in. */
+.vc-link-button {
+  background: linear-gradient(currentColor, currentColor) no-repeat 0 100% / 0 1px;
+  transition:
+    background-size var(--vc-base) var(--vc-ease-out),
+    color var(--vc-fast) var(--vc-ease);
+}
+.vc-link-button:hover {
+  background-size: 100% 1px;
+  text-decoration: none;
+}
+
+/* ---------- What waits for you breathes ---------- */
+@keyframes vc-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-warning-default) 34%, transparent);
+  }
+  55% {
+    box-shadow: 0 0 0 7px color-mix(in srgb, var(--color-warning-default) 0%, transparent);
+  }
+}
+.vc-mound[data-tone="attention"] {
+  animation: vc-breathe 3.2s var(--vc-ease) infinite;
+}
+/* A number that changed makes itself seen once (the element is re-keyed by its value). */
+@keyframes vc-tick {
+  from {
+    scale: 1.35;
+  }
+}
+[data-bump] {
+  animation: vc-tick 380ms var(--vc-ease-out);
+}
+
+/* ---------- Summer ⇄ Polar night ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .vc-theme-fade,
+  .vc-theme-fade *,
+  .vc-theme-fade *::before,
+  .vc-theme-fade *::after {
+    transition:
+      background-color 360ms var(--vc-ease),
+      color 360ms var(--vc-ease),
+      border-color 360ms var(--vc-ease),
+      fill 360ms var(--vc-ease),
+      stroke 360ms var(--vc-ease) !important;
+  }
+}
+/* Settings and Trash at the foot of the sidebar take the glider too. */
+.vc-foot-links a {
+  position: relative;
+  z-index: 1;
+  margin: -4px -8px;
+  padding: 4px 8px;
+  border-radius: var(--vc-radius-sm);
+}
+.vc-foot-links a[aria-current="page"] {
+  color: var(--color-fg-default);
+}
+
+/* ---------- Horizon: the tundra at this hour ---------- */
+.vc-header.with-horizon {
+  position: relative;
+}
+.vc-horizon {
+  position: absolute;
+  top: -26px;
+  right: -14px;
+  overflow: visible;
+  pointer-events: none;
+}
+.vc-horizon .ground {
+  fill: none;
+  stroke-width: 1;
+}
+.vc-horizon stop.land {
+  stop-color: var(--color-border-strong);
+}
+.vc-horizon stop.edge {
+  stop-color: var(--color-border-strong);
+  stop-opacity: 0;
+}
+.vc-horizon .hill {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: vc-hill 900ms var(--vc-ease-out) backwards;
+}
+.vc-horizon .hill.far {
+  fill: color-mix(in srgb, var(--color-accent-default) 9%, var(--color-surface-base));
+}
+.vc-horizon .hill.mid {
+  fill: color-mix(in srgb, var(--color-accent-default) 20%, var(--color-surface-base));
+  animation-delay: 80ms;
+}
+.vc-horizon .hill.near {
+  fill: color-mix(in srgb, var(--color-accent-default) 36%, var(--color-surface-base));
+  animation-delay: 160ms;
+}
+.vc-horizon .hill.mark {
+  fill: var(--color-accent-default);
+  animation-delay: 260ms;
+}
+@keyframes vc-hill {
+  from {
+    opacity: 0;
+    transform: scaleY(0.4);
+  }
+}
+/* The sun or moon comes up from behind the hills to where it is now. */
+.vc-horizon .rise {
+  animation: vc-skyrise 1500ms var(--vc-ease-out) 200ms backwards;
+}
+@keyframes vc-skyrise {
+  from {
+    opacity: 0;
+    transform: translateY(34px);
+  }
+}
+.vc-horizon[data-sky="sun"] .disc {
+  fill: color-mix(in oklab, var(--color-warning-default) 55%, var(--color-warning-border));
+}
+.vc-horizon[data-sky="sun"] .glow {
+  fill: color-mix(in srgb, var(--color-warning-default) 13%, transparent);
+}
+.vc-horizon[data-sky="moon"] .disc {
+  fill: var(--color-fg-muted);
+}
+.vc-horizon[data-sky="moon"] .glow {
+  fill: color-mix(in srgb, var(--color-fg-muted) 7%, transparent);
+}
+.vc-horizon .glow {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: vc-glow 6s var(--vc-ease) infinite alternate;
+}
+@keyframes vc-glow {
+  from {
+    opacity: 0.55;
+    transform: scale(0.86);
+  }
+}
+.vc-horizon .star {
+  fill: var(--color-fg-muted);
+  animation: vc-twinkle 3.6s var(--vc-ease) infinite alternate backwards;
+}
+@keyframes vc-twinkle {
+  from {
+    opacity: 0.15;
+  }
+}
+@media (max-width: 860px) {
+  .vc-horizon {
+    display: none;
+  }
+}
+
+/* The small hill rows (empty pages, first run) grow the same way. */
+.vc-hills path {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: vc-hill 800ms var(--vc-ease-out) backwards;
+}
+.vc-hills .h2 {
+  animation-delay: 70ms;
+}
+.vc-hills .h3 {
+  animation-delay: 140ms;
+}
+.vc-hills .h1 {
+  animation-delay: 220ms;
+}
+
+/* ---------- When a page stops working ---------- */
+.vc-broken {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  max-width: 520px;
+}
+.vc-broken pre {
+  max-width: 100%;
+  margin: 0;
+  padding: 10px 12px;
+  overflow-x: auto;
+  border-radius: var(--vc-radius-sm);
+  background: var(--color-surface-raised);
+  color: var(--color-fg-muted);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  white-space: pre-wrap;
+}
+
+/* A quiet empty page: hills, one sentence. */
+.vc-empty-note {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  margin-top: 56px;
+  color: var(--color-fg-muted);
+}
+.vc-empty-note p {
+  max-width: 46ch;
+  margin: 0;
+}

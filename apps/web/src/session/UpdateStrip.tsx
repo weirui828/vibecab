@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Glider } from "../ui/Glider.js";
 import { Button } from "@wei/design-system";
 import { errorMessage } from "../../../ui/src/copy/errors.js";
 import { terms } from "../../../ui/src/copy/terms.js";
@@ -289,6 +290,7 @@ export function UpdateStrip({
         </span>
         <span className="actions">
           <div className="vc-segmented small" role="group" aria-label="View">
+            <Glider selector='[aria-pressed="true"],[aria-current="page"]' />
             <button type="button" aria-pressed={changesShown} onClick={() => !changesShown && onToggleChanges(latest)}>
               Show changes
             </button>

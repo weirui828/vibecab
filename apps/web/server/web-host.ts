@@ -5,7 +5,7 @@ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, extname, join, normalize, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AddressInfo } from "node:net";
-import { sameHost, sameOrigin } from "./access.js";
+import { jsonBody, ownFetch, sameHost, sameOrigin } from "./access.js";
 import { providerCatalog, readLiveModels } from "../../../contract/src/provider-catalog.js";
 import { EngineLink } from "./engine.js";
 
@@ -203,8 +203,12 @@ export async function startWebHost(options: WebHostOptions): Promise<WebHost> {
       res.writeHead(303, { Location: "/", "Cache-Control": "no-store" });
       return res.end();
     }
-    // No browser sign-in: the Host check (DNS rebinding) and the Origin check (CSRF) above keep websites out.
+    // No browser sign-in: the Host check (DNS rebinding) and the Origin check (CSRF) above keep websites out, with
+    // the browser's own word on where a call comes from, and JSON-only commands, as a second wall.
     if (path.startsWith("/v1/") || path.startsWith("/app/")) {
+      if (!ownFetch(req)) return error(res, 403, "forbidden", "Only VibeCab's own pages can call it");
+      if (req.method === "POST" && /^\/v1\/(commands|queries)\//.test(path) && !jsonBody(req))
+        return error(res, 415, "invalid", "Commands and queries must be JSON");
       if (path.startsWith("/app/")) return app(req, res, path, url);
       sockets.add(res);
       res.on("close", () => sockets.delete(res));

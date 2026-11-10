@@ -48,6 +48,30 @@ describe("browser access", () => {
     expect(otherPort.status).toBe(403);
   });
 
+  it("has a second wall behind the Origin check: Sec-Fetch-Site and JSON-only commands", async () => {
+    const post = (headers: Record<string, string>, body = JSON.stringify({ args: {} })) =>
+      raw(t.host.port, "POST", "/v1/queries/vc.Sessions", { headers, body });
+    // The browser says where a request comes from, and a page cannot change that: other sites are refused, and so
+    // is another port on this computer ("same-site"), even if a broken browser sent no Origin.
+    for (const site of ["cross-site", "same-site"])
+      expect((await post({ "Content-Type": "application/json", "Sec-Fetch-Site": site })).status).toBe(403);
+    expect((await raw(t.host.port, "GET", "/app/state", { headers: { "Sec-Fetch-Site": "cross-site" } })).status).toBe(
+      403,
+    );
+    // VibeCab's own pages, an address typed by the person, and programs (no such header) pass.
+    for (const site of ["same-origin", "none"])
+      expect((await post({ "Content-Type": "application/json", "Sec-Fetch-Site": site })).status).toBe(200);
+    expect((await post({ "Content-Type": "application/json" })).status).toBe(200);
+    // A form on another site can post text/plain without asking the browser first; JSON it cannot.
+    expect((await post({ "Content-Type": "text/plain" })).status).toBe(415);
+    expect((await post({})).status).toBe(415);
+    const command = await raw(t.host.port, "POST", "/v1/commands/vc.StartSession", {
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ commandId: "plain", payload: { title: "No" } }),
+    });
+    expect(command.status).toBe(415);
+  });
+
   it("sends a page opened on localhost to 127.0.0.1, so a browser keeps one set of preferences", async () => {
     const page = await raw(t.host.port, "GET", "/s/abc?x=1", { headers: { Host: "localhost:" + t.host.port } });
     expect(page.status).toBe(307);

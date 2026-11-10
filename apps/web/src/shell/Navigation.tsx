@@ -1,4 +1,6 @@
 import { Icon } from "@wei/design-system";
+import { Glider } from "../ui/Glider.js";
+import { Count } from "../ui/Count.js";
 import type { IconName } from "@wei/design-system";
 import { plural } from "../ui/time.js";
 import { terms } from "../../../ui/src/copy/terms.js";
@@ -84,6 +86,7 @@ export function ThemeSwitch({
   ];
   return (
     <div className={"vc-segmented" + (small ? " small" : "")} role="group" aria-label="Theme">
+      <Glider selector='[aria-pressed="true"]' />
       {options.map(([value, label]) => (
         <button key={value} type="button" aria-pressed={theme === value} onClick={() => setTheme(value)}>
           {label}
@@ -103,6 +106,7 @@ export function Sidebar(props: NavProps) {
     ended = (sessions ?? []).length - open.length;
   return (
     <aside className="vc-sidebar" aria-label="Navigation">
+      <Glider selector='[aria-current="page"]:not(.vc-nav-heading)' />
       <a className="vc-rail-mark" href="#/" aria-label="Home">
         <Mark height={20} />
       </a>
@@ -125,7 +129,7 @@ export function Sidebar(props: NavProps) {
             >
               <Icon name={item.icon} size={20} />
               <span className="label">{item.label}</span>
-              {count > 0 && <span className="count">{count}</span>}
+              {count > 0 && <Count value={count} />}
             </a>
           );
         })}
@@ -160,7 +164,7 @@ export function Sidebar(props: NavProps) {
                 >
                   <Mound tone={sessionTone(session, items)} />
                   <span className="title">{session.title}</span>
-                  {items && items.length > 0 && <span className="count">{items.length}</span>}
+                  {items && items.length > 0 && <Count value={items.length} />}
                 </a>
               );
             })}
@@ -181,10 +185,10 @@ export function Sidebar(props: NavProps) {
           </span>
         )}
         <div className="vc-foot-links collapsible">
-          <a href="#/settings" onClick={onNavigate}>
+          <a href="#/settings" onClick={onNavigate} aria-current={route.startsWith("/settings") ? "page" : undefined}>
             Settings
           </a>
-          <a href="#/trash" onClick={onNavigate}>
+          <a href="#/trash" onClick={onNavigate} aria-current={route === "/trash" ? "page" : undefined}>
             Trash
           </a>
           {onToggleRail && (

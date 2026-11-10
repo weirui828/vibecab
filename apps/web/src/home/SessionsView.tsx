@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Glider } from "../ui/Glider.js";
 import { Button } from "@wei/design-system";
 import { terms } from "../../../ui/src/copy/terms.js";
 import { sortSessions } from "../live/workspace.js";
@@ -40,6 +41,7 @@ export function SessionsView({
         </p>
         <div className="vc-actions">
           <div className="vc-segmented small" role="group" aria-label="Show">
+            <Glider selector='[aria-pressed="true"],[aria-current="page"]' />
             {(["all", "active", "paused", "ended"] as const).map((value) => (
               <button key={value} type="button" aria-pressed={show === value} onClick={() => setShow(value)}>
                 {value === "all" ? "All" : heading[value]}
