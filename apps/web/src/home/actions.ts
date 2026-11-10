@@ -1,6 +1,6 @@
 import { useCallback } from "react";
-import { errorMessage } from "../../../ui/src/copy/errors.js";
-import { terms } from "../../../ui/src/copy/terms.js";
+import { errorMessage } from "../copy/errors.js";
+import { terms } from "../copy/terms.js";
 import { useBridge } from "../live/LiveStore.js";
 import { useToast } from "../ui/Toast.js";
 import { navigate } from "../shell/prefs.js";

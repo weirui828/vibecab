@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { coalesce } from "../../../ui/src/coalesce.js";
+import { coalesce } from "../coalesce.js";
 import type { WebBridge } from "../bridge/webBridge.js";
 import { staleQueries } from "./refreshMap.js";
 

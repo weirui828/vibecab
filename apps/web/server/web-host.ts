@@ -17,6 +17,8 @@ export interface WebHostOptions {
   /** Development: a Connect-style handler (Vite in middleware mode) for everything that is not /v1 or /app. */
   middleware?: (req: IncomingMessage, res: ServerResponse, next: () => void) => void;
   fakeProvider?: string;
+  /** The Node and host entry that run the engine, when they are not this process's own (the packaged Mac app). */
+  engineHost?: { nodePath: string; hostEntry: string };
   version?: string;
   /** Path of the MCP stdio relay for assistant setup; found in the repository when not given. */
   mcpRelayPath?: string;
@@ -68,7 +70,10 @@ async function readBody(req: IncomingMessage): Promise<Buffer> {
 }
 
 export async function startWebHost(options: WebHostOptions): Promise<WebHost> {
-  const engine = new EngineLink(options.workspace, options.fakeProvider ? { fakeProvider: options.fakeProvider } : {});
+  const engine = new EngineLink(options.workspace, {
+    ...(options.fakeProvider ? { fakeProvider: options.fakeProvider } : {}),
+    ...(options.engineHost ? { host: options.engineHost } : {}),
+  });
   let port = 0;
   const relayPath = () => {
     if (options.mcpRelayPath) return options.mcpRelayPath;

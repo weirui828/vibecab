@@ -3,7 +3,11 @@ import { Menu } from "electron";
 export function installApplicationMenu(options: {
   openSettings: () => void;
   newDraft: () => void;
-  importMarkdown: () => void;
+  restoreBackup: () => void;
+  openAtLogin: boolean;
+  setOpenAtLogin: (enabled: boolean) => void;
+  notifications: boolean;
+  setNotifications: (enabled: boolean) => void;
   quit: () => void;
 }): void {
   Menu.setApplicationMenu(
@@ -14,14 +18,29 @@ export function installApplicationMenu(options: {
           { label: "About VibeCab", role: "about" },
           { label: "Settings…", accelerator: "CmdOrCtrl+,", click: options.openSettings },
           { type: "separator" },
+          // What only the Mac app can do lives in its menu; the page has no way to ask for it.
+          {
+            label: "Open at Login",
+            type: "checkbox",
+            checked: options.openAtLogin,
+            click: (item) => options.setOpenAtLogin(item.checked),
+          },
+          {
+            label: "Notifications",
+            type: "checkbox",
+            checked: options.notifications,
+            click: (item) => options.setNotifications(item.checked),
+          },
+          { type: "separator" },
           { label: "Quit", accelerator: "CmdOrCtrl+Q", click: options.quit },
         ],
       },
       {
         label: "File",
         submenu: [
-          { label: "New draft", accelerator: "CmdOrCtrl+N", click: options.newDraft },
-          { label: "Import Markdown…", click: options.importMarkdown },
+          { label: "New Draft…", accelerator: "CmdOrCtrl+N", click: options.newDraft },
+          { type: "separator" },
+          { label: "Restore from Backup…", click: options.restoreBackup },
         ],
       },
       {
@@ -36,7 +55,18 @@ export function installApplicationMenu(options: {
           { role: "selectAll" },
         ],
       },
-      { label: "View", submenu: [{ role: "resetZoom" }, { role: "zoomIn" }, { role: "zoomOut" }] },
+      {
+        label: "View",
+        submenu: [
+          { role: "reload" },
+          { type: "separator" },
+          { role: "resetZoom" },
+          { role: "zoomIn" },
+          { role: "zoomOut" },
+          { type: "separator" },
+          { role: "togglefullscreen" },
+        ],
+      },
       { label: "Window", submenu: [{ role: "minimize" }, { role: "close" }] },
       { label: "Help", submenu: [] },
     ]),

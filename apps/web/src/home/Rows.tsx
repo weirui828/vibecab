@@ -1,6 +1,6 @@
 import { Icon } from "@wei/design-system";
 import type { AttentionItem } from "../../../../contract/generated/index.js";
-import { terms } from "../../../ui/src/copy/terms.js";
+import { terms } from "../copy/terms.js";
 import type { DraftRow, SessionRow } from "../live/workspace.js";
 import { Mound } from "../ui/Brand.js";
 import { Menu } from "../ui/Menu.js";

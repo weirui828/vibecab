@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Element, VcArtifactOperation } from "../../../../contract/generated/index.js";
 import { Button } from "@wei/design-system";
-import { terms } from "../../../ui/src/copy/terms.js";
+import { terms } from "../copy/terms.js";
 import { useActions } from "../home/actions.js";
 import { useBridge, useLiveQuery } from "../live/LiveStore.js";
 import type { DraftRow, SessionRow } from "../live/workspace.js";

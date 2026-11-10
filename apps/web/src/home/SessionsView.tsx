@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Glider } from "../ui/Glider.js";
 import { Button } from "@wei/design-system";
-import { terms } from "../../../ui/src/copy/terms.js";
+import { terms } from "../copy/terms.js";
 import { sortSessions } from "../live/workspace.js";
 import type { SessionRow, useWorkspace } from "../live/workspace.js";
 import { SessionRows } from "./Rows.js";

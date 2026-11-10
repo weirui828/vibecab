@@ -15,7 +15,7 @@ const tarball = (await readdir(resolve("vendor")))
   .sort()
   .at(-1);
 if (!tarball) throw Error("npm pack did not create a design system tarball");
-for (const app of ["apps/ui", "apps/web"]) {
+for (const app of ["apps/web"]) {
   const packagePath = resolve(app, "package.json"),
     appManifest = JSON.parse(await readFile(packagePath, "utf8"));
   appManifest.dependencies["@wei/design-system"] = `file:../../vendor/${tarball}`;

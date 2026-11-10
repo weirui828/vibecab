@@ -399,3 +399,40 @@ button:not(:disabled):active,
   max-width: 46ch;
   margin: 0;
 }
+
+/* ---------- In the Mac window ----------
+   The Mac app adds `vc-mac` to <html>. Its window has no title bar: the window buttons sit over the top left, and
+   these strips are where the window is dragged. */
+.vc-mac .vc-sidebar {
+  padding-top: 50px;
+}
+.vc-mac .vc-sidebar::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 44px;
+  -webkit-app-region: drag;
+}
+.vc-mac .vc-main::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: var(--vc-sidebar);
+  z-index: 40;
+  height: 12px;
+  -webkit-app-region: drag;
+}
+.vc-mac .vc-app[data-rail] .vc-main::before {
+  left: var(--vc-rail);
+}
+.vc-mac .vc-mobilebar {
+  padding-left: 84px;
+  -webkit-app-region: drag;
+}
+.vc-mac .vc-mobilebar a,
+.vc-mac .vc-mobilebar button {
+  -webkit-app-region: no-drag;
+}

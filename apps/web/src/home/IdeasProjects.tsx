@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Glider } from "../ui/Glider.js";
 import { Button, Icon } from "@wei/design-system";
 import type { Idea, Project } from "../../../../contract/generated/index.js";
-import { terms } from "../../../ui/src/copy/terms.js";
+import { terms } from "../copy/terms.js";
 import { useLiveQuery } from "../live/LiveStore.js";
 import type { DraftRow, SessionRow } from "../live/workspace.js";
 import { Hills } from "../ui/Brand.js";

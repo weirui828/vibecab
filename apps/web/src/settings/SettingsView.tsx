@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Button, Field, Input } from "@wei/design-system";
-import { terms } from "../../../ui/src/copy/terms.js";
+import { terms } from "../copy/terms.js";
 import { useBridge, useLiveQuery } from "../live/LiveStore.js";
 import type { SessionRow } from "../live/workspace.js";
 import { ThemeSwitch } from "../shell/Navigation.js";

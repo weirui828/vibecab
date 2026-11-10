@@ -1,36 +1,35 @@
-import { app, clipboard, dialog, ipcMain, nativeTheme, protocol, shell } from "electron";
-import { execFileSync } from "node:child_process";
+import { app, dialog } from "electron";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
-import { randomUUID } from "node:crypto";
-import { Contract, fail } from "../../../contract/src/index.js";
-import type { CommandEnvelope, QueryEnvelope, Subscription } from "../../../contract/src/index.js";
-import { start, status, stop } from "../../../host/src/control.js";
+import { status, stop } from "../../../host/src/control.js";
 import { httpClient } from "../../../adapters/http/src/index.js";
+import { startWebHost } from "../../web/server/web-host.js";
+import type { WebHost } from "../../web/server/web-host.js";
 import { workspacePath } from "./paths.js";
-import type { Settings } from "../../../contract/generated/index.js";
-import { isUnauthenticated, reconnectEvents, retryUnauthenticated } from "./bridge-runtime.js";
 import { switchWorkspaceFromBackup } from "./restore-workspace.js";
 import { createTrayManager } from "./tray.js";
 import { installApplicationMenu } from "./app-menu.js";
 import { assertNode26, engineNodePath, hostEntryPath, mcpRelayPath } from "./runtime.js";
 import { readAppToken } from "./app-token.js";
-import { waitForEngineHandlers } from "./ready-ipc.js";
 import { createWindowManager } from "./window-manager.js";
+import { eventScript, navigateScript } from "./shell-page.js";
 import { configureSmokeArguments, installSmokeHooks, markSmokeReady } from "./smoke-lifecycle.js";
+
+// The Mac app is a window, a menu and a menu-bar item around the web app: it starts the web host inside this
+// process (which starts and watches the engine) and shows it. The page gets no preload and no IPC.
 
 configureSmokeArguments(process.argv, process.env);
 
-const contract = new Contract(),
-  workspace = resolve(workspacePath());
+const workspace = resolve(workspacePath());
+/** Fixed, so the window keeps its per-browser choices (theme, sidebar) between launches; any free port if taken. */
+const APP_PORT = 5165;
 installSmokeHooks(process.env, (code) => app.exit(code));
 const developmentHostEntry = resolve(app.getAppPath(), "../../host/bin/vibecab-host.mjs");
 const developmentMcpRelay = resolve(app.getAppPath(), "../../adapters/mcp-server/bin/vibecab-mcp.mjs");
 const execFileAsync = promisify(execFile);
 type Preferences = {
-  theme?: "system" | "light" | "dark";
   notificationsEnabled?: boolean;
   width?: number;
   height?: number;
@@ -42,9 +41,7 @@ async function preferences(): Promise<Preferences> {
   try {
     const value: unknown = JSON.parse(await readFile(preferencesPath(), "utf8"));
     if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-    const theme = Reflect.get(value, "theme");
     return {
-      ...(theme === "system" || theme === "light" || theme === "dark" ? { theme } : {}),
       ...(Reflect.get(value, "notificationsEnabled") === true ? { notificationsEnabled: true } : {}),
       ...["width", "height", "x", "y"]
         .filter((key) => Number.isFinite(Reflect.get(value, key)))
@@ -66,17 +63,20 @@ async function savePreferences(patch: Partial<Preferences>): Promise<void> {
 }
 let windowRef: import("electron").BrowserWindow | undefined,
   client: ReturnType<typeof httpClient> | undefined,
-  apiUrl = "",
-  token = "";
+  webHost: WebHost | undefined,
+  apiUrl = "";
 let resolveEngineReady!: () => void, rejectEngineReady!: (error: unknown) => void;
 const engineReady = new Promise<void>((resolveReady, rejectReady) => {
-    resolveEngineReady = resolveReady;
-    rejectEngineReady = rejectReady;
-  }),
-  readyIpcMain = waitForEngineHandlers(ipcMain, engineReady);
+  resolveEngineReady = resolveReady;
+  rejectEngineReady = rejectReady;
+});
 void engineReady.catch(() => undefined);
 let isQuitting = false;
 const createWindow = createWindowManager({
+  appUrl: () => {
+    if (!webHost) throw Error("VibeCab is not ready");
+    return webHost.url;
+  },
   preferences,
   savePreferences,
   getWindow: () => windowRef,
@@ -85,299 +85,132 @@ const createWindow = createWindowManager({
   },
   isQuitting: () => isQuitting,
 });
-const subscriptions = new Map<string, AbortController>();
 let trayManager: ReturnType<typeof createTrayManager> | undefined;
 
-function hostOptions() {
-  const fakeProvider = process.env.VIBECAB_DEV === "1" ? process.env.VIBECAB_FAKE_PROVIDER : undefined;
+function engineHost() {
   return {
     nodePath: engineNodePath(app.isPackaged, process.resourcesPath, process.env.VIBECAB_NODE),
     hostEntry: hostEntryPath(app.isPackaged, process.resourcesPath, developmentHostEntry),
-    ...(fakeProvider ? { fakeProvider } : {}),
   };
 }
 
+/** The web host, inside this process: the web app's pages and its way to the engine. */
+async function startWeb(): Promise<WebHost> {
+  const fakeProvider = process.env.VIBECAB_DEV === "1" ? process.env.VIBECAB_FAKE_PROVIDER : undefined;
+  const options = {
+    workspace,
+    // Packaged, the built web app lies beside the engine; in development, in the build output.
+    staticRoot: app.isPackaged
+      ? join(process.resourcesPath, "engine", "dist", "apps", "web", "client")
+      : join(import.meta.dirname, "../../web/client"),
+    engineHost: engineHost(),
+    version: app.getVersion(),
+    mcpRelayPath: mcpRelayPath(app.isPackaged, process.resourcesPath, developmentMcpRelay),
+    ...(fakeProvider ? { fakeProvider } : {}),
+  };
+  try {
+    return await startWebHost({ ...options, port: APP_PORT });
+  } catch (error) {
+    if (!(error instanceof Error && "code" in error && error.code === "EADDRINUSE")) throw error;
+    return startWebHost({ ...options, port: 0 });
+  }
+}
+
+/** The shell's own line to the engine, for the menu-bar item and the check before quitting. */
 async function connect(): Promise<void> {
   const runtime = await status(workspace);
   if (!runtime.running) throw Error("Engine stopped");
   apiUrl = runtime.httpUrl;
-  token = await readAppToken(workspace);
-  client = httpClient(apiUrl, token);
+  client = httpClient(apiUrl, await readAppToken(workspace));
 }
 
-async function recoverAuthentication(): Promise<void> {
+/** The page can restart the engine (Settings → About); then it has a new address, and the menu-bar item follows. */
+async function followEngine(): Promise<void> {
+  const runtime = await status(workspace);
+  if (!runtime.running || runtime.httpUrl === apiUrl) return;
   trayManager?.stop();
-  await stop(workspace);
-  await start(workspace, hostOptions());
   await connect();
   createTray();
+}
+
+async function showWindow(): Promise<void> {
+  if (!windowRef) await createWindow();
+  windowRef?.show();
+  windowRef?.focus();
+  app.dock?.show();
+}
+
+/** Says something to the page: the shell's only way in, and there is no way back. */
+async function tellPage(script: string): Promise<void> {
+  await showWindow();
+  await windowRef?.webContents.executeJavaScript(script);
 }
 
 function createTray(): void {
   const templatePath = app.isPackaged
     ? join(process.resourcesPath, "engine", "iconTemplate.png")
     : join(import.meta.dirname, "../../../../apps/macos/build/iconTemplate.png");
+  if (!client) throw Error("Engine is not connected");
   trayManager = createTrayManager({
-    client: requireClient(),
+    client,
     workspace,
     iconPath: templatePath,
     getNotificationsEnabled: async () => (await preferences()).notificationsEnabled ?? false,
     isWindowFocused: () => windowRef?.isFocused() ?? false,
-    openWindow: async () => {
-      if (!windowRef) await createWindow();
-      windowRef?.show();
-      windowRef?.focus();
-      app.dock?.show();
-    },
-    newDraft: () => windowRef?.webContents.send("app:new-draft"),
-    navigate: (path) => windowRef?.webContents.send("app:navigate", path),
+    openWindow: showWindow,
+    newDraft: () => void tellPage(eventScript("new-draft")),
+    navigate: (path) => void tellPage(navigateScript(path)),
     stop: () => app.quit(),
   });
   trayManager.create();
   trayManager.startEvents();
 }
 
-function requireClient(): ReturnType<typeof httpClient> {
-  if (!client) throw Error("Engine is not connected");
-  return client;
-}
-
-function installBridge(): void {
-  readyIpcMain.handle("vibe:command", (_event, raw: unknown) =>
-    retryUnauthenticated(async () => {
-      const input = contract.read<CommandEnvelope>("command-envelope", raw);
-      const result = await requireClient().command(input);
-      if (result.ok) contract.read("operations/" + input.type, result.result, "#/properties/result");
-      return result;
-    }, recoverAuthentication),
-  );
-  readyIpcMain.handle("vibe:query", (_event, raw: unknown) =>
-    retryUnauthenticated(async () => {
-      return requireClient().query(contract.read<QueryEnvelope>("query-envelope", raw));
-    }, recoverAuthentication),
-  );
-  readyIpcMain.handle("vibe:put-blob", (_event, raw: unknown) =>
-    retryUnauthenticated(async () => {
-      const input = contract.read<{ bytes: Uint8Array; mediaType: string }>("json", raw);
-      return requireClient().putBlob(input.bytes, input.mediaType);
-    }, recoverAuthentication),
-  );
-  readyIpcMain.handle("vibe:get-blob", (_event, raw: unknown) =>
-    retryUnauthenticated(async () => {
-      if (typeof raw !== "string" || !/^[a-f0-9]{64}$/.test(raw)) fail("invalid", "Invalid blob hash");
-      return requireClient().getBlob(raw);
-    }, recoverAuthentication),
-  );
-  readyIpcMain.handle("vibe:subscribe", async (event, raw: unknown) => {
-    const input = contract.read<{ id: string; afterSeq: number; filter: unknown }>("json", raw),
-      controller = new AbortController();
-    subscriptions.set(input.id, controller);
-    void (async () => {
-      try {
-        for await (const item of reconnectEvents(
-          input.afterSeq,
-          controller.signal,
-          (afterSeq) =>
-            requireClient().subscribe(
-              contract.read<Subscription>("subscription", { afterSeq, filter: input.filter }),
-              undefined,
-              controller.signal,
-            ),
-          async (error) => {
-            event.sender.send("app:connection-lost");
-            if (isUnauthenticated(error)) await recoverAuthentication();
-          },
-        )) {
-          event.sender.send("vibe:event:" + input.id, item);
-        }
-      } catch {
-        if (!controller.signal.aborted) event.sender.send("app:connection-lost");
-      }
-    })();
+async function restoreBackup(): Promise<void> {
+  const picked = await dialog.showOpenDialog({
+    properties: ["openFile"],
+    filters: [{ name: "VibeCab backup", extensions: ["tgz", "tar.gz", "gz"] }],
   });
-  readyIpcMain.handle("vibe:unsubscribe", (_event, id: unknown) => {
-    if (typeof id === "string") {
-      subscriptions.get(id)?.abort();
-      subscriptions.delete(id);
-    }
+  const archive = picked.filePaths[0];
+  if (picked.canceled || !archive) return;
+  const confirmation = await dialog.showMessageBox({
+    type: "warning",
+    buttons: ["Restore", "Cancel"],
+    defaultId: 1,
+    cancelId: 1,
+    message: "VibeCab will stop, restore into a new workspace and switch to it.",
+    detail: `Your current workspace will be kept in workspaces/ as default-before-restore-${new Date().toISOString().slice(0, 10)}.`,
   });
-  readyIpcMain.handle("app:state", async () => ((await status(workspace)).running ? "Connected" : "Engine stopped"));
-  readyIpcMain.handle("app:start-engine", async () => {
-    const nodePath = engineNodePath(app.isPackaged, process.resourcesPath, process.env.VIBECAB_NODE);
-    assertNode26(nodePath);
-    await start(workspace, hostOptions());
-    await connect();
-    return "Connected";
-  });
-  readyIpcMain.handle("app:save-provider", async (_event, raw: unknown) => {
-    const input = contract.read<{ baseUrl: string; model: string; apiKey: string }>("json", raw);
-    const engine = client;
-    if (!engine) throw Error("Engine is not connected");
-    const existing = contract.read<Settings>("settings", await engine.query({ name: "sys.Settings", args: {} }));
-    const existingModel = existing.models.default;
-    const model = {
-      ...existingModel,
-      provider: "openai-compatible",
-      baseUrl: input.baseUrl,
-      model: input.model,
-      keyRef: "provider:default",
-      capabilities: existingModel?.capabilities ?? {
-        tools: true,
-        jsonSchemaOutput: true,
-        streaming: true,
-        maxContextTokens: 32768,
-        reportsUsage: false,
+  if (confirmation.response !== 0) return;
+  const { nodePath, hostEntry } = engineHost();
+  try {
+    await switchWorkspaceFromBackup({
+      workspace,
+      archive,
+      stop: async () => {
+        trayManager?.stop();
+        client = undefined;
+        apiUrl = "";
+        await stop(workspace);
       },
-      pricing: existingModel?.pricing ?? { inputMicrosPerMillion: 0, outputMicrosPerMillion: 0 },
-    };
-    const settings = await engine.command(
-      contract.read<CommandEnvelope>("command-envelope", {
-        commandId: randomUUID(),
-        type: "sys.SetSettings",
-        payload: { patch: { models: { default: model } } },
-      }),
-    );
-    if (!settings.ok) fail(settings.error.code, settings.error.message, settings.error.details);
-    const key = await engine.command(
-      contract.read<CommandEnvelope>("command-envelope", {
-        commandId: randomUUID(),
-        type: "sys.SetProviderKey",
-        payload: { alias: "default", secret: input.apiKey },
-      }),
-    );
-    if (!key.ok) fail(key.error.code, key.error.message, key.error.details);
-  });
-  readyIpcMain.handle("app:open-markdown", async () => {
-    const picked = await dialog.showOpenDialog({
-      properties: ["openFile"],
-      filters: [{ name: "Markdown", extensions: ["md", "markdown"] }],
-    });
-    if (picked.canceled || !picked.filePaths[0]) return undefined;
-    const path = picked.filePaths[0];
-    return { name: path.split(/[\\/]/).at(-1) ?? "Document.md", content: await readFile(path, "utf8") };
-  });
-  readyIpcMain.handle("app:open-external", async (_event, url: unknown) => {
-    if (typeof url === "string" && /^(https:|mailto:)/i.test(url)) await shell.openExternal(url);
-  });
-  readyIpcMain.handle("app:set-theme", (_event, theme: unknown) => {
-    if (theme !== "system" && theme !== "light" && theme !== "dark") fail("invalid", "Invalid theme");
-    nativeTheme.themeSource = theme;
-    void savePreferences({ theme });
-  });
-  readyIpcMain.handle("app:get-login-item", () => app.getLoginItemSettings().openAtLogin);
-  readyIpcMain.handle("app:set-login-item", (_event, enabled: unknown) => {
-    if (typeof enabled !== "boolean") fail("invalid", "Invalid login item setting");
-    app.setLoginItemSettings({ openAtLogin: enabled });
-    return app.getLoginItemSettings().openAtLogin;
-  });
-  readyIpcMain.handle("app:get-notifications-enabled", async () => (await preferences()).notificationsEnabled ?? false);
-  readyIpcMain.handle("app:set-notifications-enabled", async (_event, enabled: unknown) => {
-    if (typeof enabled !== "boolean") fail("invalid", "Invalid notification setting");
-    await savePreferences({ notificationsEnabled: enabled });
-  });
-  readyIpcMain.handle("app:tray-status", async () => {
-    await trayManager?.refresh();
-    return trayManager?.snapshot();
-  });
-  readyIpcMain.handle("app:version", () => app.getVersion());
-  readyIpcMain.handle("app:node-version", () =>
-    execFileSync(
-      engineNodePath(app.isPackaged, process.resourcesPath, process.env.VIBECAB_NODE ?? process.execPath),
-      ["--version"],
-      {
-        encoding: "utf8",
+      start: async () => {
+        await webHost?.engine.start();
+        await connect();
+        createTray();
+        windowRef?.webContents.reload();
       },
-    ).trim(),
-  );
-  readyIpcMain.handle("app:workspace-path", () => workspace);
-  readyIpcMain.handle("app:mcp-relay-path", () =>
-    mcpRelayPath(app.isPackaged, process.resourcesPath, developmentMcpRelay),
-  );
-  readyIpcMain.handle("app:open-mcp-config", async () => {
-    const configPath = join(app.getPath("appData"), "Claude", "claude_desktop_config.json");
-    await shell.showItemInFolder(configPath);
-  });
-  readyIpcMain.handle("app:copy-text", (_event, raw: unknown) => {
-    if (typeof raw === "string") clipboard.writeText(raw);
-  });
-  readyIpcMain.handle("app:reveal", async (_event, raw: unknown) => {
-    if (typeof raw === "string") await shell.showItemInFolder(raw);
-  });
-  readyIpcMain.handle("app:save-files", async (_event, raw: unknown) => {
-    if (
-      !Array.isArray(raw) ||
-      raw.some((item) => !item || typeof item.name !== "string" || !(item.bytes instanceof Uint8Array))
-    )
-      fail("invalid", "Invalid export files");
-    const files = raw as Array<{ name: string; bytes: Uint8Array }>;
-    const testDirectory = process.env.VIBECAB_DEV === "1" ? process.env.VIBECAB_TEST_SAVE_DIR : undefined;
-    if (testDirectory) {
-      await mkdir(testDirectory, { recursive: true });
-      for (const file of files) await writeFile(join(testDirectory, file.name.replace(/[^\w.-]+/g, "-")), file.bytes);
-      return;
-    }
-    if (files.length > 1) {
-      const picked = await dialog.showOpenDialog({ properties: ["openDirectory", "createDirectory"] });
-      if (picked.canceled || !picked.filePaths[0]) return;
-      for (const file of files)
-        await writeFile(join(picked.filePaths[0], file.name.replace(/[^\w.-]+/g, "-")), file.bytes);
-      return;
-    }
-    for (const file of files) {
-      const picked = await dialog.showSaveDialog({ defaultPath: file.name });
-      if (!picked.canceled && picked.filePath) await writeFile(picked.filePath, file.bytes);
-    }
-  });
-  readyIpcMain.handle("app:restore-backup", async () => {
-    const picked = await dialog.showOpenDialog({
-      properties: ["openFile"],
-      filters: [{ name: "VibeCab backup", extensions: ["tgz", "tar.gz", "gz"] }],
+      restore: async (archivePath, destination) => {
+        await execFileAsync(nodePath, [hostEntry, "restore", "--archive", archivePath, "--workspace", destination], {
+          timeout: 300_000,
+        });
+      },
     });
-    const archive = picked.filePaths[0];
-    if (picked.canceled || !archive) return;
-    const confirmation = await dialog.showMessageBox(windowRef!, {
-      type: "warning",
-      buttons: ["Restore", "Cancel"],
-      defaultId: 1,
-      cancelId: 1,
-      message: "VibeCab will stop, restore into a new workspace and switch to it.",
-      detail: `Your current workspace will be kept in workspaces/ as default-before-restore-${new Date().toISOString().slice(0, 10)}.`,
-    });
-    if (confirmation.response !== 0) return;
-    const hostEntry = hostEntryPath(app.isPackaged, process.resourcesPath, developmentHostEntry),
-      nodePath = engineNodePath(app.isPackaged, process.resourcesPath, process.env.VIBECAB_NODE);
-    try {
-      await switchWorkspaceFromBackup({
-        workspace,
-        archive,
-        stop: async () => {
-          for (const controller of subscriptions.values()) controller.abort();
-          subscriptions.clear();
-          client = undefined;
-          await stop(workspace);
-        },
-        start: async () => {
-          await start(workspace, hostOptions());
-          await connect();
-        },
-        restore: async (archivePath, destination) => {
-          await execFileAsync(nodePath, [hostEntry, "restore", "--archive", archivePath, "--workspace", destination], {
-            timeout: 300_000,
-          });
-        },
-      });
-    } catch (error) {
-      throw new Error(error instanceof Error ? error.message : "Could not restore backup.", { cause: error });
-    }
-  });
+  } catch (error) {
+    dialog.showErrorBox("VibeCab could not restore the backup", error instanceof Error ? error.message : "");
+  }
 }
-
-installBridge();
 
 app.setName("VibeCab");
-protocol.registerSchemesAsPrivileged([
-  { scheme: "vc-blob", privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true } },
-]);
 const lock = process.env.VIBECAB_SMOKE === "1" || app.requestSingleInstanceLock();
 if (!lock) app.quit();
 else {
@@ -391,31 +224,28 @@ else {
   app
     .whenReady()
     .then(async () => {
-      nativeTheme.themeSource = (await preferences()).theme ?? "system";
-      const nodePath = engineNodePath(app.isPackaged, process.resourcesPath, process.env.VIBECAB_NODE);
-      assertNode26(nodePath);
-      protocol.handle("vc-blob", async (request) => {
-        const hash = new URL(request.url).hostname;
-        if (!/^[a-f0-9]{64}$/.test(hash)) return new Response("Not found", { status: 404 });
-        const response = await fetch(apiUrl + "/v1/blobs/" + hash, { headers: { Authorization: "Bearer " + token } });
-        return new Response(response.body, {
-          status: response.status,
-          headers: { "Content-Type": "application/octet-stream", "Cache-Control": "no-store" },
-        });
-      });
-      await start(workspace, hostOptions());
+      assertNode26(engineHost().nodePath);
+      webHost = await startWeb();
+      await webHost.engine.start();
       await connect();
       resolveEngineReady();
       createTray();
-      const trayTimer = setInterval(() => void trayManager?.refresh(), 5000);
+      const trayTimer = setInterval(
+        () =>
+          void followEngine()
+            .then(() => trayManager?.refresh())
+            .catch(() => undefined),
+        5000,
+      );
       app.on("before-quit", () => clearInterval(trayTimer));
       installApplicationMenu({
-        openSettings: () => {
-          void trayManager?.refresh();
-          windowRef?.webContents.send("app:navigate", "/settings");
-        },
-        newDraft: () => windowRef?.webContents.send("app:new-draft"),
-        importMarkdown: () => windowRef?.webContents.send("app:import"),
+        openSettings: () => void tellPage(navigateScript("/settings")),
+        newDraft: () => void tellPage(eventScript("new-draft")),
+        restoreBackup: () => void restoreBackup(),
+        openAtLogin: app.getLoginItemSettings().openAtLogin,
+        setOpenAtLogin: (enabled) => app.setLoginItemSettings({ openAtLogin: enabled }),
+        notifications: (await preferences()).notificationsEnabled ?? false,
+        setNotifications: (enabled) => void savePreferences({ notificationsEnabled: enabled }),
         quit: () => app.quit(),
       });
       if (!app.getLoginItemSettings().wasOpenedAtLogin) {
@@ -478,7 +308,8 @@ else {
         }
       }
       isQuitting = true;
-      for (const controller of subscriptions.values()) controller.abort();
+      trayManager?.stop();
+      await webHost?.close().catch(() => undefined);
       if (busy) await stop(workspace, { timeoutMs: 30_000 });
       else await stop(workspace, { timeoutMs: 35_000 });
       app.quit();

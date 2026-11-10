@@ -2,7 +2,7 @@ import { JSDOM } from "jsdom";
 import { describe, expect, it } from "vitest";
 import type { Element, Thread } from "../../../contract/generated/index.js";
 import { inlineMarkdownToPlainText, locateQuote } from "../../../contract/src/inline-markdown.js";
-import { locatorForTextSelection } from "../../ui/src/document/anchors.js";
+import { locatorForTextSelection } from "../src/document/anchors.js";
 import { layoutMargin } from "../src/session/marginLayout.js";
 import { rangeForOffsets, selectionInElement } from "../src/session/textRanges.js";
 import { applyFilter, deliveryLabel, sortByPosition, threadsForDraft } from "../src/session/threads.js";

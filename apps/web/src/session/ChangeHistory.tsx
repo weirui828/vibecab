@@ -1,6 +1,6 @@
 import { Button } from "@wei/design-system";
 import type { Agreement, Update } from "../../../../contract/generated/index.js";
-import { terms } from "../../../ui/src/copy/terms.js";
+import { terms } from "../copy/terms.js";
 import { Dialog } from "../ui/Dialog.js";
 import { relativeTime } from "../ui/time.js";
 import type { Thread } from "./threads.js";

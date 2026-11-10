@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { errorMessage } from "../../../ui/src/copy/errors.js";
+import { errorMessage } from "../copy/errors.js";
 import { useBridge } from "../live/LiveStore.js";
 import { useToast } from "../ui/Toast.js";
 import { newCommandId } from "../bridge/webBridge.js";

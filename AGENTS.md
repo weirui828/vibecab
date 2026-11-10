@@ -51,8 +51,8 @@ adapters/
   mcp-server/             # (later task)
   mcp-client/             # (later task)
 host/                     # shared local engine host
-apps/ui/                  # React renderer
-apps/macos/               # Electron main and preload
+apps/web/                 # the web app: React renderer (src/) and its local web host (server/)
+apps/macos/               # Electron shell around the web app: window, menu, menu-bar item (no preload)
 docs/
   design/                 # architecture (read-only for agents unless a task says so)
   tasks/                  # one file per task
@@ -125,7 +125,7 @@ A task is not done until `pnpm gen && pnpm typecheck && pnpm lint && pnpm test &
 ## 9. App
 
 1. The renderer talks to the engine only through the `ContractBridge` interface; it never holds a token, opens a socket, or imports engine code.
-2. Engine names (`artifact`, `doc`, `OutputSet`, ids, operation names) never appear in user-visible text. User-facing terms come only from `apps/ui/src/copy/terms.ts`: **Draft**, **Document**, **Snapshot**, **Session**, **Update**, **Agree / Decline**.
+2. Engine names (`artifact`, `doc`, `OutputSet`, ids, operation names) never appear in user-visible text. User-facing terms come only from `apps/web/src/copy/terms.ts`: **Draft**, **Document**, **Snapshot**, **Session**, **Update**, **Agree / Decline**.
 3. CLI commands, MCP tool names, contract operations and the HTTP API keep engine names. Display-name changes belong in `terms.ts`.
 4. User and agent text is rendered as text, never as HTML.
 

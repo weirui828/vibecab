@@ -7,7 +7,7 @@ import type {
   VcArtifactOperation,
   VcResumeViewOperation,
 } from "../../../../contract/generated/index.js";
-import { terms } from "../../../ui/src/copy/terms.js";
+import { terms } from "../copy/terms.js";
 import { useBridge, useLiveQuery } from "../live/LiveStore.js";
 import type { DraftRow, SessionRow } from "../live/workspace.js";
 import { useDialogs } from "../home/DialogHost.js";

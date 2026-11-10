@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button, Icon, Input } from "@wei/design-system";
-import { terms } from "../../../ui/src/copy/terms.js";
+import { terms } from "../copy/terms.js";
 import { sortSessions } from "../live/workspace.js";
 import type { useWorkspace } from "../live/workspace.js";
 import { Hills } from "../ui/Brand.js";

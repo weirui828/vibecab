@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button, Field, Input } from "@wei/design-system";
 import type { Grant } from "../../../../contract/generated/index.js";
-import { terms } from "../../../ui/src/copy/terms.js";
+import { terms } from "../copy/terms.js";
 import { useLiveQuery } from "../live/LiveStore.js";
 import type { SessionRow } from "../live/workspace.js";
 import { relativeTime } from "../ui/time.js";

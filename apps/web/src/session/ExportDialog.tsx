@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button, Checkbox } from "@wei/design-system";
-import { errorMessage } from "../../../ui/src/copy/errors.js";
+import { errorMessage } from "../copy/errors.js";
 import { useBridge } from "../live/LiveStore.js";
 import { Dialog } from "../ui/Dialog.js";
 import { newCommandId } from "../bridge/webBridge.js";

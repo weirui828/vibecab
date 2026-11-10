@@ -1,7 +1,7 @@
 import { forwardRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { Button } from "@wei/design-system";
-import { terms } from "../../../ui/src/copy/terms.js";
+import { terms } from "../copy/terms.js";
 import type { FeedbackComment, Thread } from "./threads.js";
 import {
   anchorOf,

@@ -1,7 +1,7 @@
 import type { AnchorResolution, Element, FeedbackComment, Thread } from "../../../../contract/generated/index.js";
 import { inlineMarkdownToPlainText, locateQuote } from "../../../../contract/src/inline-markdown.js";
 import { buildTree } from "../document/DocumentView.js";
-import { terms } from "../../../ui/src/copy/terms.js";
+import { terms } from "../copy/terms.js";
 
 export type { Thread, FeedbackComment };
 

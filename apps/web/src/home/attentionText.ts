@@ -1,5 +1,5 @@
 import type { AttentionItem } from "../../../../contract/generated/index.js";
-import { terms } from "../../../ui/src/copy/terms.js";
+import { terms } from "../copy/terms.js";
 import type { MoundTone } from "../ui/Brand.js";
 
 type Kind = AttentionItem["kind"];

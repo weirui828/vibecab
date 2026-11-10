@@ -1,6 +1,6 @@
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { terms } from "../../../ui/src/copy/terms.js";
+import { terms } from "../copy/terms.js";
 import type { DraftRow, SessionRow } from "../live/workspace.js";
 import { useActions } from "./actions.js";
 import type { TrashKind } from "./actions.js";
@@ -54,6 +54,12 @@ export function DialogHost({
     }),
     [],
   );
+  // The Mac app's menu and menu-bar item ask for a new draft with this window event (they have no other way in).
+  useEffect(() => {
+    const newDraft = () => setOpen({ kind: "draft" });
+    window.addEventListener("vibecab:new-draft", newDraft);
+    return () => window.removeEventListener("vibecab:new-draft", newDraft);
+  }, []);
   const rename = open?.kind === "rename" ? open : undefined,
     fixed = open?.kind === "draft" && open.sessionId ? sessions.find((s) => s.sessionId === open.sessionId) : undefined,
     attachTo = open?.kind === "attach" ? sessions.find((s) => s.sessionId === open.sessionId) : undefined;

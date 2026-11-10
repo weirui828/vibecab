@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Button, Icon, IconButton } from "@wei/design-system";
-import { terms } from "../../ui/src/copy/terms.js";
-import type { ConnectionState } from "../../ui/src/connection.js";
+import { terms } from "./copy/terms.js";
+import type { ConnectionState } from "./connection.js";
 import { webBridge } from "./bridge/webBridge.js";
 import type { WebBridge } from "./bridge/webBridge.js";
 import { LiveStoreProvider } from "./live/LiveStore.js";
