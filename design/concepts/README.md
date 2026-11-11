@@ -15,7 +15,8 @@ These are sketches, not app code: nothing here is wired to the engine.
 ## A + B together
 
 - `ab-resonant-line.html` — the session page after Wei's feedback on A and B. Two lines with two jobs. The cable on
-  top is time: a station per version, and the cab is the C of the logo (the mark's own outline, clipped), hung on the
-  cable point for point, with an ease out, cruise and brake and a pendulum swing from its own acceleration. The plumb
-  line beside the draft is place: a bead where each thread sits, humming while open, moss once agreed. Colours are
-  Tundra palette steps only.
+  top is time: a station per version, and the cab is the gondola from the logo (cabin, roof and grips cut from the
+  mark's own outline, without the C), hung on the cable point for point, with an ease out, cruise and brake and a
+  pendulum swing from its own acceleration. The plumb line beside the draft is place: a bead where each thread sits,
+  hollow while open, moss once agreed. It is still until the pointer passes a paragraph; now and then a slow gust
+  leans it, with a low wind sound that can be switched off. Colours are Tundra palette steps only.

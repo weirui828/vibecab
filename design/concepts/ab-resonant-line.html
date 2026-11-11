@@ -193,7 +193,7 @@
       opacity: 0.2;
     }
   }
-  /* The cab is the C of the mark, taken from the logo outline itself. */
+  /* The cab is the gondola inside the C of the mark, cut from the logo outline itself: cabin, roof, grips. */
   .cab-ink {
     fill: var(--ink);
   }
@@ -210,7 +210,7 @@
   }
   .rod {
     stroke: var(--ink);
-    stroke-width: 1.5;
+    stroke-width: 1.9;
     stroke-linecap: round;
   }
   /* A thread is a bead clipped on the line: open while it hums, moss once agreed. */
@@ -344,6 +344,12 @@
     display: grid;
     place-items: center;
     transition: transform 0.5s var(--ease);
+  }
+  .skyswitch.sound {
+    right: calc(max(16px, env(safe-area-inset-right, 0px)) + 54px);
+  }
+  .skyswitch.sound[aria-pressed="false"] {
+    opacity: 0.5;
   }
   .skyswitch:hover {
     transform: rotate(40deg);
@@ -589,7 +595,7 @@
     <defs>
       <clipPath id="cab-clip">
         <polygon
-          points="2153.9,1887 2210.7,1797.8 2535.1,1724.8 2600,1692.4 2600,1588.6 2716.8,1565.9 2716.8,1676.2 2778.5,1692.4 3094.8,1822.2 3094.8,2763 2153.9,2763"
+          points="2545,1724 2600,1724 2600,1588.6 2716.8,1565.9 2716.8,1676 2780,1692 2780,1724 3023,1724 3023,2297 2545,2297"
         />
       </clipPath>
     </defs>
@@ -613,6 +619,7 @@
       <g id="cab">
         <path class="cab-glass" d="M2637 1820 L2800 1820 Q2940 1900 2950 2060 L2637 2060Z" />
         <rect class="cab-lit" x="2852" y="2132" width="74" height="40" rx="12" />
+        <path class="cab-ink" d="M2962 1998 L3004 1998 L2974 2102 L2950 2102Z" />
         <path
           class="cab-lit"
           d="M0 0 C6.23 1.88 11.68 4.2 17.25 7.56 C17.98 8 18.72 8.44 19.48 8.89 C26.4 13.11 32.76 17.84 39 23 C39.28 23.23 39.28 23.23 40.67 24.37 C60.69 40.77 77.49 59.25 90 82 C90.34 82.6 90.68 83.2 91.03 83.82 C103.3 105.81 108.98 130.92 113.16 155.55 C113.33 156.5 113.49 157.45 113.65 158.43 C114.15 163.6 114 168.81 114 174 C83.64 174 53.28 174 22 174 C20.58 171.15 20.74 168.62 20.61 165.44 C20.54 164.03 20.47 162.62 20.41 161.21 C20.37 160.46 20.34 159.7 20.3 158.93 C18.12 112.96 12.86 67.27 3.63 22.18 C3.46 21.36 3.29 20.54 3.12 19.7 C2.81 18.19 2.5 16.68 2.18 15.17 C1.14 10.13 0.51 5.12 0 0 Z "
@@ -641,6 +648,20 @@
       </svg>
     </span>
   </div>
+  <button class="skyswitch sound" id="sound" aria-pressed="true" aria-label="Wind sound" title="Wind sound">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      aria-hidden="true"
+    >
+      <path d="M3 9h9a3 3 0 1 0-3-3M3 14h14a3 3 0 1 1-3 3M3 11.5h17" />
+    </svg>
+  </button>
   <button class="skyswitch" id="sky" aria-label="Switch between summer and polar night" title="Summer / Polar night">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" />
@@ -697,9 +718,9 @@
   </div>
   <p class="note">
     Concept A + B. Two lines, two jobs. The cable above is time: one station per version, and it only moves when the cab
-    does. The plumb line beside the draft is place: a bead where each thread sits, hollow while it is open and humming,
-    moss once you agree. Move over a paragraph to pluck its bead. Agree, and the bead rings and sends its change up to
-    the cab. Update carries only what you agreed to.
+    does. The plumb line beside the draft is place: a bead where each thread sits, hollow while it is open, moss once
+    you agree. It keeps still until you pass over a paragraph, and now and then a gust leans it. Agree, and the bead
+    rings and sends its change up to the cab. Update carries only what you agreed to.
   </p>
   <div class="dock">
     <button class="depart" id="depart" disabled>
@@ -752,7 +773,7 @@
   posts.slice(1, 4).forEach((p, i) => {
     // The mast stands to one side and holds the cable out on an arm, so a cab at the station hangs clear of it.
     const foot = 372,
-      px = p.x - 60;
+      px = p.x - 48;
     el(
       "path",
       { class: "tower", d: `M${px} ${p.y - 4}V${foot}M${px - 20} ${foot}L${px} ${p.y + 120}L${px + 20} ${foot}` },
@@ -766,7 +787,7 @@
       },
       towers,
     );
-    el("path", { class: "deck", d: `M${px - 12} ${p.y + 104}H${p.x + 40}` }, towers);
+    el("path", { class: "deck", d: `M${px - 12} ${p.y + 96}H${p.x + 52}` }, towers);
     const wheel = el("g", {}, towers);
     el("circle", { class: "sheave", cx: p.x, cy: p.y + 5, r: 5 }, wheel);
     el(
@@ -782,7 +803,7 @@
 
   // ---------- State ----------
   const cab = { span: 2, t: 0, theta: 0, omega: 0, load: 0, vx: 0, x: posts[2].x };
-  const K = 0.078, // logo units to scene px
+  const K = 0.105, // logo units to scene px
     OX = 2657, // the point of the logo's cab that sits on the cable, in logo units
     OY = 1517,
     ROD = [
@@ -820,22 +841,66 @@
     return heightAt(s, (x - s.a.x) / (s.b.x - s.a.x));
   }
 
+  // Wind: now and then one slow gust leans the plumb line and passes. Nothing else moves it on its own.
+  const wind = { next: 6, from: -100, long: 7, level: 0 };
+  function blow() {
+    if (!calm && clock >= wind.next) {
+      wind.from = clock;
+      wind.long = 6.5 + Math.random() * 2.5;
+      wind.next = clock + 24 + Math.random() * 26;
+    }
+    const x = (clock - wind.from) / wind.long;
+    wind.level = x > 0 && x < 1 ? Math.sin(Math.PI * x) ** 2 : 0;
+    if (!sound.node) return;
+    const now = sound.node.ctx.currentTime;
+    sound.node.gain.gain.setTargetAtTime(sound.on ? wind.level * 0.085 : 0, now, 0.3);
+    sound.node.filter.frequency.setTargetAtTime(300 + wind.level * 360, now, 0.4);
+  }
+  // Where the plumb line is at height y: its own ringing plus the lean of the gust, which rolls slowly down it.
+  function sideAt(y) {
+    const s = Math.min(Math.max(y / plumbLine.h, 0), 1),
+      roll = 0.75 + 0.25 * Math.sin(2 * Math.PI * 1.3 * s - 1.1 * (clock - wind.from));
+    return 14 + wave(plumbLine, s) + wind.level * 5 * Math.sin(Math.PI * s) * roll;
+  }
+  // The gust can be heard, low and warm: brown noise through a low-pass that opens a little as it swells.
+  const sound = { on: true, node: null };
+  function listen() {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (sound.node || !Ctx) return sound.node?.ctx.resume();
+    const ctx = new Ctx(),
+      buffer = ctx.createBuffer(1, ctx.sampleRate * 4, ctx.sampleRate),
+      data = buffer.getChannelData(0);
+    let last = 0;
+    for (let i = 0; i < data.length; i++) {
+      last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02;
+      data[i] = last * 3.5;
+    }
+    const src = ctx.createBufferSource(),
+      filter = ctx.createBiquadFilter(),
+      gain = ctx.createGain();
+    src.buffer = buffer;
+    src.loop = true;
+    filter.type = "lowpass";
+    filter.frequency.value = 300;
+    filter.Q.value = 0.3;
+    gain.gain.value = 0;
+    src.connect(filter).connect(gain).connect(ctx.destination);
+    src.start();
+    sound.node = { ctx, gain, filter };
+  }
+  addEventListener("pointerdown", listen, { once: true });
+  addEventListener("keydown", listen, { once: true });
+
   function pluck(s, t, amp) {
     const centre = t * (s.n - 1);
     for (let j = 1; j < s.n - 1; j++) s.u[j] += amp * Math.exp(-(((j - centre) / 2.6) ** 2));
   }
   function simulate() {
-    const open = calm ? [] : beads.filter((b) => b.state === "open");
     for (let sub = 0; sub < 3; sub++) {
       for (const s of [...spans, plumbLine]) {
         const { u, v, n } = s;
         for (let j = 1; j < n - 1; j++) v[j] = (v[j] + 0.25 * (u[j - 1] + u[j + 1] - 2 * u[j])) * 0.9955;
         for (let j = 1; j < n - 1; j++) u[j] += v[j];
-      }
-      // Open threads keep the plumb line humming: two close notes that beat against each other.
-      for (const b of open) {
-        const j = Math.min(plumbLine.n - 2, Math.max(1, Math.round((b.y / plumbLine.h) * (plumbLine.n - 1))));
-        plumbLine.v[j] += 0.016 * (Math.sin(clock * 15) + Math.sin(clock * 17.3 + b.y));
       }
       // The cab is heavy: the wave mostly stops at it.
       const cs = spans[cab.span],
@@ -880,7 +945,7 @@
     rodsEl = $("rods"),
     beadsEl = $("beads"),
     riser = $("riser");
-  const gripEls = [0, 1].map(() => el("circle", { class: "grip", r: 2.7 }, gripsEl));
+  const gripEls = [0, 1].map(() => el("circle", { class: "grip", r: 3.1 }, gripsEl));
   const rodEls = [0, 1].map(() => el("line", { class: "rod" }, rodsEl));
   const threads = [...document.querySelectorAll(".thread")];
   beads.forEach((b, i) => {
@@ -891,7 +956,7 @@
     );
     b.el.addEventListener("pointerenter", () => {
       threads[i].classList.add("lit");
-      ring(i, 5);
+      ring(i, 3.5);
     });
     b.el.addEventListener("pointerleave", () => threads[i].classList.remove("lit"));
     b.el.addEventListener("click", () =>
@@ -941,17 +1006,17 @@
     });
     let d = "";
     for (let j = 0; j < plumbLine.n; j++)
-      d += `${j ? "L" : "M"}${(14 + plumbLine.u[j]).toFixed(2)} ${((j / (plumbLine.n - 1)) * plumbLine.h).toFixed(1)}`;
+      d += `${j ? "L" : "M"}${sideAt((j / (plumbLine.n - 1)) * plumbLine.h).toFixed(2)} ${((j / (plumbLine.n - 1)) * plumbLine.h).toFixed(1)}`;
     $("string-path").setAttribute("d", d);
     for (const b of beads) {
-      b.el.setAttribute("cx", (14 + wave(plumbLine, b.y / plumbLine.h)).toFixed(2));
+      b.el.setAttribute("cx", sideAt(b.y).toFixed(2));
       b.el.setAttribute("cy", b.y.toFixed(1));
     }
     const up = beads.find((b) => b.state === "rising");
     if (up) {
       const e = up.k * up.k * (3 - 2 * up.k),
         y = up.y * (1 - e);
-      riser.setAttribute("cx", (14 + wave(plumbLine, y / plumbLine.h)).toFixed(2));
+      riser.setAttribute("cx", sideAt(y).toFixed(2));
       riser.setAttribute("cy", y.toFixed(1));
     }
     riser.style.opacity = up ? Math.min(1, (1 - up.k) * 5) : 0;
@@ -975,6 +1040,7 @@
   // ---------- One frame ----------
   function frame(dt) {
     clock += dt;
+    blow();
     simulate();
     let ax = 0;
     if (ride) {
@@ -990,7 +1056,7 @@
     }
     // The cab is a pendulum under its grips: it hangs back when the line pulls away and swings forward on braking.
     const w = 3.3,
-      breeze = 0.035 * Math.sin(clock * 0.9) + 0.02 * Math.sin(clock * 2.3);
+      breeze = 0.02 * Math.sin(clock * 0.9) + wind.level * 0.16 * Math.sin((clock - wind.from) * 1.3);
     cab.omega += (-w * w * cab.theta - 1.5 * cab.omega + ax / 140 + breeze) * dt;
     cab.theta += cab.omega * dt;
     for (const b of beads) {
@@ -1051,7 +1117,7 @@
     const i = Number(row.dataset.t);
     row.addEventListener("pointerenter", () => {
       beads[i].el.classList.add("lit");
-      ring(i, 6);
+      ring(i, 4);
     });
     row.addEventListener("pointerleave", () => beads[i].el.classList.remove("lit"));
   });
@@ -1062,7 +1128,7 @@
       thread.classList.add("agreed");
       b.el.classList.add("agreed");
       b.el.setAttribute("aria-label", `Agreed thread ${i + 1}`);
-      if (!calm) pluck(plumbLine, b.y / plumbLine.h, 10); // the bead rings once, then the line quiets
+      if (!calm) pluck(plumbLine, b.y / plumbLine.h, 8); // the bead rings once
       b.state = "rising";
       b.k = calm ? 1 : 0;
       refresh();
@@ -1134,6 +1200,12 @@
     document.documentElement.dataset.theme = dark() ? "light" : "dark";
     sky();
   });
+  $("sound").addEventListener("click", () => {
+    sound.on = !sound.on;
+    $("sound").setAttribute("aria-pressed", String(sound.on));
+    listen();
+    if (sound.on && !wind.level) wind.next = clock; // turning it on calls a gust, so there is something to hear
+  });
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", sky);
   new MutationObserver(sky).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
   sky();
@@ -1164,5 +1236,5 @@
     requestAnimationFrame(loop);
   })(last);
   // For checking the motion by hand: step the same frame function without the clock.
-  window.vcLine = { frame, cab, beads, spans, plumbLine, heightAt, xAt };
+  window.vcLine = { frame, cab, beads, spans, plumbLine, wind, sideAt, heightAt, xAt };
 </script>
