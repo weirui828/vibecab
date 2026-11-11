@@ -1,6 +1,6 @@
 import { parse, serialize, serializeOuter } from "parse5";
 import type { DefaultTreeAdapterTypes } from "parse5";
-import type { CommitInput, Element, ElementDraft } from "../../../contract/src/index.js";
+import type { CommitInput, ElementDraft } from "../../../contract/src/index.js";
 import { htmlPlainText } from "../../../contract/src/index.js";
 
 // An HTML file as a Draft, and back. The file is kept as it is: an element that only groups blocks becomes a
@@ -37,7 +37,6 @@ const isElement = (node: Node) => !node.nodeName.startsWith("#");
 // Attributes stay a list, in the order the file has them: a map would be sorted when it is stored.
 const attrsOf = (node: Node | undefined) => (node?.attrs ?? []).map((a): [string, string] => [a.name, a.value]);
 const escapeText = (value: string) => value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
-const escapeAttr = (value: string) => value.replaceAll("&", "&amp;").replaceAll('"', "&quot;");
 const find = (node: Node | undefined, tag: string) => node?.childNodes?.find((child) => child.nodeName === tag);
 
 function isGroup(node: Node, depth: number): boolean {
@@ -88,36 +87,4 @@ export function importHtml(source: string): { title: string | undefined; changes
   const named = find(head, "title"),
     title = named ? htmlPlainText(inner(named)) : "";
   return { title: title || undefined, changes };
-}
-
-const attributes = (attrs: Array<[string, string]>) =>
-  attrs.map(([name, value]) => ` ${name}="${escapeAttr(value)}"`).join("");
-
-/** What is inside `<body>`: the tree in order, each block as it is stored. `mark` may add to a block's first tag. */
-export function htmlBody(elements: Element[], mark?: (element: Element) => string): string {
-  const children = (parentId: string | null) =>
-    elements
-      .filter((e) => e.parentId === parentId && e.type !== "html_head")
-      .sort((a, b) => (a.order < b.order ? -1 : 1));
-  const render = (element: Element): string => {
-    const extra = mark?.(element) ?? "";
-    if (element.type === "html_node")
-      return `<${element.props.tag}${attributes(element.props.attrs)}${extra}>\n${children(element.elementId).map(render).join("\n")}\n</${element.props.tag}>`;
-    if (element.type !== "html_block") return "";
-    // The block is one element (the contract checks it), so its first tag ends at the first space, slash or bracket.
-    return extra ? element.html.replace(/^<[^\s/>]+/, (open) => open + extra) : element.html;
-  };
-  return children(null).map(render).join("\n");
-}
-
-/** The whole file again, from its elements. */
-export function htmlDocument(elements: Element[], mark?: (element: Element) => string, headFirst = ""): string {
-  const head = elements.find((e) => e.type === "html_head"),
-    props = head?.type === "html_head" ? head.props : { htmlAttrs: [], bodyAttrs: [] };
-  return [
-    `<!DOCTYPE html><html${attributes(props.htmlAttrs)}><head>${headFirst}${head?.type === "html_head" ? head.html : ""}</head>`,
-    `<body${attributes(props.bodyAttrs)}>`,
-    htmlBody(elements, mark),
-    "</body></html>",
-  ].join("\n");
 }

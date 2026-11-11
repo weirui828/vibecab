@@ -12,6 +12,8 @@ export type Trashable = TrashKind | "idea" | "project";
 export interface NewDraft {
   title: string;
   markdown?: string;
+  /** An HTML file, kept as it is. */
+  html?: string;
   /** Existing session to add the Draft to; a new session named after the Draft otherwise. */
   sessionId?: string;
   /** The first Draft in a session is its primary one. */
@@ -36,13 +38,15 @@ export function useActions() {
     [bridge, toast],
   );
   return {
-    async createDraft({ title, markdown, sessionId, role = "primary", resume }: NewDraft): Promise<boolean> {
+    async createDraft({ title, markdown, html, sessionId, role = "primary", resume }: NewDraft): Promise<boolean> {
       // Resume before creating, so a refusal never leaves a Draft behind with no session.
       if (sessionId && resume && (await run("vc.ResumeSession", { sessionId })) === undefined) return false;
       const created =
-        markdown === undefined
-          ? await run<{ artifactId: string }>("vc.CreateArtifact", { title, mediaKind: "doc" })
-          : await run<{ artifactId: string }>("vc.ImportContent", { title, format: "markdown", content: markdown });
+        html !== undefined
+          ? await run<{ artifactId: string }>("vc.ImportContent", { title, format: "html", content: html })
+          : markdown === undefined
+            ? await run<{ artifactId: string }>("vc.CreateArtifact", { title, mediaKind: "doc" })
+            : await run<{ artifactId: string }>("vc.ImportContent", { title, format: "markdown", content: markdown });
       if (!created) return false;
       const target = sessionId ?? (await run<{ sessionId: string }>("vc.StartSession", { title }))?.sessionId;
       if (!target) return false;

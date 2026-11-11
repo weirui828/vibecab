@@ -8,6 +8,7 @@ import type { AddressInfo } from "node:net";
 import { jsonBody, ownFetch, sameHost, sameOrigin } from "./access.js";
 import { providerCatalog, readLiveModels } from "../../../contract/src/provider-catalog.js";
 import { EngineLink } from "./engine.js";
+import { draftFramePath, draftFramePolicy, draftFrameShell } from "./draft-frame.js";
 
 export interface WebHostOptions {
   workspace: string;
@@ -218,6 +219,14 @@ export async function startWebHost(options: WebHostOptions): Promise<WebHost> {
       sockets.add(res);
       res.on("close", () => sockets.delete(res));
       return forward(req, res);
+    }
+    if ((req.method === "GET" || req.method === "HEAD") && path === draftFramePath) {
+      res.writeHead(200, {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Content-Security-Policy": draftFramePolicy,
+      });
+      return res.end(req.method === "HEAD" ? undefined : draftFrameShell);
     }
     if (options.middleware) return options.middleware(req, res, () => error(res, 404, "not_found", "Not found"));
     if (req.method !== "GET" && req.method !== "HEAD") return error(res, 405, "invalid", "Method not allowed");

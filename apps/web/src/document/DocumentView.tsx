@@ -4,6 +4,8 @@ import { Icon } from "@wei/design-system";
 import type { IconName } from "@wei/design-system";
 import type { DiffResult, Element } from "../../../../contract/generated/index.js";
 import { InlineText } from "./InlineText.js";
+import { HtmlView } from "./HtmlView.js";
+import { isHtmlDraft } from "./htmlFrame.js";
 
 const BATCH = 300;
 
@@ -114,7 +116,17 @@ const kindLabel: Partial<Record<Element["type"], string>> = {
   callout: "callout",
 };
 
-export function DocumentView({
+/** A Draft's content: Document blocks drawn here, or an HTML file shown in its own frame. */
+export function DocumentView(props: {
+  elements: Element[];
+  blobUrl(hash: string): string;
+  diff?: DocDiff | undefined;
+}) {
+  if (isHtmlDraft(props.elements)) return <HtmlView elements={props.elements} diff={props.diff?.result} />;
+  return <BlocksView {...props} />;
+}
+
+function BlocksView({
   elements,
   blobUrl,
   diff,
