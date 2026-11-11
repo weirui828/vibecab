@@ -224,15 +224,21 @@ it("shows what the agent cost and did in Settings → Spending → Usage", async
   await tl.waitFor(() =>
     expect(tl.within(usage).getByRole("table", { name: "By agent" }).textContent).toContain("Main agent"),
   );
-  const purposes = tl.within(usage).getByRole("table", { name: "By purpose" }).textContent ?? "";
-  expect(purposes).toContain("Replies");
-  expect(purposes).toMatch(/Updates \((writing|planning)\)/);
+  // Each table has its own query and shows when its own numbers arrive, so wait for this one too.
+  await tl.waitFor(() => {
+    const purposes = tl.within(usage).getByRole("table", { name: "By purpose" }).textContent ?? "";
+    expect(purposes).toContain("Replies");
+    expect(purposes).toMatch(/Updates \((writing|planning)\)/);
+  });
   // Session titles arrive with the sessions list, a moment after the numbers.
   await tl.waitFor(() =>
     expect(tl.within(usage).getByRole("table", { name: "Costliest sessions" }).textContent).toContain("Tundra walk"),
   );
-  const calls = Number(tl.within(usage).getByText("Calls", { selector: "dt" }).nextElementSibling?.textContent);
-  expect(calls).toBeGreaterThan(1);
+  let calls = 0;
+  await tl.waitFor(() => {
+    calls = Number(tl.within(usage).getByText("Calls", { selector: "dt" }).nextElementSibling?.textContent);
+    expect(calls).toBeGreaterThan(1);
+  });
   // Today only, then 30 days: the period changes what is counted, never by less than today.
   tl.fireEvent.click(tl.within(usage).getByRole("button", { name: "30 days" }));
   await tl.waitFor(() =>

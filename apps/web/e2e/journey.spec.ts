@@ -80,9 +80,13 @@ test("first run: sign in, choose a model, land on an empty Home", async () => {
 });
 
 test("Settings: the key is saved and never shown; the agent replies quickly", async () => {
+  // The agent made in the first run is in the pool; its form says a key is saved and never shows it.
   await page.goto(host.url + "/#/settings");
+  await page.getByRole("region", { name: "Main agent" }).getByRole("button", { name: "Edit" }).click();
   await expect(page.getByText(/Key saved/)).toBeVisible();
   expect(await page.content()).not.toContain("e2e-test-key");
+  // How the agent replies sits with the roles.
+  await page.goto(host.url + "/#/settings/roles");
   const agent = page.getByRole("region", { name: "How it replies" });
   await agent.getByLabel("Delay before a reply (seconds)").fill("1");
   await agent.getByRole("button", { name: "Save", exact: true }).click();
@@ -135,6 +139,8 @@ test("comment on words, the agent answers with options, agree, and an Update wri
   await page.getByRole("button", { name: "Update now" }).click();
   await expect(page.locator(".vc-strip")).toContainText("Version 2", { timeout: 20_000 });
   await expect(page.locator(".vc-doc h1")).toHaveText("Covibe: shaping one piece of work together");
+  // The line above the Draft has reached version 2: its station is no longer the faint one ahead.
+  await expect(page.locator(".vc-cable-scene .vc-station:not(.ahead) .vc-sign text").last()).toHaveText("v2");
   await page.locator(".vc-strip").getByRole("button", { name: "Show changes" }).click();
   await expect(page.locator(".vc-changes .vc-changed")).toHaveCount(1);
   await expect(page.locator(".vc-changes ins")).toContainText("shaping");
