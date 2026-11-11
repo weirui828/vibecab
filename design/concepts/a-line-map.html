@@ -1,0 +1,490 @@
+<meta charset="utf-8" />
+<title>VibeCab Line Map</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap"
+/>
+<style>
+  /* Layout: the home page is a line map. One row per session: its name and cargo on the left, its line on the right
+     with a station per version and the cab where the work stands. Loose ideas wait at the depot below. */
+  :root {
+    --paper: #fbfcfd;
+    --sky: #eef4f8;
+    --ink: #16242c;
+    --soft: #5a6b75;
+    --line: #cfdbe2;
+    --moss: #5f7a52;
+    --cab: #e8553d;
+    --cab-dark: #b53d2a;
+    --brass: #d9a441;
+    --glow: #fff3c4;
+    --board: #1b2a31;
+    --board-ink: #f3ead2;
+    --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+    --body: "Instrument Sans", "Helvetica Neue", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #101d28;
+      --sky: #162838;
+      --ink: #e6eef2;
+      --soft: #93a7b3;
+      --line: #2a4052;
+      --moss: #7fa06f;
+      --cab: #f06a50;
+      --cab-dark: #c24a34;
+      --brass: #e6b655;
+      --glow: #ffe9a3;
+      --board: #060d13;
+      --board-ink: #f3ead2;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #101d28;
+    --sky: #162838;
+    --ink: #e6eef2;
+    --soft: #93a7b3;
+    --line: #2a4052;
+    --moss: #7fa06f;
+    --cab: #f06a50;
+    --cab-dark: #c24a34;
+    --brass: #e6b655;
+    --glow: #ffe9a3;
+    --board: #060d13;
+    --board-ink: #f3ead2;
+    color-scheme: dark;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 16px/1.5 var(--body);
+  }
+  button {
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 2px solid var(--cab);
+    outline-offset: 3px;
+  }
+  .page {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding-block: 44px 90px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .eyebrow {
+    color: var(--soft);
+    font: 500 12px var(--mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  h1 {
+    margin: 8px 0 6px;
+    font: 700 clamp(34px, 6vw, 54px) / 1.02 var(--display);
+    letter-spacing: -0.025em;
+  }
+  .sum {
+    margin: 0 0 34px;
+    color: var(--soft);
+    max-width: 52ch;
+  }
+  .sum b {
+    color: var(--ink);
+  }
+
+  /* ---------- Lines ---------- */
+  .lines {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .lineitem {
+    display: grid;
+    grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+    gap: 10px 24px;
+    align-items: center;
+    padding: 14px 16px;
+    border-radius: 16px;
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.25s;
+    animation: arrive 0.6s var(--ease) backwards;
+  }
+  .lineitem:nth-child(2) {
+    animation-delay: 70ms;
+  }
+  .lineitem:nth-child(3) {
+    animation-delay: 140ms;
+  }
+  .lineitem:nth-child(4) {
+    animation-delay: 210ms;
+  }
+  .lineitem:nth-child(5) {
+    animation-delay: 280ms;
+  }
+  @keyframes arrive {
+    from {
+      opacity: 0;
+      translate: 0 12px;
+    }
+  }
+  .lineitem:hover {
+    background: var(--sky);
+  }
+  .name {
+    font: 600 19px/1.2 var(--display);
+  }
+  .cargo {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  /* A draft is cargo: a tag tied to the line. */
+  .tag {
+    position: relative;
+    padding: 3px 9px 3px 16px;
+    border-radius: 4px 6px 6px 4px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    font-size: 12.5px;
+    color: var(--soft);
+  }
+  .tag::before {
+    content: "";
+    position: absolute;
+    left: 6px;
+    top: 50%;
+    width: 4px;
+    height: 4px;
+    margin-top: -2px;
+    border-radius: 50%;
+    background: var(--line);
+  }
+  .state {
+    margin-top: 8px;
+    font: 500 11.5px var(--mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--soft);
+  }
+  .state.wait {
+    color: var(--cab);
+  }
+  .track {
+    display: block;
+    width: 100%;
+    height: 84px;
+    overflow: visible;
+  }
+  .rope {
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: 1.5;
+  }
+  .rope.ahead {
+    stroke-dasharray: 4 6;
+    opacity: 0.4;
+  }
+  .paused .rope,
+  .ended .rope {
+    stroke-dasharray: 2 6;
+    opacity: 0.45;
+  }
+  .stop {
+    fill: var(--paper);
+    stroke: var(--ink);
+    stroke-width: 1.5;
+  }
+  .stop.done {
+    fill: var(--ink);
+  }
+  .stoplabel {
+    font: 500 10px var(--mono);
+    fill: var(--soft);
+    text-anchor: middle;
+  }
+  .car .swing {
+    transform-box: fill-box;
+    transform-origin: 50% 0;
+    animation: sway 3.2s ease-in-out infinite alternate;
+  }
+  .lineitem:hover .car .swing {
+    animation-duration: 0.9s;
+  }
+  .paused .car .swing,
+  .ended .car .swing {
+    animation: none;
+  }
+  @keyframes sway {
+    from {
+      transform: rotate(-3deg);
+    }
+    to {
+      transform: rotate(3deg);
+    }
+  }
+  .car .body {
+    fill: var(--cab);
+  }
+  .car .roof {
+    fill: var(--cab-dark);
+  }
+  .car .win {
+    fill: var(--glow);
+  }
+  .paused .car .body,
+  .ended .car .body {
+    fill: var(--line);
+  }
+  .paused .car .roof,
+  .ended .car .roof {
+    fill: var(--soft);
+  }
+  .paused .car .win,
+  .ended .car .win {
+    fill: var(--paper);
+  }
+  .car .arm {
+    stroke: var(--ink);
+    stroke-width: 1.8;
+  }
+  .bell {
+    fill: var(--brass);
+    transform-box: fill-box;
+    transform-origin: 50% 0;
+    animation: ring 1.6s ease-in-out infinite;
+  }
+  @keyframes ring {
+    0%,
+    60%,
+    100% {
+      transform: rotate(0);
+    }
+    70% {
+      transform: rotate(22deg);
+    }
+    85% {
+      transform: rotate(-22deg);
+    }
+  }
+  .waiter {
+    fill: var(--ink);
+  }
+  .running .car {
+    animation: run 5s ease-in-out infinite;
+  }
+  @keyframes run {
+    0%,
+    10% {
+      translate: 0 0;
+    }
+    90%,
+    100% {
+      translate: var(--go) -4px;
+    }
+  }
+  .gate {
+    stroke: var(--soft);
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+
+  /* Laying a new line */
+  .newline {
+    width: 100%;
+    margin-top: 10px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border: 1.5px dashed var(--line);
+    border-radius: 16px;
+    background: none;
+    color: var(--soft);
+    font-weight: 600;
+    text-align: left;
+    transition:
+      border-color 0.25s,
+      color 0.25s;
+  }
+  .newline:hover {
+    border-color: var(--ink);
+    color: var(--ink);
+  }
+  .newline i {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: var(--paper);
+    font-style: normal;
+    font-size: 20px;
+    transition: transform 0.4s var(--ease);
+  }
+  .newline:hover i {
+    transform: rotate(90deg);
+  }
+
+  /* ---------- Depot: ideas not on any line yet ---------- */
+  .depot {
+    margin-top: 54px;
+  }
+  .depot h2 {
+    margin: 6px 0 16px;
+    font: 600 24px var(--display);
+  }
+  .parcels {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .parcel {
+    max-width: 260px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: var(--sky);
+    font-size: 14.5px;
+    line-height: 1.4;
+    transition: transform 0.35s var(--ease);
+  }
+  .parcel:nth-child(odd) {
+    transform: rotate(-1deg);
+  }
+  .parcel:nth-child(even) {
+    transform: rotate(0.8deg);
+  }
+  .parcel:hover {
+    transform: translateY(-4px) rotate(0);
+  }
+  .parcel small {
+    display: block;
+    margin-top: 6px;
+    color: var(--soft);
+    font: 500 10.5px var(--mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .note {
+    margin: 40px 0 0;
+    color: var(--soft);
+    font-size: 13.5px;
+    max-width: 62ch;
+  }
+  @media (max-width: 720px) {
+    .lineitem {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+</style>
+
+<div class="page">
+  <div class="eyebrow">VibeCab · line map</div>
+  <h1>Good evening, Wei.</h1>
+  <p class="sum">
+    <b>Two cabs are waiting for you.</b> One is on its way to the next station, one is resting, and one line is closed.
+  </p>
+
+  <ul class="lines" id="lines"></ul>
+  <button class="newline" type="button">
+    <i>+</i>Lay a new line<span style="font-weight: 400">· start a session</span>
+  </button>
+
+  <section class="depot">
+    <div class="eyebrow">Depot</div>
+    <h2>Ideas not on a line yet</h2>
+    <div class="parcels">
+      <div class="parcel">
+        Ask the panel: send a draft to several agents and show what each one finds.<small>Loose · 2 days</small>
+      </div>
+      <div class="parcel">Paste an image into a draft.<small>Loose · 2 days</small></div>
+      <div class="parcel">A song template: verse, chorus, bridge.<small>Loose · today</small></div>
+    </div>
+  </section>
+
+  <p class="note">
+    Concept A, home. Sessions are shown once, here, as lines. A filled station is a version already written. The cab
+    shows where the work stands: ringing with people on the platform when it needs you, moving while an Update runs,
+    grey when the line rests, behind a gate when the line is closed. Drafts are the cargo tags.
+  </p>
+</div>
+
+<script>
+  const sessions = [
+    { name: "Launch week", cargo: ["Launch notes", "Launch FAQ"], stops: 4, at: 2, waiting: 3, state: "needs" },
+    { name: "Covibe explainer", cargo: ["From idea to results"], stops: 3, at: 1, waiting: 2, state: "needs" },
+    { name: "Interview questions", cargo: ["Interview questions"], stops: 3, at: 1, waiting: 0, state: "running" },
+    { name: "Reading notes", cargo: ["Reading list"], stops: 2, at: 1, waiting: 0, state: "paused" },
+    { name: "Q3 retro", cargo: ["Q3 retrospective"], stops: 3, at: 2, waiting: 0, state: "ended" },
+  ];
+  const words = {
+    needs: (s) => `${s.waiting} waiting on the platform`,
+    running: () => "On the way to the next station",
+    paused: () => "Resting · the cab is parked",
+    ended: () => "Line closed · read only",
+  };
+  const W = 600,
+    Y = 26;
+  document.getElementById("lines").innerHTML = sessions
+    .map((s) => {
+      const gap = (W - 80) / (s.stops - 1 || 1),
+        x = (i) => 40 + i * gap,
+        cabX = x(s.at);
+      const sag = (a, b) => `M${a} ${Y}Q${(a + b) / 2} ${Y + 12} ${b} ${Y}`;
+      let rope = "";
+      for (let i = 0; i < s.stops - 1; i++)
+        rope += `<path class="rope${i >= s.at ? " ahead" : ""}" d="${sag(x(i), x(i + 1))}"/>`;
+      const stops = Array.from(
+        { length: s.stops },
+        (_, i) =>
+          `<circle class="stop${i <= s.at ? " done" : ""}" cx="${x(i)}" cy="${Y}" r="5"/><text class="stoplabel" x="${x(i)}" y="${Y - 12}">v${i + 1}</text>`,
+      ).join("");
+      const waiters = Array.from(
+        { length: s.waiting },
+        (_, i) =>
+          `<g class="waiter"><circle cx="${cabX + 30 + i * 11}" cy="${Y + 40}" r="3.2"/><rect x="${cabX + 27.2 + i * 11}" y="${Y + 43}" width="5.6" height="8" rx="2.5"/></g>`,
+      ).join("");
+      const gate =
+        s.state === "ended" ? `<path class="gate" d="M${cabX + 34} ${Y + 20}v34M${cabX + 26} ${Y + 30}h16"/>` : "";
+      return `<li><a class="lineitem ${s.state}" href="#" style="--go:${gap}px">
+        <span><span class="name">${s.name}</span>
+          <span class="cargo">${s.cargo.map((c) => `<span class="tag">${c}</span>`).join("")}</span>
+          <span class="state${s.state === "needs" ? " wait" : ""}" style="display:block">${words[s.state](s)}</span></span>
+        <svg class="track" viewBox="0 0 ${W} 84" preserveAspectRatio="xMinYMid meet" aria-hidden="true">
+          ${rope}${stops}${waiters}${gate}
+          <g class="car" transform="translate(${cabX} ${Y})"><g class="swing">
+            <path class="arm" d="M0 0V14"/>
+            ${s.state === "needs" ? `<path class="bell" d="M-4 12h8l-1.6-6a2.4 2.4 0 0 0-4.8 0z"/>` : ""}
+            <rect class="roof" x="-15" y="14" width="30" height="6" rx="2"/>
+            <rect class="body" x="-13.5" y="18" width="27" height="21" rx="4"/>
+            <rect class="win" x="-10" y="22" width="8.5" height="7.5" rx="1.5"/>
+            <rect class="win" x="1.5" y="22" width="8.5" height="7.5" rx="1.5"/>
+          </g></g>
+        </svg></a></li>`;
+    })
+    .join("");
+  document.querySelectorAll(".lineitem").forEach((a) => a.addEventListener("click", (e) => e.preventDefault()));
+</script>

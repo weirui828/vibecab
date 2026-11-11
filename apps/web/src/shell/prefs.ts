@@ -64,13 +64,3 @@ export function useCommentPlace(): [CommentPlace, (place: CommentPlace) => void]
   }, []);
   return [place, set];
 }
-
-/** The sidebar folded to a rail of icons, remembered per browser. */
-export function useSidebarRail(): [boolean, (railed: boolean) => void] {
-  const [railed, setRailed] = useState(() => read("vc-sidebar") === "rail");
-  const set = useCallback((next: boolean) => {
-    write("vc-sidebar", next ? "rail" : "full");
-    setRailed(next);
-  }, []);
-  return [railed, set];
-}

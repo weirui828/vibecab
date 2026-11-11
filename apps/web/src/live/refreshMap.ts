@@ -19,7 +19,14 @@ const map: Record<string, string[]> = {
   "vc.CommentEdited": ["vc.Threads", "vc.FeedbackItems", "vc.AttentionInbox"],
   "vc.CommentDeleted": ["vc.Threads", "vc.FeedbackItems", "vc.AttentionInbox"],
   "vc.CommentsRead": ["vc.Threads", "vc.AttentionInbox"],
-  "vc.FeedbackStateChanged": ["vc.DecisionRecord", "vc.Conflicts", "vc.AttentionInbox", "vc.FeedbackItems"],
+  // A comment's state lives in its thread: without vc.Threads here, a declined thread kept its Decline button.
+  "vc.FeedbackStateChanged": [
+    "vc.DecisionRecord",
+    "vc.Conflicts",
+    "vc.AttentionInbox",
+    "vc.FeedbackItems",
+    "vc.Threads",
+  ],
   "vc.ConflictDetected": ["vc.DecisionRecord", "vc.Conflicts", "vc.AttentionInbox", "vc.FeedbackItems"],
   "vc.ConflictResolved": ["vc.DecisionRecord", "vc.Conflicts", "vc.AttentionInbox", "vc.FeedbackItems"],
   "vc.DeliveryStateChanged": ["vc.DeliveryState", "vc.Threads"],

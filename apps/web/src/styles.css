@@ -5,6 +5,7 @@
 @import "./session/loop.css";
 @import "./settings/settings.css";
 @import "./motion.css";
+@import "./shell/line.css";
 @source "../node_modules/@wei/design-system/dist";
 
 /* VibeCab web. Semantic design-system tokens only: no raw colours (a test enforces it).
@@ -12,8 +13,6 @@
 
 @layer base {
   :root {
-    --vc-sidebar: 240px;
-    --vc-rail: 64px;
     --vc-column: 720px;
     --vc-radius: 12px;
     --vc-radius-sm: 8px;
@@ -157,10 +156,6 @@
 .vc-app {
   min-height: 100dvh;
 }
-.vc-app {
-  display: grid;
-  grid-template-columns: var(--vc-sidebar) minmax(0, 1fr);
-}
 .vc-main {
   min-width: 0;
   min-height: 100dvh;
@@ -172,124 +167,6 @@
   padding: clamp(40px, 9vh, 96px) 32px 128px;
 }
 
-/* Sidebar */
-.vc-sidebar {
-  position: sticky;
-  top: 0;
-  display: flex;
-  flex-direction: column;
-  height: 100dvh;
-  padding: 22px 14px 16px;
-  border-right: 1px solid var(--color-border-subtle);
-  background: var(--color-surface-base);
-  overflow-y: auto;
-}
-.vc-sidebar-brand {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 0 10px 22px;
-  text-decoration: none;
-}
-.vc-sidebar-brand small {
-  color: var(--color-fg-muted);
-  font-size: 12px;
-  letter-spacing: 0.01em;
-}
-.vc-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.vc-nav-link {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 36px;
-  padding: 0 10px;
-  border-radius: var(--vc-radius-sm);
-  color: var(--color-fg-muted);
-  font-size: 14.5px;
-  font-weight: 500;
-  text-decoration: none;
-  transition:
-    background var(--vc-fast) var(--vc-ease),
-    color var(--vc-fast) var(--vc-ease);
-}
-.vc-nav-link:hover {
-  background: var(--color-surface-raised);
-  color: var(--color-fg-default);
-}
-.vc-nav-link[aria-current="page"] {
-  background: var(--color-surface-raised);
-  color: var(--color-fg-default);
-}
-.vc-nav-link .count {
-  margin-left: auto;
-  color: var(--color-fg-muted);
-  font-family: var(--font-mono);
-  font-size: 12px;
-}
-.vc-nav-link[data-attention="true"] .count {
-  color: var(--color-warning-fg);
-}
-.vc-nav-section {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: 26px 10px 8px;
-}
-.vc-session-link {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 34px;
-  padding: 0 10px;
-  border-radius: var(--vc-radius-sm);
-  color: var(--color-fg-default);
-  font-size: 14px;
-  text-decoration: none;
-  transition: background var(--vc-fast) var(--vc-ease);
-}
-.vc-session-link span.title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.vc-session-link:hover,
-.vc-session-link[aria-current="page"] {
-  background: var(--color-surface-raised);
-}
-.vc-session-link[data-state="ended"],
-.vc-session-link[data-state="paused"] {
-  color: var(--color-fg-muted);
-}
-.vc-session-link .count {
-  margin-left: auto;
-  color: var(--color-warning-fg);
-  font-family: var(--font-mono);
-  font-size: 12px;
-}
-.vc-sidebar-foot {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  margin-top: auto;
-  padding: 18px 10px 0;
-}
-.vc-foot-links {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  font-size: 13px;
-}
-.vc-foot-links a {
-  color: var(--color-fg-muted);
-  text-decoration: none;
-}
-.vc-foot-links a:hover {
-  color: var(--color-fg-default);
-}
 .vc-connection {
   display: flex;
   align-items: center;
@@ -300,13 +177,6 @@
 
 .rail-only {
   display: none;
-}
-.vc-nav.rail-only {
-  flex-direction: column;
-}
-.vc-rail-mark {
-  display: none;
-  margin-bottom: 18px;
 }
 .vc-icon-link {
   padding: 0;
@@ -377,21 +247,6 @@
   color: var(--color-warning-fg);
   font-family: var(--font-mono);
   font-size: 11.5px;
-}
-
-/* Phone top bar */
-.vc-mobilebar {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  display: none;
-  align-items: center;
-  justify-content: space-between;
-  height: 56px;
-  padding: 0 8px 0 16px;
-  border-bottom: 1px solid var(--color-border-subtle);
-  background: color-mix(in srgb, var(--color-surface-base) 92%, transparent);
-  backdrop-filter: blur(12px);
 }
 
 /* ---------- Page header ---------- */
@@ -807,7 +662,7 @@
 /* ---------- Session ---------- */
 .vc-session-head {
   position: sticky;
-  top: 0;
+  top: var(--vc-topbar);
   z-index: 15;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -971,101 +826,10 @@
   animation: vc-flash 1.6s var(--vc-ease);
 }
 
-/* The sidebar folded to a rail by choice: the same rail as on mid-size screens. */
-.vc-app[data-rail] {
-  grid-template-columns: var(--vc-rail) minmax(0, 1fr);
-}
-.vc-app[data-rail] > .vc-sidebar {
-  align-items: center;
-  padding: 18px 10px 14px;
-}
-.vc-app[data-rail] > .vc-sidebar .collapsible {
-  display: none;
-}
-.vc-app[data-rail] > .vc-sidebar .rail-only {
-  display: flex;
-}
-.vc-app[data-rail] > .vc-sidebar .vc-nav-link {
-  justify-content: center;
-  width: 44px;
-  padding: 0;
-}
-.vc-app[data-rail] > .vc-sidebar .vc-nav-link .label,
-.vc-app[data-rail] > .vc-sidebar .vc-nav-link .count {
-  display: none;
-}
-.vc-app[data-rail] > .vc-sidebar .vc-sidebar-foot {
-  align-items: center;
-  padding: 14px 0 0;
-}
-.vc-app[data-rail] > .vc-sidebar .vc-rail-mark {
-  display: block;
-}
-.vc-rail-toggle {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  margin-left: auto;
-  padding: 0;
-  border: 0;
-  border-radius: var(--vc-radius-sm);
-  background: none;
-  color: var(--color-fg-muted);
-  cursor: pointer;
-}
-.vc-rail-toggle:hover,
-.vc-rail-expand:hover {
-  background: var(--color-surface-raised);
-  color: var(--color-fg-default);
-}
-.vc-rail-expand {
-  border: 0;
-  background: none;
-  cursor: pointer;
-}
-/* Below 1024px the rail is forced, so there is nothing to expand into. */
-@media (max-width: 1023px) {
-  .vc-rail-expand {
-    display: none;
-  }
-}
-
 /* ---------- Responsive ---------- */
-@media (max-width: 1023px) {
-  .vc-app {
-    grid-template-columns: var(--vc-rail) minmax(0, 1fr);
-  }
-  .vc-app > .vc-sidebar {
-    align-items: center;
-    padding: 18px 10px 14px;
-  }
-  .vc-app > .vc-sidebar .collapsible {
-    display: none;
-  }
-  .vc-app > .vc-sidebar .rail-only {
-    display: flex;
-  }
-  .vc-app > .vc-sidebar .vc-nav-link {
-    justify-content: center;
-    width: 44px;
-    padding: 0;
-  }
-  .vc-app > .vc-sidebar .vc-nav-link .label,
-  .vc-app > .vc-sidebar .vc-nav-link .count {
-    display: none;
-  }
-  .vc-app > .vc-sidebar .vc-sidebar-foot {
-    align-items: center;
-    padding: 14px 0 0;
-  }
-  .vc-app > .vc-sidebar .vc-rail-mark {
-    display: block;
-  }
-}
 @media (max-width: 719px) {
   .vc-session-head {
-    top: 56px;
+    top: var(--vc-topbar);
     grid-template-columns: minmax(0, 1fr) auto;
     padding: 8px 8px 8px 18px;
   }
@@ -1087,12 +851,6 @@
   }
   .vc-app {
     display: block;
-  }
-  .vc-app > .vc-sidebar {
-    display: none;
-  }
-  .vc-app .vc-mobilebar {
-    display: flex;
   }
   .vc-page {
     padding: 28px 18px 112px;
@@ -1118,32 +876,6 @@
   }
 }
 
-/* The sheet: the sidebar on phones. */
-.vc-sheet {
-  position: fixed;
-  inset: 0 auto 0 0;
-  width: min(300px, 86vw);
-  max-width: none;
-  height: 100dvh;
-  max-height: none;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-right: 1px solid var(--color-border-subtle);
-  background: var(--color-surface-base);
-  color: var(--color-fg-default);
-}
-.vc-sheet[open] {
-  animation: vc-slide var(--vc-base) var(--vc-ease);
-}
-.vc-sheet::backdrop {
-  background: color-mix(in srgb, var(--color-surface-inverse) 28%, transparent);
-}
-.vc-sheet .vc-sidebar {
-  position: static;
-  height: 100%;
-  border: 0;
-}
 @keyframes vc-slide {
   from {
     transform: translateX(-24px);
@@ -1365,26 +1097,6 @@
   color: var(--color-fg-muted);
 }
 
-/* Sidebar: the Sessions heading opens the full list; ended ones are one quiet link away. */
-.vc-nav-heading {
-  color: var(--color-fg-muted);
-  text-decoration: none;
-}
-.vc-nav-heading:hover,
-.vc-nav-heading[aria-current="page"] {
-  color: var(--color-fg-default);
-}
-.vc-nav-more {
-  display: block;
-  margin: 4px 10px 0;
-  padding: 4px 0;
-  color: var(--color-fg-muted);
-  font-size: 12.5px;
-  text-decoration: none;
-}
-.vc-nav-more:hover {
-  color: var(--color-fg-default);
-}
 .vc-session-head .vc-facts-line {
   margin-top: 3px;
 }

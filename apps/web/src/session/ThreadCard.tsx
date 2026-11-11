@@ -152,7 +152,14 @@ function CommentItem({
 /** Agree / Decline for the opening comment. Never focused automatically; Decline asks for an optional reason. */
 function DecideRow({ comment, actions }: { comment: FeedbackComment; actions: Actions }) {
   const [declining, setDeclining] = useState(false),
-    [reason, setReason] = useState("");
+    [reason, setReason] = useState(""),
+    // One answer at a time: a second click while the first is on its way would be refused by the engine.
+    [sending, setSending] = useState(false);
+  const send = (answer: () => Promise<boolean>) => {
+    if (sending) return;
+    setSending(true);
+    void answer().finally(() => setSending(false));
+  };
   if (declining)
     return (
       <form
@@ -160,7 +167,7 @@ function DecideRow({ comment, actions }: { comment: FeedbackComment; actions: Ac
         aria-label="Decline"
         onSubmit={(event) => {
           event.preventDefault();
-          void actions.decline(comment.commentId, reason.trim() || undefined);
+          send(() => actions.decline(comment.commentId, reason.trim() || undefined));
         }}
       >
         <input
@@ -172,14 +179,19 @@ function DecideRow({ comment, actions }: { comment: FeedbackComment; actions: Ac
         <Button type="button" size="sm" variant="ghost" onClick={() => setDeclining(false)}>
           Cancel
         </Button>
-        <Button type="submit" size="sm" variant="secondary">
+        <Button type="submit" size="sm" variant="secondary" disabled={sending}>
           {terms.decline}
         </Button>
       </form>
     );
   return (
     <div className="vc-decide">
-      <Button size="sm" variant="primary" onClick={() => void actions.agree(comment.commentId, { kind: "as_written" })}>
+      <Button
+        size="sm"
+        variant="primary"
+        disabled={sending}
+        onClick={() => send(() => actions.agree(comment.commentId, { kind: "as_written" }))}
+      >
         {terms.agree}
       </Button>
       <Button size="sm" variant="ghost" onClick={() => setDeclining(true)}>

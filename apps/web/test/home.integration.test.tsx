@@ -151,8 +151,10 @@ it("shows a session's state, pauses and resumes it, asks before ending, and list
   expect(tl.within(ask).getByRole("button", { name: "Pause instead" })).toBeTruthy();
   tl.fireEvent.click(tl.within(ask).getByRole("button", { name: "End session" }));
   await tl.waitFor(async () => expect(await stateOf()).toBe("ended"));
-  // Ended sessions leave the sidebar list but stay one link away, on the Sessions page.
-  const more = await tl.screen.findByRole("link", { name: /^\d+ ended$/ });
+  // Ended sessions leave Home but stay one jump away, on the Sessions page.
+  tl.fireEvent.click(tl.screen.getByRole("button", { name: /Jump to/ }));
+  const more = await tl.screen.findByRole("link", { name: /^\d+ ended/ });
+  expect(more.getAttribute("href")).toBe("#/sessions/ended");
   tl.fireEvent.click(more);
   window.location.hash = "/sessions/ended";
   const ended = await tl.screen.findByRole("region", { name: "Ended" });
@@ -160,14 +162,37 @@ it("shows a session's state, pauses and resumes it, asks before ending, and list
   expect(tl.screen.queryByRole("region", { name: "Active" })).toBeNull();
 });
 
-it("folds the sidebar to a rail and back, and remembers it", async () => {
+it("gets around from one bar: what needs you, a jump box for everything else, and no sidebar", async () => {
   const { container } = await renderApp();
-  tl.fireEvent.click(await tl.screen.findByRole("button", { name: "Collapse sidebar" }));
-  expect(container.querySelector(".vc-app")?.hasAttribute("data-rail")).toBe(true);
-  expect(localStorage.getItem("vc-sidebar")).toBe("rail");
-  tl.fireEvent.click(tl.screen.getByRole("button", { name: "Expand sidebar" }));
-  expect(container.querySelector(".vc-app")?.hasAttribute("data-rail")).toBe(false);
-  expect(localStorage.getItem("vc-sidebar")).toBe("full");
-  // Only Settings and Trash stay at the foot; the theme and version live in Settings.
-  expect(container.querySelector(".vc-sidebar-foot")?.textContent).not.toMatch(/Polar night|v\d/);
+  const bar = tl.within((await tl.screen.findByRole("banner")) as HTMLElement);
+  expect(container.querySelector("aside")).toBeNull();
+  // The wind is silent: nothing in the bar makes sound.
+  expect(bar.queryByRole("button", { name: /sound/i })).toBeNull();
+  // On Home the bar says the tagline; elsewhere it says where you are, with the way back.
+  expect(bar.getByText("Thinking. Vibing. Building.")).toBeTruthy();
+  // The jump box finds a session by a few letters and goes there on Enter.
+  await tl.screen.findByRole("link", { name: "Tundra walk" });
+  tl.fireEvent.keyDown(window, { key: "k", metaKey: true });
+  const box = await tl.screen.findByRole("dialog", { name: "Jump to" });
+  tl.fireEvent.change(tl.within(box).getByRole("textbox", { name: "Jump to" }), { target: { value: "walk active" } });
+  expect(tl.within(box).getAllByRole("link")).toHaveLength(1);
+  tl.fireEvent.keyDown(box, { key: "Enter" });
+  await tl.waitFor(() => expect(window.location.hash).toMatch(/^#\/s\/session_/));
+  expect(tl.screen.queryByRole("dialog", { name: "Jump to" })).toBeNull();
+  const here = await tl.screen.findByRole("navigation", { name: "You are here" });
+  expect(here.textContent).toContain("Tundra walk");
+  // Settings is a page like any other: one click from the bar, and listed in the jump box.
+  expect(bar.getByRole("link", { name: "Settings" }).getAttribute("href")).toBe("#/settings");
+});
+
+it("draws each session on Home as its own line, with the reason in words", async () => {
+  const { container } = await renderApp();
+  const line = (await tl.screen.findByRole("link", { name: "Tundra walk" })).closest("li") as HTMLElement;
+  expect(line.querySelector(".why")?.textContent).toBe("Nothing is waiting.");
+  // One stop per version of its Draft, and one more, faint, for the version to come (once its Draft has loaded).
+  await tl.waitFor(() => expect(line.querySelectorAll(".vc-mini-stop")).toHaveLength(2), { timeout: 5000 });
+  expect(line.querySelectorAll(".ahead .vc-mini-stop")).toHaveLength(1);
+  expect(line.querySelector("use")?.getAttribute("href")).toBe("#vc-gondola");
+  // The cab is cut from the mark itself, once, for every line to use.
+  expect(container.querySelector("#vc-gondola path.vc-cab-ink")).not.toBeNull();
 });

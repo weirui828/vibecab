@@ -1,0 +1,2092 @@
+<meta charset="utf-8" />
+<title>VibeCab Resonant Line</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap"
+/>
+<style>
+  /* Layout: the line on top (a cable that is also a string); under it the draft in one column, threads in its margin.
+     Every colour is a Tundra palette step: basalt, moss, lichen, glacier, sedge. */
+  :root {
+    --paper: #f9f8f4;
+    --raised: #f3f1ea;
+    --sky: #dde9e9;
+    --ink: #1f2321;
+    --ink-soft: #585f58;
+    --line: #d9dacd;
+    --moss: #4c5d3f;
+    --hill-far: #c3cba8;
+    --hill-mid: #93a27b;
+    --hill-near: #627352;
+    --sedge: #c9a85c;
+    --glacier: #4d8a90;
+    --orb: #c9a85c;
+    --glass: 0.22;
+    --board: #2b302d;
+    --board-ink: #f3f1ea;
+    --flap-a: #3a413c;
+    --flap-b: #1f2321;
+    --display: Fraunces, Georgia, serif;
+    --body: "Instrument Sans", "Helvetica Neue", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #151917;
+      --raised: #1e2320;
+      --sky: #1b2c2e;
+      --ink: #ecebe3;
+      --ink-soft: #a2a99e;
+      --line: #2a302c;
+      --moss: #a9bb8f;
+      --hill-far: #1e2623;
+      --hill-mid: #26332b;
+      --hill-near: #303c28;
+      --sedge: #d9b865;
+      --glacier: #8fc0c4;
+      --orb: #ecebe3;
+      --glass: 0.7;
+      --board: #0c0f0e;
+      --flap-a: #2a302c;
+      --flap-b: #151917;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #151917;
+    --raised: #1e2320;
+    --sky: #1b2c2e;
+    --ink: #ecebe3;
+    --ink-soft: #a2a99e;
+    --line: #2a302c;
+    --moss: #a9bb8f;
+    --hill-far: #1e2623;
+    --hill-mid: #26332b;
+    --hill-near: #303c28;
+    --sedge: #d9b865;
+    --glacier: #8fc0c4;
+    --orb: #ecebe3;
+    --glass: 0.7;
+    --board: #0c0f0e;
+    --flap-a: #2a302c;
+    --flap-b: #151917;
+    color-scheme: dark;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 16px/1.6 var(--body);
+  }
+  button {
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 2px solid var(--moss);
+    outline-offset: 3px;
+  }
+
+  /* ---------- The line ---------- */
+  .scene {
+    position: relative;
+    background: linear-gradient(var(--sky), var(--paper) 78%);
+    overflow: hidden;
+  }
+  .scene > svg {
+    display: block;
+    width: 100%;
+    height: clamp(250px, 36vw, 380px);
+  }
+  .hill-far {
+    fill: var(--hill-far);
+  }
+  .hill-mid {
+    fill: var(--hill-mid);
+  }
+  .hill-near {
+    fill: var(--hill-near);
+  }
+  .tower {
+    stroke: var(--ink);
+    stroke-width: 2.2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+  }
+  .deck {
+    stroke: var(--ink);
+    stroke-width: 3;
+    stroke-linecap: round;
+  }
+  .sheave {
+    fill: var(--paper);
+    stroke: var(--ink);
+    stroke-width: 1.6;
+  }
+  .cable {
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: 1.7;
+    stroke-linejoin: round;
+  }
+  .cable.tail {
+    stroke-dasharray: 4 7;
+    opacity: 0.4;
+  }
+  .orb {
+    fill: var(--orb);
+  }
+  .orb-glow {
+    fill: var(--orb);
+    opacity: 0.22;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: breathe 6s ease-in-out infinite alternate;
+  }
+  @keyframes breathe {
+    from {
+      transform: scale(0.82);
+      opacity: 0.1;
+    }
+  }
+  .aurora {
+    fill: none;
+    stroke-width: 26;
+    stroke-linecap: round;
+    opacity: 0;
+    filter: blur(14px);
+  }
+  .night .aurora {
+    opacity: 0.4;
+    animation: aurora 9s ease-in-out infinite alternate;
+  }
+  .aurora.a1 {
+    stroke: #5e8c66;
+  }
+  .aurora.a2 {
+    stroke: #4d8a90;
+    animation-delay: -4s !important;
+  }
+  @keyframes aurora {
+    to {
+      transform: translate(40px, 14px) skewX(-8deg);
+      opacity: 0.18;
+    }
+  }
+  .star {
+    fill: #ecebe3;
+    opacity: 0;
+  }
+  .night .star {
+    opacity: 0.9;
+    animation: twinkle 3s ease-in-out infinite alternate;
+  }
+  @keyframes twinkle {
+    from {
+      opacity: 0.2;
+    }
+  }
+  /* The cab is the gondola inside the C of the mark, cut from the logo outline itself: cabin, roof, grips. */
+  .cab-ink {
+    fill: var(--ink);
+  }
+  .cab-glass {
+    fill: var(--sedge);
+    opacity: var(--glass);
+    transition: opacity 0.6s;
+  }
+  .cab-lit {
+    fill: var(--sedge);
+  }
+  .grip {
+    fill: var(--ink);
+  }
+  .rod {
+    stroke: var(--ink);
+    stroke-width: 1.9;
+    stroke-linecap: round;
+  }
+  /* A thread is a bead clipped on the line: open while it hums, moss once agreed. */
+  .bead {
+    fill: var(--paper);
+    stroke: var(--ink);
+    stroke-width: 1.8;
+    cursor: pointer;
+    transition:
+      fill 0.3s,
+      stroke 0.3s,
+      r 0.3s var(--ease);
+  }
+  .bead.agreed {
+    fill: var(--moss);
+    stroke: var(--moss);
+  }
+  .bead.lit {
+    r: 8;
+  }
+  .bead.written {
+    r: 4;
+    opacity: 0.55;
+  }
+  /* The plumb line: it hangs from the scene down the side of the draft and marks where the threads are. */
+  .wrap {
+    position: relative;
+  }
+  .wrap > :not(.string):not(.dock) {
+    margin-left: 44px;
+  }
+  .string {
+    position: absolute;
+    top: 0;
+    left: max(16px, env(safe-area-inset-left, 0px));
+    width: 28px;
+    overflow: visible;
+  }
+  .plumb,
+  .riser {
+    fill: var(--moss);
+  }
+  .riser {
+    opacity: 0;
+  }
+  .sign text {
+    font: 700 12px var(--mono);
+    fill: var(--board-ink);
+    text-anchor: middle;
+  }
+  .sign rect {
+    fill: var(--board);
+  }
+  .sign.next {
+    opacity: 0.4;
+  }
+  .landed {
+    fill: var(--moss);
+  }
+
+  /* Status board: split flaps, and a tuner that shows how far you and the agent are from agreeing. */
+  .board {
+    position: absolute;
+    left: max(16px, env(safe-area-inset-left, 0px));
+    top: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 14px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    background: var(--board);
+    color: var(--board-ink);
+    font: 700 12.5px/1 var(--mono);
+    letter-spacing: 0.04em;
+    box-shadow: 0 8px 24px -12px rgb(0 0 0 / 0.5);
+  }
+  .board .cell {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .board small {
+    font-size: 10px;
+    font-weight: 500;
+    opacity: 0.55;
+    letter-spacing: 0.14em;
+  }
+  .flap {
+    display: inline-flex;
+    gap: 2px;
+  }
+  .flap span {
+    display: inline-grid;
+    place-items: center;
+    min-width: 14px;
+    height: 21px;
+    padding: 0 2px;
+    border-radius: 3px;
+    background: linear-gradient(var(--flap-a) 49%, var(--flap-b) 50%, var(--flap-a) 51%);
+  }
+  .flap span.flip {
+    animation: flip 0.42s ease-in;
+  }
+  @keyframes flip {
+    50% {
+      transform: rotateX(-90deg);
+    }
+  }
+  .tuner path {
+    fill: none;
+    stroke-width: 1.6;
+    stroke-linecap: round;
+  }
+  .tuner .you {
+    stroke: #c9a85c;
+  }
+  .tuner .agent {
+    stroke: #9dbfc0;
+  }
+  .skyswitch {
+    position: absolute;
+    right: max(16px, env(safe-area-inset-right, 0px));
+    top: 16px;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--board);
+    color: var(--board-ink);
+    display: grid;
+    place-items: center;
+    transition: transform 0.5s var(--ease);
+  }
+  .skyswitch.sound {
+    right: calc(max(16px, env(safe-area-inset-right, 0px)) + 54px);
+  }
+  .skyswitch.sound[aria-pressed="false"] {
+    opacity: 0.5;
+  }
+  .skyswitch:hover {
+    transform: rotate(40deg);
+  }
+
+  /* ---------- The draft ---------- */
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding-block: 24px 120px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .route {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 14px;
+    color: var(--ink-soft);
+    font: 500 12px var(--mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  h1 {
+    margin: 8px 0 28px;
+    font: 400 clamp(30px, 5vw, 46px) / 1.08 var(--display);
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+    max-width: 17ch;
+  }
+  .rows {
+    display: grid;
+    gap: 22px;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 320px);
+    gap: 28px;
+    align-items: start;
+  }
+  .row p {
+    margin: 0;
+    max-width: 62ch;
+    font-size: 17.5px;
+  }
+  .row h2 {
+    margin: 10px 0 0;
+    font: 600 22px var(--display);
+  }
+  mark {
+    background: linear-gradient(transparent 62%, color-mix(in srgb, var(--sedge) 55%, transparent) 62%);
+    color: inherit;
+    padding: 0 1px;
+  }
+  .fresh {
+    animation: fresh 2.6s var(--ease);
+  }
+  @keyframes fresh {
+    from {
+      background: color-mix(in srgb, var(--sedge) 50%, transparent);
+    }
+    to {
+      background: transparent;
+    }
+  }
+
+  .thread {
+    position: relative;
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: var(--raised);
+    border: 1px solid var(--line);
+    font-size: 14.5px;
+    line-height: 1.45;
+    transition:
+      transform 0.4s var(--ease),
+      border-color 0.3s;
+  }
+  .thread:hover,
+  .thread.lit {
+    transform: translateY(-2px);
+    border-color: var(--ink-soft);
+  }
+  .thread .kicker {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--ink-soft);
+    font: 500 10.5px var(--mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .thread .kicker i {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    border: 1.6px solid var(--ink);
+    transition:
+      background 0.3s,
+      border-color 0.3s;
+  }
+  .thread.agreed .kicker i {
+    background: var(--moss);
+    border-color: var(--moss);
+  }
+  .thread .who {
+    margin-top: 8px;
+    font-weight: 600;
+  }
+  .thread .agent {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--line);
+    color: var(--ink-soft);
+  }
+  .thread .agent b {
+    color: var(--moss);
+  }
+  .agree {
+    margin-top: 12px;
+    padding: 7px 14px;
+    border: 1.5px solid var(--ink);
+    border-radius: 999px;
+    background: none;
+    font-weight: 600;
+    font-size: 13.5px;
+    transition:
+      background 0.2s,
+      color 0.2s,
+      transform 0.15s;
+  }
+  .agree:hover {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .agree:active {
+    transform: scale(0.94);
+  }
+  .thread.agreed .agree {
+    display: none;
+  }
+  .thread .state {
+    display: none;
+    margin-top: 12px;
+    color: var(--moss);
+    font: 700 11px var(--mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .thread.agreed .state {
+    display: block;
+    animation: settle 0.5s var(--ease);
+  }
+  @keyframes settle {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
+
+  .dock {
+    position: sticky;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    display: flex;
+    justify-content: center;
+    margin-top: 40px;
+    pointer-events: none;
+  }
+  .depart {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 22px 10px 10px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--board);
+    color: var(--board-ink);
+    box-shadow: 0 14px 30px -14px rgb(0 0 0 / 0.55);
+    font: 600 15px var(--body);
+    text-align: left;
+    transition:
+      transform 0.3s var(--ease),
+      opacity 0.3s;
+  }
+  .depart[disabled] {
+    cursor: default;
+  }
+  .depart[disabled] > * {
+    opacity: 0.5;
+  }
+  .depart:not([disabled]):hover {
+    transform: translateY(-2px);
+  }
+  .depart .knob {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: #627352;
+    transition: transform 0.5s var(--ease);
+  }
+  .depart:not([disabled]):hover .knob {
+    transform: rotate(-28deg);
+  }
+  .depart small {
+    display: block;
+    font: 500 11px var(--mono);
+    opacity: 0.6;
+    letter-spacing: 0.06em;
+  }
+  .note {
+    margin: 26px 0 0;
+    color: var(--ink-soft);
+    font-size: 13.5px;
+    max-width: 62ch;
+  }
+  @media (max-width: 760px) {
+    .wrap > :not(.string):not(.dock) {
+      margin-left: 32px;
+    }
+    .row {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 12px;
+    }
+    .board {
+      font-size: 11px;
+    }
+  }
+  /* ---------- Shell: one bar instead of a sidebar ---------- */
+  .bar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 52px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    background: color-mix(in srgb, var(--paper) 84%, transparent);
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line);
+    font-size: 14px;
+  }
+  .bar .grow,
+  .tabs .grow {
+    flex: 1;
+  }
+  .bar button {
+    border: 0;
+    background: none;
+  }
+  .mark {
+    display: grid;
+    padding: 4px;
+    border-radius: 8px;
+    transition: transform 0.4s var(--ease);
+  }
+  .mark:hover {
+    transform: translateY(-1px) rotate(-3deg);
+  }
+  .crumb {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    white-space: nowrap;
+  }
+  .crumb[hidden],
+  main[hidden] {
+    display: none;
+  }
+  .crumb i {
+    color: var(--ink-soft);
+    font-style: normal;
+  }
+  .crumb b {
+    font: 600 16px var(--display);
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .crumb .back {
+    padding: 0;
+    color: var(--ink-soft);
+  }
+  .crumb .back:hover {
+    color: var(--ink);
+  }
+  .tag {
+    color: var(--ink-soft);
+    font: 500 11px var(--mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .bar .needs,
+  .bar .jump {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 34px;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    font-weight: 500;
+    transition:
+      border-color 0.2s,
+      transform 0.3s var(--ease);
+  }
+  .bar .needs:hover,
+  .bar .jump:hover {
+    border-color: var(--ink-soft);
+    transform: translateY(-1px);
+  }
+  .needs i {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1.8px solid var(--ink);
+    animation: nudge 2.8s var(--ease) infinite;
+  }
+  @keyframes nudge {
+    8% {
+      transform: translateX(-2.5px);
+    }
+    16% {
+      transform: translateX(2px);
+    }
+    24% {
+      transform: none;
+    }
+  }
+  .needs b {
+    font: 700 12px var(--mono);
+  }
+  .jump {
+    color: var(--ink-soft);
+  }
+  kbd {
+    font: 500 11px var(--mono);
+    padding: 1px 5px;
+    border: 1px solid var(--line);
+    border-radius: 5px;
+  }
+  .bar .skyswitch {
+    position: static;
+    width: 34px;
+    height: 34px;
+    background: none;
+    color: var(--ink);
+    border: 1px solid var(--line);
+  }
+  .pop {
+    position: absolute;
+    top: 48px;
+    right: max(16px, env(safe-area-inset-right, 0px));
+    width: min(340px, calc(100vw - 32px));
+    padding: 6px;
+    border-radius: 12px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    box-shadow: 0 12px 32px rgb(31 35 33 / 0.16);
+    animation: settle 0.3s var(--ease);
+  }
+  .pop[hidden] {
+    display: none;
+  }
+  .pop button,
+  .results button {
+    display: grid;
+    gap: 2px;
+    width: 100%;
+    padding: 9px 10px;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+    text-align: left;
+  }
+  .pop button:hover,
+  .results button:hover,
+  .results button.on {
+    background: var(--raised);
+  }
+  .pop span,
+  .results span {
+    color: var(--ink-soft);
+    font-size: 13px;
+  }
+  .palette {
+    width: min(520px, calc(100vw - 32px));
+    margin-top: 14vh;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: 0 12px 32px rgb(31 35 33 / 0.16);
+  }
+  .palette::backdrop {
+    background: rgb(21 25 23 / 0.28);
+  }
+  .palette input {
+    width: 100%;
+    padding: 10px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    background: none;
+    color: inherit;
+    font: 400 17px var(--body);
+    outline: none;
+  }
+  .results {
+    display: grid;
+    padding-top: 6px;
+    max-height: 46vh;
+    overflow: auto;
+  }
+  .results small {
+    padding: 8px 10px 2px;
+    color: var(--ink-soft);
+    font: 500 10.5px var(--mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  main.rise > :not(.scene) {
+    animation: rise 0.5s var(--ease);
+  }
+  @keyframes rise {
+    from {
+      transform: translateY(10px);
+    }
+  }
+
+  /* ---------- Home ---------- */
+  .home-scene > svg {
+    height: clamp(170px, 22vw, 240px);
+  }
+  .far-line {
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: 1;
+    opacity: 0.45;
+  }
+  #far-cab {
+    opacity: 0.6;
+  }
+  .hello {
+    position: absolute;
+    left: max(16px, calc((100% - 1080px) / 2 + 16px));
+    top: 26px;
+    right: 16px;
+  }
+  .hello h1 {
+    margin: 0;
+    max-width: 14ch;
+    font-size: clamp(28px, 4.4vw, 42px);
+  }
+  .hello p {
+    margin: 10px 0 0;
+    color: var(--ink-soft);
+    font: 500 12px var(--mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .home {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding-block: 8px 80px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .tabs {
+    position: sticky;
+    top: 52px;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    padding: 12px 0;
+    background: var(--paper);
+    border-bottom: 1px solid var(--line);
+  }
+  .tabs a {
+    color: var(--ink-soft);
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .tabs a.on,
+  .tabs a:hover {
+    color: var(--ink);
+  }
+  .tabs a b {
+    margin-left: 4px;
+    font: 500 12px var(--mono);
+    opacity: 0.6;
+  }
+  .new {
+    padding: 8px 16px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--board);
+    color: var(--board-ink);
+    font-weight: 600;
+    font-size: 14px;
+    transition: transform 0.3s var(--ease);
+  }
+  .new:hover {
+    transform: translateY(-2px);
+  }
+  .home section {
+    scroll-margin-top: 110px;
+  }
+  .home h2 {
+    margin: 44px 0 4px;
+    font: 600 22px var(--display);
+  }
+  .group {
+    margin: 30px 0 4px;
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .lede {
+    margin: 0 0 14px;
+    color: var(--ink-soft);
+    font-size: 14.5px;
+  }
+  /* One session, one line. The whole row is the way in. */
+  .line {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) auto;
+    align-items: center;
+    gap: 8px 28px;
+    width: 100%;
+    padding: 14px 12px;
+    margin-inline: -12px;
+    width: calc(100% + 24px);
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    border-radius: 10px 10px 0 0;
+    background: none;
+    text-align: left;
+    transition: background 0.25s;
+    animation: rise 0.6s var(--ease) backwards;
+  }
+  .line:hover {
+    background: var(--raised);
+  }
+  .line h3 {
+    margin: 0;
+    font: 600 19px/1.25 var(--display);
+  }
+  .line .why {
+    margin-top: 3px;
+    color: var(--ink-soft);
+    font-size: 14px;
+  }
+  .line.needs-you .why {
+    color: var(--ink);
+  }
+  .line.needs-you .why::before {
+    content: "";
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    margin-right: 7px;
+    border-radius: 50%;
+    border: 1.7px solid var(--ink);
+  }
+  .line.quiet {
+    opacity: 0.62;
+  }
+  .line svg {
+    display: block;
+    width: 100%;
+    height: 70px;
+    overflow: visible;
+  }
+  .line .stop {
+    fill: var(--paper);
+    stroke: var(--ink);
+    stroke-width: 1.5;
+  }
+  .line .stop.ahead {
+    stroke-dasharray: 2 2.5;
+    opacity: 0.5;
+  }
+  .line .vlabel {
+    font: 500 9.5px var(--mono);
+    fill: var(--ink-soft);
+    text-anchor: middle;
+  }
+  .line .mini-cable {
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: 1.3;
+  }
+  .line .mini-cable.ahead {
+    stroke-dasharray: 3 5;
+    opacity: 0.45;
+  }
+  .line .mini-bead {
+    fill: var(--paper);
+    stroke: var(--ink);
+    stroke-width: 1.4;
+  }
+  .line .mini-bead.agreed {
+    fill: var(--moss);
+    stroke: var(--moss);
+  }
+  .line .cargo {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    color: var(--ink-soft);
+    font: 500 11px var(--mono);
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  .drafts {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .draft {
+    display: grid;
+    gap: 6px;
+    padding: 14px 16px 16px;
+    border: 1px solid var(--line);
+    border-radius: 4px 12px 12px 4px;
+    border-left: 3px solid var(--hill-mid);
+    background: none;
+    text-align: left;
+    transition:
+      transform 0.35s var(--ease),
+      border-color 0.2s;
+  }
+  .draft:hover {
+    transform: translateY(-3px);
+    border-color: var(--ink-soft);
+    border-left-color: var(--moss);
+  }
+  .draft b {
+    font: 600 16px/1.3 var(--display);
+  }
+  .draft span {
+    color: var(--ink-soft);
+    font-size: 13px;
+  }
+  .ideas {
+    display: grid;
+    gap: 2px;
+  }
+  .idea {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    padding: 11px 0;
+    border-bottom: 1px dashed var(--line);
+  }
+  .idea p {
+    flex: 1;
+    margin: 0;
+  }
+  .idea button {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--moss);
+    font-weight: 600;
+    font-size: 13.5px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .idea:hover button,
+  .idea button:focus-visible {
+    opacity: 1;
+  }
+  @media (max-width: 760px) {
+    .line {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .line .cargo {
+      flex-direction: row;
+      gap: 12px;
+    }
+    .jump span,
+    .needs span,
+    #crumb-home {
+      display: none;
+    }
+    .idea button {
+      opacity: 1;
+    }
+  }
+  @media (hover: none) {
+    .idea button {
+      opacity: 1;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+</style>
+
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+  <defs>
+    <clipPath id="cab-clip">
+      <polygon
+        points="2545,1724 2600,1724 2600,1588.6 2716.8,1565.9 2716.8,1676 2780,1692 2780,1724 3023,1724 3023,2297 2545,2297"
+      />
+    </clipPath>
+    <g id="gondola">
+      <path class="cab-glass" d="M2637 1820 L2800 1820 Q2940 1900 2950 2060 L2637 2060Z" />
+      <rect class="cab-lit" x="2852" y="2132" width="74" height="40" rx="12" />
+      <path class="cab-ink" d="M2962 1998 L3004 1998 L2974 2102 L2950 2102Z" />
+      <path
+        id="vc-fan"
+        class="cab-lit"
+        d="M0 0 C6.23 1.88 11.68 4.2 17.25 7.56 C17.98 8 18.72 8.44 19.48 8.89 C26.4 13.11 32.76 17.84 39 23 C39.28 23.23 39.28 23.23 40.67 24.37 C60.69 40.77 77.49 59.25 90 82 C90.34 82.6 90.68 83.2 91.03 83.82 C103.3 105.81 108.98 130.92 113.16 155.55 C113.33 156.5 113.49 157.45 113.65 158.43 C114.15 163.6 114 168.81 114 174 C83.64 174 53.28 174 22 174 C20.58 171.15 20.74 168.62 20.61 165.44 C20.54 164.03 20.47 162.62 20.41 161.21 C20.37 160.46 20.34 159.7 20.3 158.93 C18.12 112.96 12.86 67.27 3.63 22.18 C3.46 21.36 3.29 20.54 3.12 19.7 C2.81 18.19 2.5 16.68 2.18 15.17 C1.14 10.13 0.51 5.12 0 0 Z "
+        transform="translate(2820,1887)"
+      />
+      <g clip-path="url(#cab-clip)">
+        <path
+          id="vc-ink"
+          class="cab-ink"
+          d="M0 0 C-1.99 27.72 -8.14 51.01 -28.75 70.81 C-50.1 88.97 -79.29 93.18 -105.81 98.88 C-115.25 100.91 -124.64 103.11 -134 105.5 C-145.11 108.34 -156.28 110.88 -167.5 113.25 C-176.17 115.1 -184.78 117.15 -193.39 119.26 C-208.35 122.91 -223.39 126.19 -238.45 129.42 C-246.04 131.05 -253.62 132.7 -261.21 134.34 C-261.95 134.5 -262.69 134.66 -263.46 134.83 C-275.51 137.44 -287.55 140.13 -299.56 142.94 C-300.32 143.11 -301.07 143.29 -301.85 143.47 C-304.79 144.16 -307.72 144.84 -310.65 145.53 C-318.69 147.4 -326.75 149.21 -334.81 151 C-335.54 151.16 -336.28 151.33 -337.03 151.49 C-348.39 154.01 -359.77 156.45 -371.15 158.87 C-371.59 158.96 -371.59 158.96 -373.81 159.44 C-374.25 159.53 -374.25 159.53 -376.47 160 C-391.11 163.12 -405.71 166.42 -420.29 169.82 C-421.86 170.18 -423.43 170.55 -425 170.92 C-425.76 171.1 -426.52 171.27 -427.31 171.46 C-432.33 172.62 -437.36 173.76 -442.4 174.86 C-443.67 175.14 -444.95 175.42 -446.26 175.71 C-448.6 176.22 -450.95 176.73 -453.3 177.24 C-454.31 177.46 -455.32 177.68 -456.37 177.91 C-457.24 178.1 -458.12 178.28 -459.03 178.48 C-461 179 -461 179 -462 180 C-462.1 181.38 -462.13 182.76 -462.13 184.14 C-462.14 185.03 -462.14 185.93 -462.15 186.84 C-462.15 187.83 -462.15 188.82 -462.15 189.84 C-462.15 190.87 -462.15 191.91 -462.16 192.97 C-462.16 196.41 -462.17 199.86 -462.17 203.3 C-462.17 205.69 -462.17 208.08 -462.18 210.47 C-462.18 215.5 -462.19 220.53 -462.19 225.56 C-462.19 231.98 -462.2 238.4 -462.22 244.82 C-462.23 249.77 -462.23 254.72 -462.23 259.66 C-462.23 262.03 -462.23 264.4 -462.24 266.76 C-462.25 270.09 -462.25 273.41 -462.24 276.74 C-462.25 277.22 -462.25 277.22 -462.26 279.66 C-462.18 296.97 -457.47 307.31 -445.52 319.51 C-443.56 321.43 -441.52 323.24 -439.45 325.05 C-423.79 338.79 -417.82 353.54 -416 374 C-413.71 374.54 -411.42 375.08 -409.12 375.62 C-408.38 375.8 -407.63 375.98 -406.85 376.16 C-402.23 377.25 -397.6 378.32 -392.96 379.36 C-370.11 384.49 -347.86 390.56 -326 399 C-325.12 399.34 -324.24 399.67 -323.33 400.02 C-312.56 404.15 -302.24 408.68 -292 414 C-289.73 415.1 -287.46 416.21 -285.19 417.31 C-270.15 424.87 -256.43 433.89 -243 444 C-242.37 444.47 -241.75 444.93 -241.11 445.41 C-231.8 452.36 -223.31 460.04 -214.96 468.11 C-213.07 469.94 -211.15 471.74 -209.23 473.54 C-172.44 508.53 -159.17 566.66 -157.75 615.81 C-157.72 619.55 -157.8 623.27 -158 627 C-171.01 627.72 -183.97 628.14 -197 628 C-197.39 626.82 -197.78 625.65 -198.19 624.44 C-198.47 623.61 -198.74 622.78 -199.03 621.93 C-199.72 619.85 -200.38 617.76 -201.03 615.66 C-205.82 600.51 -212.78 586.58 -221 573 C-221.38 572.37 -221.76 571.75 -222.15 571.1 C-249.07 526.77 -283.17 491.8 -329 467 C-330.26 466.29 -331.53 465.58 -332.79 464.87 C-372.53 442.83 -418.18 431.62 -463.52 431.63 C-466.43 431.63 -469.34 431.59 -472.25 431.55 C-491.02 431.44 -508.55 434.07 -524.25 445.08 C-531.36 452.86 -530.59 461.85 -530.56 471.71 C-530.57 473.41 -530.58 475.11 -530.6 476.81 C-530.63 481.42 -530.64 486.03 -530.64 490.63 C-530.65 495.5 -530.68 500.36 -530.7 505.22 C-530.74 513.41 -530.77 521.6 -530.78 529.79 C-530.8 540.19 -530.85 550.59 -530.9 561 C-530.94 570.04 -530.98 579.08 -531.01 588.13 C-531.02 590.98 -531.03 593.83 -531.04 596.68 C-531.11 614.39 -531.14 632.09 -530.74 649.79 C-530.7 651.23 -530.68 652.68 -530.65 654.12 C-530.36 671.45 -525.03 682.8 -513.25 695.31 C-502.47 705.57 -487.22 714.14 -472 714.12 C-471.01 714.12 -470.03 714.12 -469.01 714.12 C-467.93 714.12 -466.85 714.12 -465.74 714.11 C-464.59 714.11 -463.44 714.11 -462.26 714.11 C-459.07 714.11 -455.88 714.11 -452.69 714.1 C-449.25 714.1 -445.81 714.09 -442.37 714.09 C-436.41 714.09 -430.45 714.08 -424.49 714.08 C-415.87 714.06 -407.25 714.06 -398.64 714.05 C-384.65 714.05 -370.66 714.03 -356.68 714.02 C-356.26 714.02 -356.26 714.02 -354.14 714.02 C-348.2 714.01 -342.26 714.01 -336.31 714 C-329.52 713.99 -322.73 713.99 -315.93 713.98 C-315.51 713.98 -315.51 713.98 -313.4 713.98 C-299.46 713.96 -285.52 713.95 -271.58 713.95 C-262.98 713.94 -254.38 713.93 -245.78 713.92 C-239.89 713.91 -234 713.91 -228.12 713.91 C-224.72 713.9 -221.31 713.9 -217.91 713.89 C-214.23 713.89 -210.55 713.89 -206.87 713.89 C-206.33 713.88 -206.33 713.88 -203.59 713.88 C-202.61 713.88 -201.63 713.88 -200.62 713.88 C-199.77 713.88 -198.92 713.88 -198.04 713.88 C-196 714 -196 714 -194 715 C-195.46 748.33 -204.34 780.54 -220 810 C-220.39 810.74 -220.77 811.47 -221.17 812.23 C-229.48 827.93 -239.25 841.71 -251 855 C-251.5 855.57 -252.01 856.14 -252.52 856.73 C-254.03 858.43 -255.54 860.12 -257.06 861.81 C-257.53 862.33 -257.99 862.86 -258.47 863.4 C-259.61 864.64 -260.8 865.82 -262 867 C-262.66 867 -263.32 867 -264 867 C-264 867.66 -264 868.32 -264 869 C-286.85 891.34 -318.25 901.67 -349.54 901.52 C-351.44 901.52 -353.33 901.53 -355.23 901.54 C-360.32 901.56 -365.41 901.55 -370.51 901.54 C-375.87 901.53 -381.23 901.54 -386.6 901.54 C-395.6 901.55 -404.6 901.54 -413.61 901.52 C-423.97 901.5 -434.34 901.51 -444.7 901.53 C-453.65 901.55 -462.59 901.55 -471.54 901.54 C-476.86 901.53 -482.18 901.53 -487.5 901.55 C-492.51 901.56 -497.52 901.55 -502.53 901.53 C-504.35 901.52 -506.17 901.52 -507.99 901.53 C-534.2 901.65 -556.76 894.85 -575.99 876.16 C-600.53 851.1 -608.9 817.78 -613 784 C-613.08 783.37 -613.08 783.37 -613.51 780.17 C-614.19 773.97 -614.15 767.78 -614.16 761.54 C-614.16 760.19 -614.17 758.84 -614.17 757.48 C-614.19 753.79 -614.19 750.09 -614.2 746.39 C-614.21 742.4 -614.22 738.41 -614.24 734.41 C-614.26 727.5 -614.28 720.59 -614.29 713.67 C-614.31 703.68 -614.34 693.69 -614.37 683.69 C-614.42 667.47 -614.46 651.26 -614.5 635.04 C-614.54 619.29 -614.58 603.54 -614.63 587.79 C-614.63 586.82 -614.63 585.85 -614.64 584.84 C-614.65 579.97 -614.66 575.1 -614.68 570.22 C-614.79 529.82 -614.9 489.41 -615 449 C-616.44 449.32 -617.89 449.63 -619.33 449.95 C-620.13 450.13 -620.94 450.31 -621.77 450.49 C-635.06 453.53 -647.89 458.83 -660 465 C-660.65 465.32 -661.3 465.64 -661.96 465.97 C-679.56 474.72 -695.87 485.48 -711 498 C-711.52 498.43 -712.05 498.87 -712.59 499.31 C-713.11 499.74 -713.63 500.17 -714.16 500.61 C-715.14 501.42 -716.12 502.23 -717.12 503.06 C-717.55 503.42 -717.55 503.42 -719.7 505.22 C-721.75 506.8 -723.64 507.95 -726 509 C-726 509.66 -726 510.32 -726 511 C-727.42 512.4 -727.42 512.4 -729.41 514.05 C-734.32 518.22 -738.88 522.69 -743.44 527.25 C-744.28 528.09 -745.12 528.93 -745.98 529.8 C-751.74 535.61 -757 541.53 -762 548 C-763.42 549.67 -764.83 551.33 -766.25 553 C-772.73 560.92 -778.34 569.48 -784 578 C-784.44 578.66 -784.88 579.32 -785.33 580 C-790.93 588.46 -796.1 597.12 -801 606 C-801.33 606.6 -801.67 607.2 -802.01 607.82 C-806.97 616.74 -811.25 625.84 -815.24 635.24 C-816.26 637.6 -817.35 639.92 -818.44 642.25 C-837.2 683.57 -847.57 728.53 -853.25 773.44 C-853.33 774.03 -853.33 774.03 -853.71 777.05 C-854.18 781.03 -854.6 785.01 -855 789 C-855.09 789.85 -855.17 790.7 -855.26 791.58 C-857.11 810.17 -857.4 828.71 -857.38 847.38 C-857.37 847.75 -857.37 847.75 -857.37 849.64 C-857.37 872.33 -856.88 894.59 -853 917 C-852.78 918.32 -852.57 919.65 -852.35 920.97 C-847.68 949.42 -840.93 977.59 -832 1005 C-831.71 1005.91 -831.41 1006.81 -831.11 1007.75 C-825.89 1023.89 -820.35 1039.69 -812.96 1054.98 C-811.94 1057.12 -810.96 1059.27 -809.98 1061.43 C-804.35 1073.7 -797.91 1085.4 -791 1097 C-790.57 1097.72 -790.14 1098.45 -789.7 1099.19 C-777.07 1120.32 -761.99 1139.88 -745.01 1157.68 C-743 1160 -743 1160 -742 1163 C-741.34 1163 -740.68 1163 -740 1163 C-740 1163.66 -740 1164.32 -740 1165 C-739.34 1165 -738.68 1165 -738 1165 C-738 1165.66 -738 1166.32 -738 1167 C-737.34 1167 -736.68 1167 -736 1167 C-736 1167.66 -736 1168.32 -736 1169 C-735.34 1169 -734.68 1169 -734 1169 C-734 1169.66 -734 1170.32 -734 1171 C-733.34 1171 -732.68 1171 -732 1171 C-732 1171.66 -732 1172.32 -732 1173 C-731.41 1173.26 -730.83 1173.51 -730.22 1173.78 C-727.8 1175.11 -726.32 1176.54 -724.44 1178.56 C-720.14 1182.96 -715.55 1186.82 -710.73 1190.63 C-709.49 1191.61 -708.25 1192.6 -707.02 1193.59 C-696.41 1202.1 -685.59 1209.89 -674 1217 C-673.17 1217.51 -672.34 1218.03 -671.49 1218.56 C-657.75 1227.03 -643.7 1234.35 -629 1241 C-628.13 1241.4 -627.25 1241.8 -626.35 1242.22 C-600.92 1253.85 -574.11 1261.08 -546.69 1266.25 C-546.29 1266.33 -546.29 1266.33 -544.31 1266.71 C-526.68 1269.86 -509.01 1270.35 -491.14 1270.32 C-487.4 1270.31 -483.66 1270.34 -479.93 1270.36 C-463.75 1270.4 -448.01 1269.31 -432 1267 C-431.62 1266.95 -431.62 1266.95 -429.69 1266.67 C-425.61 1266.07 -421.55 1265.38 -417.5 1264.62 C-416.91 1264.52 -416.91 1264.52 -413.94 1263.97 C-404.42 1262.17 -395.22 1259.96 -386 1257 C-384.8 1256.62 -383.59 1256.23 -382.35 1255.83 C-360.62 1248.86 -339.3 1241.55 -319 1231 C-316.69 1229.87 -314.38 1228.75 -312.06 1227.62 C-292.49 1217.81 -274.56 1205.28 -257.75 1191.3 C-256.76 1190.48 -255.77 1189.66 -254.75 1188.81 C-253.88 1188.08 -253.01 1187.34 -252.11 1186.58 C-250 1185 -250 1185 -248 1185 C-248 1184.34 -248 1183.68 -248 1183 C-246.64 1181.62 -246.64 1181.62 -244.69 1180 C-229.97 1167.45 -229.97 1167.45 -223.86 1160.18 C-222 1158 -220.06 1155.91 -218.11 1153.83 C-211.94 1147.23 -206.34 1140.28 -201 1133 C-200.53 1132.37 -200.07 1131.74 -199.59 1131.09 C-191.31 1119.82 -184.05 1108.07 -177 1096 C-176.01 1094.32 -175.02 1092.63 -174.02 1090.95 C-171.67 1086.97 -169.33 1082.99 -167 1079 C-162.12 1079.49 -158.73 1080.37 -154.56 1082.94 C-153.53 1083.57 -152.5 1084.2 -151.44 1084.84 C-150.29 1085.56 -149.15 1086.28 -148 1087 C-146.7 1087.8 -145.39 1088.6 -144.09 1089.41 C-135.94 1094.44 -127.92 1099.63 -120 1105 C-120.86 1110.89 -123.85 1115.22 -126.91 1120.22 C-128.03 1122.05 -129.13 1123.88 -130.23 1125.71 C-136.61 1136.21 -143.69 1146.13 -151 1156 C-151.43 1156.58 -151.85 1157.16 -152.29 1157.75 C-154.84 1161.19 -157.41 1164.6 -160 1168 C-160.78 1169.03 -161.55 1170.07 -162.35 1171.13 C-175.55 1188.6 -190.44 1204.5 -205.88 1220 C-206.66 1220.79 -207.44 1221.58 -208.25 1222.39 C-226.52 1240.61 -247.9 1256.6 -270.03 1269.82 C-272.02 1271.01 -273.99 1272.21 -275.96 1273.41 C-293.02 1283.71 -310.82 1292.85 -329 1301 C-329.69 1301.31 -330.38 1301.63 -331.09 1301.95 C-375.35 1321.99 -424.69 1333.33 -473 1337 C-473.74 1337.06 -474.47 1337.12 -475.23 1337.18 C-555.63 1343.11 -638.96 1332.97 -834 1228 C-836.83 1225.48 -839.63 1222.92 -842.43 1220.36 C-846.83 1216.32 -851.26 1212.34 -856 1208.69 C-856.66 1208.13 -857.32 1207.57 -858 1207 C-858 1206.34 -858 1205.68 -858 1205 C-858.66 1205 -859.32 1205 -860 1205 C-860 1204.34 -860 1203.68 -860 1203 C-860.66 1203 -861.32 1203 -862 1203 C-862 1202.34 -862 1201.68 -862 1201 C-862.66 1201 -863.32 1201 -864 1201 C-864 1200.34 -864 1199.68 -864 1199 C-864.66 1199 -865.32 1199 -866 1199 C-866 1198.34 -866 1197.68 -866 1197 C-866.66 1197 -867.32 1197 -868 1197 C-869.34 1195.67 -869.34 1195.67 -870.94 1193.75 C-873.21 1191.07 -875.51 1188.43 -877.91 1185.87 C-878.41 1185.33 -878.91 1184.8 -879.42 1184.24 C-880.43 1183.17 -881.43 1182.1 -882.44 1181.04 C-886 1177.22 -886 1177.22 -886 1175 C-886.66 1175 -887.32 1175 -888 1175 C-889.21 1173.71 -889.21 1173.71 -890.58 1171.88 C-891.09 1171.2 -891.61 1170.52 -892.14 1169.82 C-892.69 1169.08 -893.24 1168.33 -893.81 1167.56 C-895 1165.98 -896.18 1164.4 -897.37 1162.82 C-897.98 1162.02 -898.58 1161.21 -899.21 1160.37 C-900.85 1158.19 -902.53 1156.04 -904.22 1153.89 C-923.76 1129.07 -940.14 1101.61 -952.57 1072.57 C-954.08 1069.04 -955.68 1065.63 -957.5 1062.25 C-961.18 1055.06 -963.5 1047.28 -966.09 1039.66 C-966.97 1037.09 -967.87 1034.54 -968.79 1032 C-973.06 1020.13 -976.77 1008.19 -980 996 C-980.25 995.08 -980.49 994.15 -980.75 993.2 C-988.18 964.92 -992.49 936.1 -995 907 C-995.09 906.07 -995.18 905.14 -995.27 904.18 C-996.14 894.89 -996.4 885.58 -996.62 876.25 C-996.65 875.36 -996.67 874.48 -996.69 873.56 C-997.39 843.59 -996.81 813.77 -993 784 C-992.83 782.67 -992.67 781.33 -992.5 780 C-985.75 726.65 -971.95 672.96 -947.08 625.08 C-945.94 622.88 -944.82 620.68 -943.7 618.48 C-930.35 592.51 -914.59 567.55 -896 545 C-895.63 544.54 -895.63 544.54 -893.75 542.21 C-885.78 532.35 -877.75 522.43 -868.62 513.62 C-867 512 -867 512 -864.62 509 C-864.09 508.34 -863.55 507.68 -863 507 C-862.34 507 -861.68 507 -861 507 C-861 506.34 -861 505.68 -861 505 C-859.64 503.66 -859.64 503.66 -857.69 502.06 C-854.11 499.03 -850.79 495.84 -847.5 492.5 C-843.16 488.12 -838.71 483.98 -834 480 C-833.51 479.58 -833.51 479.58 -831.04 477.45 C-829.94 476.5 -828.85 475.56 -827.75 474.62 C-827.25 474.2 -827.25 474.2 -824.73 472.04 C-814.68 463.72 -803.92 456.41 -793.06 449.19 C-792.34 448.71 -791.62 448.22 -790.87 447.73 C-779.19 439.96 -767.35 432.66 -755 426 C-753.62 425.24 -752.24 424.47 -750.86 423.71 C-688.85 389.67 -617.47 372.3 -547 369 C-546.43 368.97 -546.43 368.97 -543.54 368.83 C-536.7 368.51 -529.85 368.23 -523 368 C-523.23 365.62 -523.48 363.25 -523.75 360.88 C-523.81 360.21 -523.87 359.54 -523.94 358.86 C-524.87 350.91 -529.19 346.61 -534.81 341.38 C-549.06 327.58 -553.68 310.23 -554.17 290.9 C-554.26 285.12 -554.23 279.34 -554.19 273.56 C-554.18 271.44 -554.17 269.31 -554.17 267.19 C-554.07 244.12 -553.57 221.06 -553 198 C-553.89 198.24 -554.78 198.48 -555.69 198.73 C-565.32 201.33 -574.98 203.72 -584.69 206 C-585.08 206.09 -585.08 206.09 -587.08 206.56 C-592.4 207.82 -597.72 209.06 -603.05 210.31 C-606.13 211.03 -609.21 211.75 -612.29 212.47 C-656.26 222.77 -656.26 222.77 -677.82 227.09 C-690.71 229.68 -703.52 232.6 -716.33 235.59 C-717.97 235.98 -719.61 236.36 -721.26 236.74 C-722.07 236.93 -722.88 237.12 -723.72 237.32 C-732.22 239.29 -740.73 241.18 -749.25 243.06 C-761.83 245.84 -774.39 248.68 -786.94 251.57 C-794.7 253.35 -802.47 255.12 -810.25 256.78 C-849.27 265.1 -887.57 275.24 -923 294 C-923.73 294.38 -924.45 294.77 -925.2 295.16 C-935.88 300.86 -946.08 307.06 -956 314 C-956.93 314.64 -957.86 315.29 -958.81 315.95 C-970.77 324.43 -982.04 333.84 -992.64 343.95 C-995 346 -995 346 -998 347 C-998 347.66 -998 348.32 -998 349 C-999.65 350.35 -1001.32 351.69 -1003 353 C-1003.33 353.66 -1003.66 354.32 -1004 355 C-1004.66 355 -1005.32 355 -1006 355 C-1006 355.66 -1006 356.32 -1006 357 C-1006.66 357 -1007.32 357 -1008 357 C-1008.26 357.59 -1008.52 358.18 -1008.79 358.79 C-1010.09 361.17 -1011.45 362.54 -1013.44 364.38 C-1018.75 369.55 -1023.14 375.36 -1027.64 381.24 C-1028.87 382.84 -1030.13 384.41 -1031.4 385.98 C-1045.69 403.93 -1057.11 423.86 -1068 444 C-1068.51 444.93 -1069.01 445.85 -1069.53 446.81 C-1075.64 458.02 -1081.05 469.38 -1085.96 481.17 C-1087.65 485.22 -1089.47 489.17 -1091.38 493.12 C-1095.27 501.34 -1098.63 509.76 -1102.01 518.2 C-1104.5 524.41 -1107.12 530.54 -1109.92 536.63 C-1111.21 539.46 -1112.35 542.33 -1113.44 545.25 C-1120.5 563.88 -1120.5 563.88 -1124.56 572.56 C-1126.46 576.64 -1128.02 580.75 -1129.5 585 C-1130.94 589.14 -1132.45 593.16 -1134.31 597.12 C-1141.04 611.5 -1146.4 626.54 -1151.89 641.41 C-1157.58 656.8 -1163.54 672.06 -1169.6 687.3 C-1172.49 694.59 -1175.35 701.89 -1178.08 709.24 C-1181.33 718.01 -1184.95 726.62 -1188.59 735.24 C-1191.58 742.4 -1194.34 749.58 -1196.88 756.92 C-1197.93 759.82 -1199.12 762.58 -1200.44 765.38 C-1202.81 770.42 -1204.77 775.59 -1206.7 780.82 C-1208.63 786.04 -1210.67 791.2 -1212.75 796.37 C-1214.53 800.78 -1216.22 805.22 -1217.88 809.69 C-1220.47 816.7 -1223.24 823.63 -1226.03 830.57 C-1228.39 836.44 -1230.65 842.34 -1232.85 848.27 C-1234.73 853.34 -1236.73 858.36 -1238.75 863.37 C-1240.53 867.78 -1242.22 872.22 -1243.88 876.69 C-1246.15 882.83 -1248.55 888.92 -1251 895 C-1253.57 901.38 -1256.05 907.77 -1258.43 914.22 C-1261.15 921.53 -1264.09 928.76 -1267 936 C-1273.29 951.66 -1273.29 951.66 -1276 959 C-1279.31 967.99 -1282.92 976.86 -1286.51 985.74 C-1289.33 992.73 -1292.05 999.74 -1294.68 1006.8 C-1297.73 1014.97 -1300.87 1023.11 -1304 1031.25 C-1304.32 1032.08 -1304.64 1032.91 -1304.97 1033.76 C-1309.54 1045.64 -1314.12 1057.51 -1318.73 1069.37 C-1319.32 1070.89 -1319.91 1072.41 -1320.5 1073.94 C-1323.11 1080.67 -1325.72 1087.4 -1328.53 1094.06 C-1331.76 1101.75 -1334.72 1109.56 -1337.7 1117.36 C-1340.86 1125.64 -1344.17 1133.82 -1347.7 1141.96 C-1349.21 1145.48 -1350.57 1149.02 -1351.88 1152.62 C-1354.14 1158.79 -1356.54 1164.9 -1359 1171 C-1361.71 1177.73 -1364.33 1184.47 -1366.85 1191.27 C-1368.94 1196.9 -1371.18 1202.47 -1373.43 1208.04 C-1374.89 1211.69 -1376.26 1215.37 -1377.62 1219.06 C-1380.09 1225.71 -1382.7 1232.3 -1385.35 1238.88 C-1385.54 1239.35 -1385.54 1239.35 -1386.51 1241.76 C-1388.09 1245.68 -1389.67 1249.6 -1391.26 1253.52 C-1395.52 1264.03 -1399.68 1274.48 -1403.03 1285.31 C-1404 1288 -1404 1288 -1406 1290 C-1407.98 1290.28 -1407.98 1290.28 -1410.44 1290.32 C-1411.36 1290.34 -1412.28 1290.36 -1413.23 1290.38 C-1414.24 1290.39 -1415.25 1290.4 -1416.29 1290.41 C-1417.34 1290.43 -1418.39 1290.45 -1419.47 1290.47 C-1422.86 1290.53 -1426.24 1290.58 -1429.62 1290.62 C-1431.82 1290.66 -1434.02 1290.7 -1436.21 1290.74 C-1447.13 1290.93 -1458.04 1291.04 -1468.96 1291.05 C-1469.91 1291.06 -1470.86 1291.06 -1471.84 1291.06 C-1480.91 1291.06 -1489.95 1290.6 -1499 1290 C-1502.41 1283.56 -1505.2 1277.04 -1507.75 1270.22 C-1508.9 1267.26 -1510.16 1264.38 -1511.5 1261.5 C-1513.27 1257.7 -1514.85 1253.87 -1516.34 1249.95 C-1518.85 1243.36 -1521.46 1236.82 -1524.1 1230.28 C-1524.33 1229.7 -1524.33 1229.7 -1525.53 1226.74 C-1526.78 1223.63 -1528.03 1220.52 -1529.29 1217.42 C-1530.07 1215.48 -1530.85 1213.55 -1531.63 1211.62 C-1537.72 1196.53 -1543.84 1181.45 -1550.11 1166.43 C-1553.97 1157.15 -1557.65 1147.81 -1561.26 1138.44 C-1561.68 1137.36 -1562.1 1136.29 -1562.53 1135.18 C-1562.89 1134.25 -1563.24 1133.32 -1563.61 1132.36 C-1564.76 1129.59 -1565.97 1126.89 -1567.23 1124.17 C-1570.7 1116.58 -1573.75 1108.83 -1576.84 1101.08 C-1577.49 1099.45 -1578.14 1097.83 -1578.79 1096.2 C-1580.15 1092.8 -1581.51 1089.4 -1582.86 1086.01 C-1584.58 1081.7 -1586.31 1077.39 -1588.03 1073.08 C-1589.38 1069.72 -1590.72 1066.36 -1592.06 1063 C-1592.69 1061.42 -1593.33 1059.83 -1593.96 1058.25 C-1597.64 1049.05 -1601.23 1039.83 -1604.68 1030.54 C-1608.26 1020.94 -1612.05 1011.45 -1616 1002 C-1618.05 997.09 -1620.09 992.17 -1622.12 987.25 C-1622.42 986.55 -1622.71 985.85 -1623 985.12 C-1629.69 968.93 -1636.12 952.63 -1642.51 936.31 C-1642.91 935.31 -1643.3 934.31 -1643.71 933.28 C-1644.44 931.42 -1645.17 929.56 -1645.89 927.7 C-1647.6 923.36 -1649.39 919.09 -1651.35 914.87 C-1654.69 907.61 -1657.58 900.19 -1660.52 892.77 C-1661.14 891.2 -1661.76 889.63 -1662.38 888.07 C-1664.01 883.96 -1665.64 879.85 -1667.26 875.75 C-1668.57 872.45 -1669.87 869.16 -1671.18 865.87 C-1689.12 820.65 -1689.12 820.65 -1694.56 806.25 C-1696.61 800.92 -1698.79 795.64 -1701 790.38 C-1701.32 789.61 -1701.64 788.85 -1701.97 788.06 C-1703.69 783.99 -1705.47 779.95 -1707.32 775.94 C-1710.68 768.58 -1713.74 761.1 -1716.81 753.62 C-1717.12 752.88 -1717.43 752.13 -1717.75 751.36 C-1722.7 739.31 -1727.47 727.21 -1732 715 C-1733.02 712.27 -1734.04 709.54 -1735.06 706.81 C-1735.18 706.5 -1735.18 706.5 -1735.78 704.89 C-1744.11 682.69 -1744.11 682.69 -1748.82 672.64 C-1750.59 668.67 -1752.09 664.61 -1753.59 660.53 C-1754.74 657.65 -1755.97 654.86 -1757.28 652.04 C-1760.03 646.02 -1762.49 639.91 -1764.91 633.75 C-1765.35 632.62 -1765.8 631.49 -1766.26 630.32 C-1767.68 626.74 -1769.09 623.15 -1770.5 619.56 C-1771.91 615.98 -1773.32 612.4 -1774.74 608.81 C-1775.61 606.6 -1776.49 604.38 -1777.36 602.16 C-1779.77 596.03 -1782.26 589.94 -1784.81 583.87 C-1786.61 579.54 -1788.32 575.18 -1790.03 570.81 C-1790.77 568.94 -1791.5 567.07 -1792.24 565.2 C-1793.37 562.31 -1794.5 559.43 -1795.63 556.54 C-1803.04 537.66 -1803.04 537.66 -1807.03 529.13 C-1808.39 526.14 -1809.45 523.12 -1810.5 520 C-1812.29 514.87 -1814.32 509.99 -1816.63 505.09 C-1818.01 501.99 -1819.2 498.86 -1820.39 495.68 C-1823.87 486.37 -1828.12 477.76 -1832.9 469.05 C-1834.31 466.43 -1835.62 463.76 -1836.92 461.09 C-1850.37 433.47 -1867.72 408.14 -1889 386 C-1889.9 385.06 -1890.8 384.11 -1891.73 383.14 C-1895.35 379.44 -1898.86 375.94 -1903.12 373 C-1904.07 372.34 -1905.02 371.68 -1906 371 C-1906 370.34 -1906 369.68 -1906 369 C-1906.59 368.72 -1907.18 368.44 -1907.79 368.15 C-1909.8 367.11 -1911.56 365.99 -1913.4 364.68 C-1914.04 364.23 -1914.67 363.78 -1915.33 363.32 C-1916 362.84 -1916.68 362.37 -1917.38 361.88 C-1948.16 340.5 -1985.22 325.99 -2023 325 C-2023.76 324.98 -2024.52 324.96 -2025.3 324.94 C-2076.78 323.75 -2126.69 342.67 -2164.51 377.82 C-2166 379 -2166 379 -2168 379 C-2168 379.66 -2168 380.32 -2168 381 C-2169.5 382.48 -2169.5 382.48 -2171.56 384.19 C-2182.06 393.11 -2182.06 393.11 -2184 397 C-2184.66 397 -2185.32 397 -2186 397 C-2186.27 397.59 -2186.54 398.18 -2186.82 398.78 C-2187.98 400.96 -2189.21 402.6 -2190.82 404.45 C-2191.36 405.07 -2191.89 405.69 -2192.44 406.33 C-2193 406.96 -2193.55 407.6 -2194.12 408.25 C-2194.69 408.9 -2195.25 409.55 -2195.83 410.22 C-2197.22 411.82 -2198.61 413.41 -2200 415 C-2202.72 413.71 -2205.1 412.3 -2207.5 410.5 C-2208.16 410.01 -2208.81 409.52 -2209.48 409.01 C-2210.17 408.49 -2210.86 407.97 -2211.56 407.44 C-2212.27 406.91 -2212.97 406.37 -2213.7 405.83 C-2219.59 401.36 -2225.34 396.75 -2231 392 C-2227.02 380.92 -2217.64 371.79 -2210 363 C-2209.31 362.19 -2208.61 361.38 -2207.89 360.55 C-2197.27 348.44 -2185.81 336.8 -2173 327 C-2172.5 326.6 -2172.5 326.6 -2169.97 324.59 C-2156.76 314.16 -2142.63 305.3 -2128 297 C-2127.37 296.64 -2126.73 296.27 -2126.08 295.9 C-2116.79 290.6 -2107.26 286.55 -2097.23 282.84 C-2094.85 281.94 -2092.5 280.98 -2090.14 280.02 C-2067.23 270.81 -2043.4 266.72 -2019 264 C-2018.33 263.92 -2017.66 263.83 -2016.98 263.75 C-2011.6 263.1 -2006.3 262.83 -2000.88 262.8 C-2000.04 262.79 -1999.19 262.78 -1998.32 262.78 C-1995.59 262.76 -1992.86 262.75 -1990.12 262.75 C-1989.19 262.75 -1988.25 262.75 -1987.29 262.75 C-1971.66 262.76 -1956.46 263.6 -1941 266 C-1940.5 266.07 -1940.5 266.07 -1937.99 266.45 C-1897.63 272.64 -1857.49 285.77 -1823 308 C-1822.19 308.52 -1821.37 309.05 -1820.54 309.58 C-1803.93 320.32 -1788.87 331.72 -1774.63 345.43 C-1773.23 346.78 -1771.82 348.11 -1770.41 349.43 C-1755.56 363.68 -1744.31 382.15 -1734.19 399.92 C-1733.04 401.93 -1731.87 403.93 -1730.69 405.93 C-1725.08 415.54 -1720.49 425.49 -1716.03 435.69 C-1714.59 438.92 -1713.08 442.11 -1711.56 445.31 C-1705.03 459.26 -1698.82 473.38 -1693.42 487.8 C-1691.99 491.6 -1690.42 495.3 -1688.71 498.98 C-1684.99 507.07 -1681.87 515.39 -1678.66 523.68 C-1675.64 531.44 -1672.57 539.11 -1669.06 546.67 C-1667.59 549.89 -1666.39 553.16 -1665.19 556.5 C-1662.66 563.4 -1659.88 570.17 -1656.98 576.91 C-1655.2 581.08 -1653.5 585.26 -1651.9 589.5 C-1648.63 598.01 -1645.22 606.45 -1641.82 614.9 C-1640.58 617.98 -1639.34 621.05 -1638.1 624.13 C-1636.3 628.59 -1634.51 633.06 -1632.71 637.53 C-1627.83 649.64 -1622.96 661.76 -1618.09 673.88 C-1617.84 674.5 -1617.58 675.13 -1617.33 675.77 C-1606.32 703.15 -1595.4 730.57 -1584.5 758 C-1570.24 793.86 -1555.91 829.7 -1541.5 865.5 C-1526.64 902.41 -1511.87 939.36 -1497.17 976.34 C-1477.91 1024.78 -1458.49 1073.16 -1439.02 1121.51 C-1437.98 1124.1 -1436.94 1126.68 -1435.9 1129.27 C-1434.67 1132.33 -1433.43 1135.4 -1432.19 1138.46 C-1431.65 1139.81 -1431.1 1141.16 -1430.56 1142.51 C-1430.09 1143.65 -1429.63 1144.8 -1429.15 1145.98 C-1427.76 1149.62 -1426.78 1153.18 -1426 1157 C-1425.34 1157 -1424.68 1157 -1424 1157 C-1423.94 1156.64 -1423.94 1156.64 -1423.61 1154.82 C-1423.01 1152.05 -1422.21 1149.52 -1421.25 1146.85 C-1420.89 1145.86 -1420.54 1144.86 -1420.17 1143.84 C-1419.78 1142.78 -1419.4 1141.72 -1419 1140.62 C-1418.6 1139.52 -1418.2 1138.42 -1417.79 1137.28 C-1414.36 1127.86 -1410.73 1118.53 -1407.05 1109.21 C-1405.33 1104.84 -1403.64 1100.46 -1402 1096.06 C-1401.88 1095.75 -1401.88 1095.75 -1401.3 1094.19 C-1400.81 1092.87 -1400.32 1091.55 -1399.83 1090.24 C-1394.72 1076.47 -1389.54 1062.74 -1384.16 1049.07 C-1381.61 1042.59 -1379.13 1036.08 -1376.7 1029.55 C-1369.85 1011.18 -1362.83 992.89 -1355.59 974.67 C-1351.95 965.49 -1348.44 956.26 -1345 947 C-1344.29 945.09 -1343.58 943.18 -1342.87 941.28 C-1342.54 940.41 -1342.22 939.54 -1341.88 938.64 C-1334.96 920.1 -1327.81 901.66 -1320.55 883.25 C-1320.27 882.52 -1319.98 881.79 -1319.68 881.04 C-1318.31 877.55 -1316.92 874.06 -1315.54 870.56 C-1312.65 863.27 -1309.85 855.96 -1307.11 848.61 C-1305.15 843.37 -1303.11 838.18 -1301 833 C-1297.2 823.56 -1293.61 814.05 -1290.08 804.51 C-1284.79 790.24 -1279.31 776.06 -1273.69 761.92 C-1270.75 754.51 -1267.88 747.07 -1265.1 739.59 C-1263.15 734.36 -1261.1 729.17 -1259 724 C-1256.29 717.28 -1253.67 710.53 -1251.15 703.73 C-1249.5 699.29 -1247.77 694.89 -1246 690.5 C-1241.95 680.44 -1238.19 670.28 -1234.49 660.09 C-1229.9 647.44 -1225.24 634.86 -1220.07 622.44 C-1217.62 616.54 -1215.31 610.61 -1213.1 604.62 C-1211.47 600.22 -1209.76 595.85 -1208 591.5 C-1204.49 582.8 -1201.23 574.02 -1197.97 565.23 C-1193.76 553.88 -1189.53 542.58 -1184.8 531.44 C-1183.28 527.77 -1181.9 524.06 -1180.52 520.33 C-1176.19 508.69 -1171.57 497.16 -1167 485.62 C-1165.69 482.33 -1164.39 479.05 -1163.1 475.76 C-1162.08 473.19 -1161.06 470.62 -1160.04 468.05 C-1159.33 466.26 -1158.63 464.47 -1157.92 462.68 C-1155.14 455.69 -1152.16 448.83 -1149 442 C-1148.32 440.48 -1147.64 438.95 -1146.96 437.43 C-1137.31 415.71 -1127.08 394.49 -1115 374 C-1114.51 373.17 -1114.02 372.34 -1113.52 371.48 C-1102.88 353.47 -1090.57 336.83 -1077.24 320.72 C-1075.65 318.78 -1074.07 316.84 -1072.51 314.87 C-1071.7 313.86 -1070.89 312.85 -1070.06 311.81 C-1069.33 310.89 -1068.6 309.97 -1067.85 309.02 C-1067.24 308.35 -1066.63 307.69 -1066 307 C-1065.34 307 -1064.68 307 -1064 307 C-1063.76 306.44 -1063.53 305.88 -1063.28 305.3 C-1061.71 302.47 -1059.78 300.52 -1057.5 298.23 C-1056.61 297.34 -1055.73 296.46 -1054.81 295.54 C-1053.88 294.62 -1052.96 293.7 -1052 292.75 C-1051.07 291.81 -1050.14 290.88 -1049.19 289.91 C-1048.3 289.03 -1047.41 288.15 -1046.5 287.23 C-1045.69 286.42 -1044.87 285.61 -1044.03 284.77 C-1042 283 -1042 283 -1040 283 C-1040 282.34 -1040 281.68 -1040 281 C-1038.49 279.63 -1036.91 278.33 -1035.31 277.06 C-1032.16 274.55 -1029.01 272.04 -1025.97 269.38 C-1013.71 258.68 -1000.37 249.67 -986.51 241.18 C-983.73 239.47 -981.04 237.68 -978.38 235.81 C-973.17 232.3 -967.53 229.66 -961.89 226.93 C-960.01 226.01 -958.15 225.06 -956.28 224.09 C-916.16 203.48 -873.34 192.09 -829.34 183.29 C-821.83 181.78 -814.35 180.15 -806.88 178.5 C-806.55 178.43 -806.55 178.43 -804.89 178.06 C-802.25 177.48 -799.6 176.9 -796.96 176.31 C-792.28 175.28 -787.59 174.26 -782.9 173.25 C-768.93 170.23 -755 167.08 -741.12 163.69 C-718.01 158.06 -694.8 152.93 -671.53 148 C-657.01 144.92 -642.57 141.59 -628.14 138.11 C-618.04 135.67 -607.92 133.43 -597.69 131.58 C-596.8 131.41 -595.92 131.24 -595.01 131.07 C-594.25 130.93 -593.49 130.8 -592.71 130.66 C-592.15 130.44 -591.58 130.22 -591 130 C-589.81 126.42 -590.35 124.69 -591 121 C-591.72 109.06 -591.61 99.32 -583.69 89.69 C-576.94 82.59 -569.46 77.96 -559.44 77.69 C-549.94 78.1 -541.8 81.3 -534.95 88.01 C-527.76 96.6 -526.1 104.96 -525 116 C-512.46 113.03 -499.92 110.06 -487 107 C-487.33 101.39 -487.66 95.78 -488 90 C-487.01 78.96 -484.91 70.36 -476.69 62.56 C-469.35 56.56 -461.11 54.35 -451.64 55.21 C-442.79 56.82 -435.56 62.03 -430 69 C-426 75.24 -425.25 81.89 -424.49 89.16 C-424.33 90.09 -424.17 91.03 -424 92 C-420.97 93.52 -418.89 92.44 -415.62 91.66 C-415.3 91.59 -415.3 91.59 -413.63 91.2 C-412.18 90.86 -410.74 90.52 -409.3 90.17 C-405.32 89.22 -401.33 88.3 -397.34 87.38 C-396.5 87.18 -395.66 86.98 -394.79 86.78 C-386.25 84.81 -377.68 82.99 -369.11 81.18 C-353.41 77.86 -337.75 74.39 -322.12 70.75 C-321.25 70.55 -320.38 70.34 -319.48 70.14 C-309.28 67.76 -299.11 65.29 -288.95 62.73 C-282.61 61.14 -276.26 59.65 -269.88 58.25 C-269.33 58.13 -269.33 58.13 -266.57 57.52 C-259.37 55.94 -252.16 54.39 -244.95 52.86 C-241.34 52.1 -237.73 51.33 -234.12 50.56 C-233.67 50.47 -233.67 50.47 -231.37 49.98 C-219.01 47.34 -206.7 44.55 -194.42 41.52 C-184.98 39.2 -175.51 37.11 -166.01 35.06 C-156.9 33.09 -147.82 31.03 -138.75 28.88 C-124.06 25.39 -109.31 22.23 -94.55 19.05 C-76.34 15.13 -58.14 11.2 -40 7 C-39.22 6.82 -38.43 6.64 -37.62 6.45 C-30.49 4.8 -23.38 3.12 -16.3 1.27 C-15.34 1.02 -14.37 0.77 -13.38 0.51 C-11.71 0.07 -10.05 -0.39 -8.38 -0.86 C-3.32 -2.22 -3.32 -2.22 0 0 Z M-489.18 183.61 C-489.55 183.69 -489.55 183.69 -491.38 184.12 C-492.93 184.47 -494.48 184.83 -496.03 185.19 C-519.24 190.57 -519.24 190.57 -530.93 192.9 C-535.9 193.9 -535.9 193.9 -537 195 C-537.09 196.65 -537.11 198.3 -537.1 199.95 C-537.1 201.03 -537.1 202.11 -537.1 203.23 C-537.09 204.44 -537.08 205.65 -537.07 206.9 C-537.07 208.87 -537.06 210.84 -537.05 212.81 C-537.04 214.98 -537.03 217.16 -537.02 219.33 C-537 224.21 -536.99 229.1 -536.98 233.98 C-536.97 242.06 -536.93 250.14 -536.87 258.22 C-536.83 262.89 -536.81 267.56 -536.8 272.23 C-536.8 276.84 -536.77 281.45 -536.73 286.06 C-536.71 287.79 -536.71 289.52 -536.71 291.25 C-536.74 304.95 -534.68 316.54 -525 327 C-515.97 335.84 -515.97 335.84 -509.33 336.2 C-504.18 336.13 -499.55 334.71 -494.65 333.25 C-489.54 331.83 -489.54 331.83 -486.59 332.77 C-483.6 335.08 -483.1 337.33 -482.56 341 C-483 344 -483 344 -485.06 346.12 C-487.23 347.51 -489.36 348.73 -491.62 349.94 C-495.84 352.52 -497.33 354.69 -498.69 359.38 C-499.07 362.6 -499.02 365.76 -499 369 C-492.21 369.43 -485.41 369.86 -478.61 370.28 C-476.31 370.43 -474 370.57 -471.69 370.72 C-468.36 370.93 -465.03 371.14 -461.7 371.34 C-460.68 371.41 -459.65 371.47 -458.6 371.54 C-452.39 371.92 -446.22 372.08 -440 372 C-441.86 360.76 -444.93 353.58 -452.88 345.26 C-455 343 -455 343 -456.65 340.71 C-457.1 340.14 -457.54 339.58 -458 339 C-458.66 339 -459.32 339 -460 339 C-460.26 338.43 -460.53 337.86 -460.8 337.27 C-462.08 334.85 -463.59 332.86 -465.25 330.69 C-472.58 320.29 -475.84 308.4 -478 296 C-478.17 295.16 -478.35 294.32 -478.53 293.45 C-479.16 288.83 -479.12 284.28 -479.1 279.62 C-479.1 278.59 -479.09 277.56 -479.09 276.49 C-479.09 274.26 -479.08 272.03 -479.08 269.8 C-479.06 266.27 -479.06 262.74 -479.05 259.21 C-479.04 251.72 -479.02 244.24 -479 236.75 C-478.98 228.06 -478.96 219.37 -478.94 210.69 C-478.94 207.2 -478.93 203.72 -478.91 200.23 C-478.91 198.11 -478.91 195.99 -478.9 193.86 C-478.9 193.38 -478.9 193.38 -478.89 190.91 C-478.89 190.47 -478.89 190.47 -478.89 188.22 C-478.88 187.45 -478.88 186.68 -478.88 185.88 C-479 184 -479 184 -480 182 C-483.15 182 -486.13 182.9 -489.18 183.61 Z M-306.88 764.75 C-308.79 770.29 -307.75 774.97 -305.75 780.38 C-303.64 783.54 -302.48 784.45 -299 786 C-295.47 786.44 -291.96 786.42 -288.41 786.4 C-287.38 786.4 -286.36 786.4 -285.3 786.41 C-283.14 786.41 -280.98 786.4 -278.82 786.39 C-275.51 786.38 -272.21 786.39 -268.9 786.41 C-266.8 786.41 -264.7 786.4 -262.59 786.4 C-261.61 786.4 -260.62 786.41 -259.6 786.42 C-250.99 786.33 -250.99 786.33 -247 783 C-243.7 777.5 -242.99 770.25 -244 764 C-246.05 760.61 -247.7 759.2 -251 757 C-253.19 756.73 -253.19 756.73 -255.76 756.69 C-256.72 756.68 -257.69 756.66 -258.68 756.65 C-259.72 756.64 -260.76 756.63 -261.84 756.63 C-262.91 756.62 -263.98 756.61 -265.08 756.6 C-267.35 756.59 -269.62 756.58 -271.89 756.57 C-275.35 756.56 -278.82 756.51 -282.29 756.46 C-284.49 756.45 -286.7 756.45 -288.9 756.44 C-289.94 756.42 -290.97 756.4 -292.04 756.38 C-299.8 756.43 -302.47 758.29 -306.88 764.75 Z "
+          transform="translate(3164,1381)"
+        />
+      </g>
+    </g>
+  </defs>
+</svg>
+<header class="bar">
+  <button class="mark" id="go-home" aria-label="Home" title="Home">
+    <svg viewBox="913 1359.2 2271 1380.3" height="24" aria-hidden="true">
+      <rect class="cab-lit" x="2852" y="2132" width="74" height="40" rx="12" />
+      <use href="#vc-fan" />
+      <use href="#vc-ink" />
+    </svg>
+  </button>
+  <div class="crumb" id="crumb-home"><span class="tag">Thinking. Vibing. Building.</span></div>
+  <div class="crumb" id="crumb-session" hidden>
+    <button class="back" id="back">Home</button><i>/</i><b>Covibe explainer</b
+    ><span class="tag" id="route-v">v2 of 3</span>
+  </div>
+  <span class="grow"></span>
+  <button class="needs" id="needs" aria-haspopup="true" aria-expanded="false">
+    <i></i><span>Needs you</span><b>2</b>
+  </button>
+  <button class="jump" id="jump"><span>Jump to…</span><kbd>⌘K</kbd></button>
+  <button class="skyswitch sound" id="sound" aria-pressed="true" aria-label="Wind sound" title="Wind sound">
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      aria-hidden="true"
+    >
+      <path d="M3 9h9a3 3 0 1 0-3-3M3 14h14a3 3 0 1 1-3 3M3 11.5h17" />
+    </svg>
+  </button>
+  <button class="skyswitch" id="sky" aria-label="Switch between summer and polar night" title="Summer / Polar night">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" />
+    </svg>
+  </button>
+  <div class="pop" id="needs-pop" hidden>
+    <button data-open="0"><b>Covibe explainer</b><span>2 threads open · the agent replied to both</span></button>
+    <button data-open="2"><b>Pricing page</b><span>The agent asks: which currency comes first?</span></button>
+  </div>
+</header>
+
+<dialog class="palette" id="palette" aria-label="Jump to">
+  <input id="palette-q" type="text" placeholder="A session, a draft, an idea, Settings…" autocomplete="off" />
+  <div class="results" id="palette-list"></div>
+</dialog>
+
+<main id="view-home">
+  <div class="scene home-scene">
+    <svg viewBox="0 0 1200 240" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+      <circle class="star" cx="140" cy="40" r="1.6" />
+      <circle class="star" cx="470" cy="22" r="1.3" style="animation-delay: 1s" />
+      <circle class="star" cx="760" cy="50" r="1.6" style="animation-delay: 2s" />
+      <circle class="star" cx="1040" cy="30" r="1.3" style="animation-delay: 0.5s" />
+      <path class="aurora a1" d="M-40 70 C 200 10, 420 110, 660 46 S 1040 30, 1260 84" />
+      <path class="aurora a2" d="M-40 104 C 240 50, 460 136, 720 80 S 1060 70, 1260 116" />
+      <circle class="orb-glow" cx="930" cy="118" r="44" />
+      <circle class="orb" cx="930" cy="118" r="18" />
+      <path class="hill-far" d="M0 160 Q 150 84 330 140 T 640 122 T 930 114 T 1200 148 V240 H0Z" />
+      <path
+        class="far-line"
+        d="M560 112V160M700 96V150M1010 78V140M560 112Q 630 108 700 97Q 855 96 1010 79Q 1115 78 1220 70"
+      />
+      <g id="far-cab"><use href="#gondola" transform="scale(0.034) translate(-2657 -1572)" /></g>
+      <path class="hill-mid" d="M0 196 Q 200 124 420 180 T 800 162 T 1200 184 V240 H0Z" />
+      <path class="hill-near" d="M0 222 Q 260 176 520 218 T 1200 210 V240 H0Z" />
+    </svg>
+    <div class="hello">
+      <h1>Two sessions are waiting for you.</h1>
+      <p>Tuesday 10 November · one Update is on its way</p>
+    </div>
+  </div>
+  <div class="home">
+    <nav class="tabs" aria-label="On this page">
+      <a href="#sec-sessions" class="on">Sessions <b>5</b></a>
+      <a href="#sec-drafts">Drafts <b>6</b></a>
+      <a href="#sec-ideas">Ideas <b>4</b></a>
+      <span class="grow"></span>
+      <button class="new" id="new">New session</button>
+    </nav>
+    <section id="sec-sessions"><div id="lines"></div></section>
+    <section id="sec-drafts">
+      <h2>Drafts</h2>
+      <div class="drafts" id="drafts"></div>
+    </section>
+    <section id="sec-ideas">
+      <h2>Ideas</h2>
+      <p class="lede">Not in a session yet. Start one when an idea is ready to be worked on.</p>
+      <div class="ideas" id="ideas"></div>
+    </section>
+    <p class="note">
+      Home. No sidebar: a session appears once, as its own line, with the cab where the work stands and the reason in
+      words. What needs you sits first and in the bar. Drafts and Ideas are sections of this page; everything else is
+      one jump away. Every session here opens the same demo session.
+    </p>
+  </div>
+</main>
+
+<main id="view-session" hidden>
+  <div class="scene" id="scene">
+    <svg viewBox="0 0 1200 380" preserveAspectRatio="xMidYMax slice" id="stage">
+      <g aria-hidden="true">
+        <circle class="star" cx="140" cy="50" r="1.6" />
+        <circle class="star" cx="420" cy="28" r="1.3" style="animation-delay: 1s" />
+        <circle class="star" cx="700" cy="60" r="1.6" style="animation-delay: 2s" />
+        <circle class="star" cx="930" cy="34" r="1.2" style="animation-delay: 0.5s" />
+        <circle class="star" cx="1110" cy="70" r="1.5" style="animation-delay: 1.6s" />
+        <path class="aurora a1" d="M-40 90 C 200 20, 420 130, 660 60 S 1040 40, 1260 100" />
+        <path class="aurora a2" d="M-40 130 C 240 70, 460 160, 720 100 S 1060 90, 1260 140" />
+        <circle class="orb-glow" cx="860" cy="222" r="46" />
+        <circle class="orb" cx="860" cy="222" r="19" />
+        <path class="hill-far" d="M0 300 Q 150 214 330 276 T 640 258 T 930 250 T 1200 286 V380 H0Z" />
+        <path class="hill-mid" d="M0 334 Q 200 262 420 318 T 800 300 T 1200 322 V380 H0Z" />
+        <path class="hill-near" d="M0 360 Q 260 314 520 356 T 1200 348 V380 H0Z" />
+        <g id="towers"></g>
+        <path id="cable-tail" class="cable tail" />
+        <path id="cable" class="cable" />
+        <g id="rods"></g>
+        <g id="cab"><use href="#gondola" /></g>
+        <g id="grips"></g>
+        <g id="landed"></g>
+      </g>
+    </svg>
+    <div class="board" role="status" aria-label="Session status">
+      <span class="cell"><small>AT</small><span class="flap" id="f-at"></span></span>
+      <span class="cell"><small>STATUS</small><span class="flap" id="f-st"></span></span>
+      <span class="cell" title="You and the agent: the closer the two waves, the more you agree">
+        <small id="tune-label">TUNING</small>
+        <svg class="tuner" width="66" height="21" viewBox="0 0 66 21" aria-hidden="true">
+          <path class="agent" id="w-agent" />
+          <path class="you" id="w-you" />
+        </svg>
+      </span>
+    </div>
+  </div>
+
+  <div class="wrap" id="wrap">
+    <svg class="string" id="string">
+      <path class="cable" id="string-path" />
+      <path class="plumb" id="plumb" d="M0 0l5 9-5 9-5-9z" />
+      <circle class="riser" id="riser" r="4.5" />
+      <g id="beads"></g>
+    </svg>
+
+    <h1>Covibe: shaping one piece of work together</h1>
+    <div class="rows">
+      <div class="row" data-t="0">
+        <p id="p1">
+          Covibe is how a person and an agent shape one piece of work together. You comment; the agent replies;
+          <mark>nothing changes until you agree</mark>.
+        </p>
+        <div class="thread" data-t="0">
+          <div class="kicker"><i></i><span>Thread</span></div>
+          <div class="who">You</div>
+          Maybe say this earlier. It is the whole point.
+          <div class="agent"><b>Agent</b> — I can open with it: “Nothing changes until you agree.”</div>
+          <button class="agree" type="button">Agree</button>
+          <div class="state">Agreed · rides with the next Update</div>
+        </div>
+      </div>
+      <div class="row">
+        <h2>How a round works</h2>
+        <span></span>
+      </div>
+      <div class="row" data-t="1">
+        <p id="p2">
+          Read the draft and leave comments where something feels off. The agent answers in the thread, sometimes with a
+          concrete proposal. <mark>When you agree, the next Update rewrites only what you agreed to.</mark>
+        </p>
+        <div class="thread" data-t="1">
+          <div class="kicker"><i></i><span>Thread</span></div>
+          <div class="who">You</div>
+          Shorter. One sentence is enough here.
+          <div class="agent"><b>Agent</b> — “Agree, and the next Update rewrites only that.”</div>
+          <button class="agree" type="button">Agree</button>
+          <div class="state">Agreed · rides with the next Update</div>
+        </div>
+      </div>
+      <div class="row">
+        <p>Snapshots freeze a set of drafts so you can share or export them later.</p>
+        <span></span>
+      </div>
+    </div>
+    <p class="note">
+      Concept A + B. Two lines, two jobs. The cable above is time: one station per version, and it only moves when the
+      cab does. The plumb line beside the draft is place: a bead where each thread sits, hollow while it is open, moss
+      once you agree. It keeps still until you pass over a paragraph, and now and then a gust leans it. Agree, and the
+      bead rings and sends its change up to the cab. Update carries only what you agreed to.
+    </p>
+    <div class="dock">
+      <button class="depart" id="depart" disabled>
+        <span class="knob">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#f3f1ea"
+            stroke-width="2.2"
+            aria-hidden="true"
+          >
+            <path d="M5 12h13M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+          </svg>
+        </span>
+        <span><span id="depart-label">Update</span><small id="depart-sub">Nothing agreed yet</small></span>
+      </button>
+    </div>
+  </div>
+</main>
+
+<script>
+  const NS = "http://www.w3.org/2000/svg";
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, attrs = {}, parent) => {
+    const node = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+    parent?.appendChild(node);
+    return node;
+  };
+  const calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // ---------- The line: anchors off both edges, a tower at each version ----------
+  const posts = [
+    { x: -40, y: 176 },
+    { x: 170, y: 150, name: "v1" },
+    { x: 590, y: 128, name: "v2" },
+    { x: 1010, y: 104, name: "v3" },
+    { x: 1240, y: 94 },
+  ];
+  const STEP = 7; // px between string nodes
+  const spans = posts.slice(0, -1).map((a, i) => {
+    const b = posts[i + 1],
+      n = Math.max(8, Math.round((b.x - a.x) / STEP) + 1);
+    return { a, b, n, sag: (b.x - a.x) * 0.045, u: new Float32Array(n), v: new Float32Array(n) };
+  });
+
+  const towers = $("towers"),
+    sheaves = [];
+  posts.slice(1, 4).forEach((p, i) => {
+    // The mast stands to one side and holds the cable out on an arm, so a cab at the station hangs clear of it.
+    const foot = 372,
+      px = p.x - 48;
+    el(
+      "path",
+      { class: "tower", d: `M${px} ${p.y - 4}V${foot}M${px - 20} ${foot}L${px} ${p.y + 120}L${px + 20} ${foot}` },
+      towers,
+    );
+    el(
+      "path",
+      {
+        class: "tower",
+        d: `M${px} ${p.y + 5}H${p.x - 5}M${px} ${p.y + 36}L${p.x - 16} ${p.y + 5}M${px - 10} ${p.y + 232}H${px + 10}`,
+      },
+      towers,
+    );
+    el("path", { class: "deck", d: `M${px - 12} ${p.y + 96}H${p.x + 52}` }, towers);
+    const wheel = el("g", {}, towers);
+    el("circle", { class: "sheave", cx: p.x, cy: p.y + 5, r: 5 }, wheel);
+    el(
+      "path",
+      { class: "tower", "stroke-width": 1.2, d: `M${p.x - 4} ${p.y + 5}H${p.x + 4}M${p.x} ${p.y + 1}V${p.y + 9}` },
+      wheel,
+    );
+    sheaves.push({ wheel, p });
+    const sign = el("g", { class: "sign" + (i === 2 ? " next" : ""), id: "sign" + i }, towers);
+    el("rect", { x: p.x - 19, y: p.y - 36, width: 38, height: 19, rx: 4 }, sign);
+    el("text", { x: p.x, y: p.y - 22.5 }, sign).textContent = p.name;
+  });
+
+  // ---------- State ----------
+  const cab = { span: 2, t: 0, theta: 0, omega: 0, load: 0, vx: 0, x: posts[2].x };
+  const K = 0.105, // logo units to scene px
+    OX = 2657, // the point of the logo's cab that sits on the cable, in logo units
+    OY = 1517,
+    ROD = [
+      [-36 * K, 67 * K],
+      [35.5 * K, 49 * K],
+    ];
+  const beads = [
+    { y: 0, state: "open" },
+    { y: 0, state: "open" },
+  ];
+  // The plumb line beside the draft is the same kind of string as the cable, turned upright.
+  const plumbLine = { n: 8, h: 1, u: new Float32Array(8), v: new Float32Array(8) };
+  let clock = 0,
+    ride = null, // { tau } while an Update is running
+    arrived = false,
+    phase = 2.2,
+    spin = 0;
+
+  // The cable's height anywhere: straight chord + its own sag + the dent the cab presses into it + the wave on it.
+  function dent(s, t) {
+    const c = cab.t;
+    if (spans[cab.span] !== s || c <= 0.0005 || c >= 0.9995) return 0;
+    const depth = (15 + cab.load * 3) * 4 * c * (1 - c);
+    return depth * (t < c ? t / c : (1 - t) / (1 - c));
+  }
+  function wave(s, t) {
+    const f = Math.min(Math.max(t, 0), 1) * (s.n - 1),
+      j = Math.min(Math.floor(f), s.n - 2);
+    return s.u[j] + (s.u[j + 1] - s.u[j]) * (f - j);
+  }
+  const heightAt = (s, t) => s.a.y + (s.b.y - s.a.y) * t + s.sag * 4 * t * (1 - t) + dent(s, t) + wave(s, t);
+  const xAt = (s, t) => s.a.x + (s.b.x - s.a.x) * t;
+  function heightAtX(x) {
+    const s = spans.find((sp) => x <= sp.b.x) ?? spans[spans.length - 1];
+    return heightAt(s, (x - s.a.x) / (s.b.x - s.a.x));
+  }
+
+  // Wind: now and then one slow gust leans the plumb line and passes. Nothing else moves it on its own.
+  const wind = { next: 6, from: -100, long: 7, level: 0 };
+  function blow() {
+    if (!calm && clock >= wind.next) {
+      wind.from = clock;
+      wind.long = 6.5 + Math.random() * 2.5;
+      wind.next = clock + 24 + Math.random() * 26;
+    }
+    const x = (clock - wind.from) / wind.long;
+    wind.level = x > 0 && x < 1 ? Math.sin(Math.PI * x) ** 2 : 0;
+    if (!sound.node) return;
+    const now = sound.node.ctx.currentTime;
+    sound.node.gain.gain.setTargetAtTime(sound.on ? wind.level * 0.085 : 0, now, 0.3);
+    sound.node.filter.frequency.setTargetAtTime(300 + wind.level * 360, now, 0.4);
+  }
+  // Where the plumb line is at height y: its own ringing plus the lean of the gust, which rolls slowly down it.
+  function sideAt(y) {
+    const s = Math.min(Math.max(y / plumbLine.h, 0), 1),
+      roll = 0.75 + 0.25 * Math.sin(2 * Math.PI * 1.3 * s - 1.1 * (clock - wind.from));
+    return 14 + wave(plumbLine, s) + wind.level * 5 * Math.sin(Math.PI * s) * roll;
+  }
+  // The gust can be heard, low and warm: brown noise through a low-pass that opens a little as it swells.
+  const sound = { on: true, node: null };
+  function listen() {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (sound.node || !Ctx) return sound.node?.ctx.resume();
+    const ctx = new Ctx(),
+      buffer = ctx.createBuffer(1, ctx.sampleRate * 4, ctx.sampleRate),
+      data = buffer.getChannelData(0);
+    let last = 0;
+    for (let i = 0; i < data.length; i++) {
+      last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02;
+      data[i] = last * 3.5;
+    }
+    const src = ctx.createBufferSource(),
+      filter = ctx.createBiquadFilter(),
+      gain = ctx.createGain();
+    src.buffer = buffer;
+    src.loop = true;
+    filter.type = "lowpass";
+    filter.frequency.value = 300;
+    filter.Q.value = 0.3;
+    gain.gain.value = 0;
+    src.connect(filter).connect(gain).connect(ctx.destination);
+    src.start();
+    sound.node = { ctx, gain, filter };
+  }
+  addEventListener("pointerdown", listen, { once: true });
+  addEventListener("keydown", listen, { once: true });
+
+  function pluck(s, t, amp) {
+    const centre = t * (s.n - 1);
+    for (let j = 1; j < s.n - 1; j++) s.u[j] += amp * Math.exp(-(((j - centre) / 2.6) ** 2));
+  }
+  function simulate() {
+    for (let sub = 0; sub < 3; sub++) {
+      for (const s of [...spans, plumbLine]) {
+        const { u, v, n } = s;
+        for (let j = 1; j < n - 1; j++) v[j] = (v[j] + 0.25 * (u[j - 1] + u[j + 1] - 2 * u[j])) * 0.9955;
+        for (let j = 1; j < n - 1; j++) u[j] += v[j];
+      }
+      // The cab is heavy: the wave mostly stops at it.
+      const cs = spans[cab.span],
+        cj = Math.round(cab.t * (cs.n - 1));
+      if (cj > 0 && cj < cs.n - 1) {
+        cs.u[cj] *= 0.82;
+        cs.v[cj] *= 0.82;
+      }
+    }
+  }
+
+  // ---------- Motion: ease out of the station, cruise, brake into the next ----------
+  const RIDE = { total: 5.4, up: 1.5, down: 1.9, table: [] };
+  {
+    const smooth = (x) => x * x * (3 - 2 * x),
+      N = 540;
+    let sum = 0;
+    for (let i = 0; i <= N; i++) {
+      const tau = (i / N) * RIDE.total;
+      const speed =
+        tau < RIDE.up
+          ? smooth(tau / RIDE.up)
+          : tau > RIDE.total - RIDE.down
+            ? smooth((RIDE.total - tau) / RIDE.down)
+            : 1;
+      RIDE.table.push(sum);
+      sum += speed;
+    }
+    RIDE.table = RIDE.table.map((v) => v / RIDE.table[N]);
+  }
+  function along(tau) {
+    const f = Math.min(Math.max(tau / RIDE.total, 0), 1) * (RIDE.table.length - 1),
+      i = Math.min(Math.floor(f), RIDE.table.length - 2);
+    return RIDE.table[i] + (RIDE.table[i + 1] - RIDE.table[i]) * (f - i);
+  }
+
+  // ---------- Drawing ----------
+  const cableEl = $("cable"),
+    tailEl = $("cable-tail"),
+    cabEl = $("cab"),
+    gripsEl = $("grips"),
+    rodsEl = $("rods"),
+    beadsEl = $("beads"),
+    riser = $("riser");
+  const gripEls = [0, 1].map(() => el("circle", { class: "grip", r: 3.1 }, gripsEl));
+  const rodEls = [0, 1].map(() => el("line", { class: "rod" }, rodsEl));
+  const threads = [...document.querySelectorAll(".thread")];
+  beads.forEach((b, i) => {
+    b.el = el(
+      "circle",
+      { class: "bead", r: 6, tabindex: 0, role: "img", "aria-label": `Open thread ${i + 1}` },
+      beadsEl,
+    );
+    b.el.addEventListener("pointerenter", () => {
+      threads[i].classList.add("lit");
+      ring(i, 3.5);
+    });
+    b.el.addEventListener("pointerleave", () => threads[i].classList.remove("lit"));
+    b.el.addEventListener("click", () =>
+      threads[i].scrollIntoView({ behavior: calm ? "auto" : "smooth", block: "center" }),
+    );
+  });
+
+  function spanPath(s, withCab) {
+    let d = "";
+    const cj = withCab ? cab.t * (s.n - 1) : -1;
+    for (let j = 0; j < s.n; j++) {
+      const t = j / (s.n - 1);
+      d += `${j ? "L" : "M"}${xAt(s, t).toFixed(1)} ${heightAt(s, t).toFixed(2)}`;
+      // The cab's own point goes into the line, so the kink under it is exactly where the cab hangs.
+      if (cj > j && cj < j + 1) d += `L${xAt(s, cab.t).toFixed(1)} ${heightAt(s, cab.t).toFixed(2)}`;
+    }
+    return d;
+  }
+  function draw() {
+    cableEl.setAttribute(
+      "d",
+      spans
+        .slice(0, 3)
+        .map((s) => spanPath(s, s === spans[cab.span]))
+        .join(""),
+    );
+    tailEl.setAttribute("d", spanPath(spans[3], false));
+    const s = spans[cab.span],
+      gx = xAt(s, cab.t),
+      gy = heightAt(s, cab.t),
+      deg = (cab.theta * 180) / Math.PI;
+    cabEl.setAttribute(
+      "transform",
+      `translate(${gx.toFixed(2)} ${gy.toFixed(2)}) rotate(${deg.toFixed(2)}) scale(${K}) translate(${-OX} ${-OY})`,
+    );
+    const cos = Math.cos(cab.theta),
+      sin = Math.sin(cab.theta);
+    ROD.forEach(([rx, ry], i) => {
+      const hx = gx + rx,
+        hy = heightAtX(hx); // each grip sits on the cable at its own x
+      gripEls[i].setAttribute("cx", hx.toFixed(2));
+      gripEls[i].setAttribute("cy", (hy - 1.6).toFixed(2));
+      rodEls[i].setAttribute("x1", hx.toFixed(2));
+      rodEls[i].setAttribute("y1", hy.toFixed(2));
+      rodEls[i].setAttribute("x2", (gx + rx * cos - ry * sin).toFixed(2));
+      rodEls[i].setAttribute("y2", (gy + rx * sin + ry * cos + 0.6).toFixed(2));
+    });
+    let d = "";
+    for (let j = 0; j < plumbLine.n; j++)
+      d += `${j ? "L" : "M"}${sideAt((j / (plumbLine.n - 1)) * plumbLine.h).toFixed(2)} ${((j / (plumbLine.n - 1)) * plumbLine.h).toFixed(1)}`;
+    $("string-path").setAttribute("d", d);
+    for (const b of beads) {
+      b.el.setAttribute("cx", sideAt(b.y).toFixed(2));
+      b.el.setAttribute("cy", b.y.toFixed(1));
+    }
+    const up = beads.find((b) => b.state === "rising");
+    if (up) {
+      const e = up.k * up.k * (3 - 2 * up.k),
+        y = up.y * (1 - e);
+      riser.setAttribute("cx", sideAt(y).toFixed(2));
+      riser.setAttribute("cy", y.toFixed(1));
+    }
+    riser.style.opacity = up ? Math.min(1, (1 - up.k) * 5) : 0;
+    sheaves.forEach(({ wheel, p }) =>
+      wheel.setAttribute("transform", `rotate(${(spin * 57.3).toFixed(1)} ${p.x} ${p.y + 5})`),
+    );
+    // Tuner: you and the agent as two waves, sliding into phase as threads are agreed.
+    const open = beads.filter((b) => b.state === "open").length;
+    phase += (open * 1.1 - phase) * 0.06;
+    for (const [id, shift, amp] of [
+      ["w-agent", phase, 6 + open],
+      ["w-you", 0, 6],
+    ]) {
+      let d = "";
+      for (let x = 1; x <= 65; x += 2)
+        d += `${d ? "L" : "M"}${x} ${(10.5 + amp * Math.sin(x * 0.2 + clock * 2.4 + shift)).toFixed(1)}`;
+      $(id).setAttribute("d", d);
+    }
+  }
+
+  // ---------- One frame ----------
+  function frame(dt) {
+    clock += dt;
+    blow();
+    simulate();
+    let ax = 0;
+    if (ride) {
+      ride.tau += dt;
+      cab.t = along(ride.tau);
+      const x = xAt(spans[2], cab.t),
+        vx = (x - cab.x) / dt;
+      ax = calm ? 0 : (vx - cab.vx) / dt;
+      spin += (x - cab.x) / 5;
+      cab.vx = vx;
+      cab.x = x;
+      if (ride.tau >= RIDE.total) land();
+    }
+    // The cab is a pendulum under its grips: it hangs back when the line pulls away and swings forward on braking.
+    const w = 3.3,
+      breeze = 0.02 * Math.sin(clock * 0.9) + wind.level * 0.16 * Math.sin((clock - wind.from) * 1.3);
+    cab.omega += (-w * w * cab.theta - 1.5 * cab.omega + ax / 140 + breeze) * dt;
+    cab.theta += cab.omega * dt;
+    for (const b of beads) {
+      if (b.state !== "rising") continue;
+      b.k = Math.min(1, b.k + dt / 0.9);
+      if (b.k >= 1) {
+        b.state = "aboard";
+        cab.load++;
+        cab.omega += 0.1; // the cab takes the weight
+        if (!calm) pluck(spans[2], 0.06, 3);
+        refresh();
+      }
+    }
+    draw();
+  }
+
+  // ---------- Board ----------
+  function flap(id, text) {
+    const host = $(id),
+      old = [...host.children].map((c) => c.textContent);
+    host.replaceChildren(
+      ...[...text].map((ch, i) => {
+        const cell = document.createElement("span");
+        cell.textContent = ch;
+        if (old[i] !== ch) {
+          cell.style.animationDelay = i * 45 + "ms";
+          cell.classList.add("flip");
+        }
+        return cell;
+      }),
+    );
+  }
+  const depart = $("depart"),
+    label = $("depart-label"),
+    sub = $("depart-sub");
+  function refresh() {
+    const open = beads.filter((b) => b.state === "open").length,
+      ready = beads.filter((b) => b.state === "aboard").length;
+    $("tune-label").textContent = open ? `${open} OPEN` : "IN TUNE";
+    if (ride || arrived) return;
+    flap("f-at", "V2");
+    flap("f-st", ready ? "READY  " : "WAITING");
+    depart.disabled = !ready;
+    sub.textContent = ready
+      ? `${ready} agreed change${ready > 1 ? "s" : ""} ride${ready > 1 ? "" : "s"} to v3`
+      : "Nothing agreed yet";
+  }
+
+  // ---------- Threads ----------
+  const lastRing = [0, 0];
+  function ring(i, amp) {
+    const b = beads[i];
+    if (b.state !== "open" || calm || clock - lastRing[i] < 0.45) return;
+    lastRing[i] = clock;
+    pluck(plumbLine, b.y / plumbLine.h, amp);
+  }
+  document.querySelectorAll(".row[data-t]").forEach((row) => {
+    const i = Number(row.dataset.t);
+    row.addEventListener("pointerenter", () => {
+      beads[i].el.classList.add("lit");
+      ring(i, 4);
+    });
+    row.addEventListener("pointerleave", () => beads[i].el.classList.remove("lit"));
+  });
+  threads.forEach((thread, i) => {
+    thread.querySelector(".agree").addEventListener("click", () => {
+      const b = beads[i];
+      if (b.state !== "open") return;
+      thread.classList.add("agreed");
+      b.el.classList.add("agreed");
+      b.el.setAttribute("aria-label", `Agreed thread ${i + 1}`);
+      if (!calm) pluck(plumbLine, b.y / plumbLine.h, 8); // the bead rings once
+      b.state = "rising";
+      b.k = calm ? 1 : 0;
+      refresh();
+    });
+  });
+
+  // ---------- Update ----------
+  const rewrite = [
+    [
+      "p1",
+      "<span class='fresh'>Nothing changes until you agree.</span> Covibe is how a person and an agent shape one piece of work together: you comment, the agent replies.",
+    ],
+    [
+      "p2",
+      "Read the draft and leave comments where something feels off. The agent answers in the thread. <span class='fresh'>Agree, and the next Update rewrites only that.</span>",
+    ],
+  ];
+  depart.addEventListener("click", () => {
+    if (arrived) return location.reload();
+    if (ride) return;
+    ride = { tau: calm ? RIDE.total : 0 };
+    depart.disabled = true;
+    label.textContent = "On the way to v3";
+    sub.textContent = "Rewriting only what you agreed to";
+    flap("f-st", "EN ROUTE");
+    if (!calm) pluck(spans[2], 0.05, -4); // the haul rope takes up the slack
+  });
+  function land() {
+    ride = null;
+    arrived = true;
+    cab.span = 2;
+    cab.t = 1;
+    cab.vx = 0;
+    if (!calm) {
+      pluck(spans[2], 0.94, 5);
+      pluck(spans[3], 0.1, 4);
+    }
+    $("sign2").classList.remove("next");
+    beads.forEach((b, i) => {
+      if (b.state !== "aboard") return;
+      const [id, html] = rewrite[i];
+      $(id).innerHTML = html;
+      threads[i].querySelector(".state").textContent = "Written into v3";
+      b.state = "written";
+      b.el.classList.add("written");
+      el(
+        "circle",
+        { class: "landed", cx: posts[3].x - 8 + $("landed").children.length * 16, cy: posts[3].y - 46, r: 4 },
+        $("landed"),
+      );
+    });
+    cab.load = 0;
+    flap("f-at", "V3");
+    flap("f-st", "ARRIVED ");
+    $("route-v").textContent = "v3 of 3";
+    label.textContent = "Arrived at v3";
+    sub.textContent = "Only the agreed lines changed · run it again";
+    depart.disabled = false;
+  }
+
+  // Summer and Polar night follow the theme; the round button switches by hand.
+  const scene = $("scene");
+  const dark = () =>
+    document.documentElement.dataset.theme
+      ? document.documentElement.dataset.theme === "dark"
+      : matchMedia("(prefers-color-scheme: dark)").matches;
+  const sky = () => document.body.classList.toggle("night", dark());
+  $("sky").addEventListener("click", () => {
+    document.documentElement.dataset.theme = dark() ? "light" : "dark";
+    sky();
+  });
+  $("sound").addEventListener("click", () => {
+    sound.on = !sound.on;
+    $("sound").setAttribute("aria-pressed", String(sound.on));
+    listen();
+    if (sound.on && !wind.level) wind.next = clock; // turning it on calls a gust, so there is something to hear
+  });
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", sky);
+  new MutationObserver(sky).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  sky();
+
+  // The plumb line runs from the scene's edge to the end of the draft; a bead sits at the first line of its paragraph.
+  function layout() {
+    const wrap = $("wrap").getBoundingClientRect(),
+      rows = document.querySelector(".rows").getBoundingClientRect();
+    const h = Math.max(60, rows.bottom - wrap.top + 6),
+      n = Math.max(8, Math.round(h / 6) + 1);
+    if (n !== plumbLine.n) Object.assign(plumbLine, { n, u: new Float32Array(n), v: new Float32Array(n) });
+    plumbLine.h = h;
+    $("string").setAttribute("height", h + 22);
+    $("plumb").setAttribute("transform", `translate(14 ${h})`);
+    document.querySelectorAll(".row[data-t]").forEach((row) => {
+      beads[Number(row.dataset.t)].y = row.getBoundingClientRect().top - wrap.top + 14;
+    });
+  }
+  new ResizeObserver(layout).observe($("wrap"));
+  layout();
+
+  // ---------- Home: every session once, as its own line ----------
+  const sessions = [
+    {
+      group: "VibeCab launch",
+      title: "Covibe explainer",
+      why: "2 threads open · the agent replied to both",
+      at: 1,
+      of: 2,
+      next: true,
+      open: 2,
+      state: "needs-you",
+      drafts: ["Covibe explainer"],
+    },
+    {
+      title: "Launch notes",
+      why: "Update running · rewriting 3 agreed changes into v5",
+      at: 3,
+      of: 4,
+      next: true,
+      state: "moving",
+      drafts: ["Launch notes", "FAQ"],
+    },
+    {
+      title: "Pricing page",
+      why: "The agent asks: which currency comes first?",
+      at: 2,
+      of: 3,
+      open: 1,
+      state: "needs-you",
+      drafts: ["Pricing page"],
+    },
+    {
+      group: "Reading",
+      title: "Tundra field guide",
+      why: "Paused by you on 4 November",
+      at: 1,
+      of: 2,
+      state: "quiet",
+      drafts: ["Field guide"],
+    },
+    {
+      group: "Ended",
+      title: "Welcome email",
+      why: "Ended on 28 October · kept as a Snapshot",
+      at: 5,
+      of: 6,
+      state: "quiet",
+      drafts: ["Welcome email"],
+    },
+  ];
+  const minis = [];
+  const linesEl = $("lines");
+  const html = (tag, cls, text) => {
+    const node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text) node.textContent = text;
+    return node;
+  };
+  sessions.forEach((sn, index) => {
+    if (sn.group) {
+      const g = html("div", "group");
+      g.append(html("span", "tag", sn.group));
+      linesEl.append(g);
+    }
+    const row = html("button", "line " + (sn.state === "moving" ? "" : sn.state));
+    row.style.animationDelay = index * 70 + "ms";
+    const head = html("div");
+    head.append(html("h3", "", sn.title), html("div", "why", sn.why));
+    const W = 420,
+      total = sn.of + (sn.next ? 1 : 0),
+      gap = Math.min(96, (W - 40) / Math.max(total - 1, 1)),
+      stopX = (i) => 20 + i * gap,
+      stopY = (i) => 22 - i * 2.2,
+      svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("viewBox", `0 0 ${W} 70`);
+    svg.setAttribute("preserveAspectRatio", "xMinYMid meet");
+    svg.setAttribute("aria-hidden", "true");
+    // A span of the little cable: a quadratic that sags, and the point on it at t.
+    const sag = 5,
+      point = (i, t) => {
+        const ax = stopX(i),
+          ay = stopY(i),
+          bx = stopX(i + 1),
+          by = stopY(i + 1),
+          cx = (ax + bx) / 2,
+          cy = (ay + by) / 2 + sag * 2;
+        return [
+          (1 - t) ** 2 * ax + 2 * t * (1 - t) * cx + t * t * bx,
+          (1 - t) ** 2 * ay + 2 * t * (1 - t) * cy + t * t * by,
+        ];
+      };
+    for (let i = 0; i < total - 1; i++) {
+      const ahead = i >= sn.of - 1 && !(sn.state === "moving" && i === sn.at);
+      el(
+        "path",
+        {
+          class: "mini-cable" + (ahead ? " ahead" : ""),
+          d: `M${stopX(i)} ${stopY(i)}Q${(stopX(i) + stopX(i + 1)) / 2} ${(stopY(i) + stopY(i + 1)) / 2 + sag * 2} ${stopX(i + 1)} ${stopY(i + 1)}`,
+        },
+        svg,
+      );
+    }
+    for (let i = 0; i < total; i++) {
+      el("circle", { class: "stop" + (i >= sn.of ? " ahead" : ""), cx: stopX(i), cy: stopY(i), r: 3 }, svg);
+      el("text", { class: "vlabel", x: stopX(i), y: stopY(i) - 8 }, svg).textContent = "v" + (i + 1);
+    }
+    const S = 0.058, // the little cab's scale
+      rodEls = [0, 1].map(() => el("line", { class: "rod", "stroke-width": 1.2 }, svg)),
+      gripEls = [0, 1].map(() => el("circle", { class: "grip", r: 1.9 }, svg)),
+      car = el("g", {}, svg);
+    el("use", { href: "#gondola", transform: `scale(${S}) translate(${-OX} ${-OY})` }, car);
+    const beadEls = [...Array(sn.open ?? 0)].map(() => el("circle", { class: "mini-bead", r: 3.4 }, svg));
+    // The little cable's height at x, so each grip lands on the line itself.
+    const cableY = (x) => {
+      const i = Math.min(Math.max(Math.floor((x - 20) / gap), 0), total - 2);
+      if (total < 2) return stopY(0);
+      return point(i, Math.min(Math.max((x - stopX(i)) / gap, 0), 1))[1];
+    };
+    const place = (t) => {
+      const [x, y] = sn.state === "moving" ? point(sn.at, t) : [stopX(sn.at), stopY(sn.at)];
+      car.setAttribute(
+        "transform",
+        `translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${(mini.theta * 57.3).toFixed(2)})`,
+      );
+      const cos = Math.cos(mini.theta),
+        sin = Math.sin(mini.theta);
+      ROD.forEach(([rx, ry], k) => {
+        const ax = (rx / K) * S,
+          ay = (ry / K) * S,
+          hx = x + ax,
+          hy = cableY(hx);
+        gripEls[k].setAttribute("cx", hx.toFixed(2));
+        gripEls[k].setAttribute("cy", (hy - 1).toFixed(2));
+        rodEls[k].setAttribute("x1", hx.toFixed(2));
+        rodEls[k].setAttribute("y1", hy.toFixed(2));
+        rodEls[k].setAttribute("x2", (x + ax * cos - ay * sin).toFixed(2));
+        rodEls[k].setAttribute("y2", (y + ax * sin + ay * cos + 0.5).toFixed(2));
+      });
+      beadEls.forEach((b, k) => {
+        b.setAttribute("cx", x + 30 + k * 11);
+        b.setAttribute("cy", y + 26);
+      });
+    };
+    const mini = { sn, place, theta: 0, omega: 0, t: 0, kick: 0 };
+    minis.push(mini);
+    place(0);
+    row.addEventListener("pointerenter", () => (mini.omega += 0.9)); // a touch sets the little cab swinging
+    row.addEventListener("click", () => show("session"));
+    const cargo = html("div", "cargo");
+    sn.drafts.forEach((d) => cargo.append(html("span", "", d)));
+    row.append(head, svg, cargo);
+    linesEl.append(row);
+  });
+  // The little cabs: each a small pendulum; the one whose Update is running rides its span, eases in and out, rests, and goes again.
+  function homeFrame(dt) {
+    for (const m of minis) {
+      let ax = 0;
+      if (m.sn.state === "moving" && !calm) {
+        const phase = (clock % 9.5) / RIDE.total,
+          t = phase < 1 ? along(phase * RIDE.total) : 1,
+          v = (t - m.t) / dt;
+        ax = (v - (m.v ?? 0)) / dt;
+        m.v = v;
+        m.t = t;
+        if (Math.abs(ax) > 40) ax = 0; // the jump back to the start is not a force
+      }
+      m.omega += (-10.9 * m.theta - 1.6 * m.omega + ax * 0.9 + wind.level * 0.2 * Math.sin(clock * 1.3)) * dt;
+      m.theta += m.omega * dt;
+      m.place(m.t);
+    }
+    // Far off, one cab crosses the valley, slowly.
+    const f = calm ? 0.4 : (clock / 40) % 1,
+      x = 560 + 660 * f,
+      [x0, y0, x1, y1, dip] =
+        x < 700 ? [560, 112, 700, 97, 3.5] : x < 1010 ? [700, 97, 1010, 79, 8] : [1010, 79, 1220, 70, 3.5],
+      u = (x - x0) / (x1 - x0),
+      y = (1 - u) ** 2 * y0 + 2 * u * (1 - u) * ((y0 + y1) / 2 + dip) + u * u * y1; // the same curve the far cable is drawn with
+    $("far-cab").setAttribute("transform", `translate(${x.toFixed(1)} ${y.toFixed(1)})`);
+  }
+
+  [
+    ["Covibe explainer", "Covibe explainer · v2 · edited today"],
+    ["Launch notes", "Launch notes · v4 · Update running"],
+    ["FAQ", "Launch notes · v2 · edited yesterday"],
+    ["Pricing page", "Pricing page · v3 · edited yesterday"],
+    ["Field guide", "Tundra field guide · v2 · 4 November"],
+    ["Welcome email", "Welcome email · v6 · Snapshot"],
+  ].forEach(([name, meta]) => {
+    const card = html("button", "draft");
+    card.append(html("b", "", name), html("span", "", meta));
+    card.addEventListener("click", () => show("session"));
+    $("drafts").append(card);
+  });
+  [
+    "A page that explains Updates with one moving picture.",
+    "Let a Snapshot be shared as a single link.",
+    "Voice notes as comments.",
+    "A weekly digest of what changed, written by the agent.",
+  ].forEach((text) => {
+    const row = html("div", "idea");
+    row.append(html("p", "", text), html("button", "", "Start a session"));
+    $("ideas").append(row);
+  });
+
+  // ---------- Getting around: the bar, Needs you, and one jump box ----------
+  function show(view) {
+    const swap = () => {
+      $("view-home").hidden = view !== "home";
+      $("view-session").hidden = view !== "session";
+      $("crumb-home").hidden = view !== "home";
+      $("crumb-session").hidden = view !== "session";
+      $("needs-pop").hidden = true;
+      scrollTo(0, 0);
+      if (view === "session") layout();
+    };
+    swap();
+    // The incoming page rises into place; it never starts invisible, so a paused tab still shows it whole.
+    const page = $("view-" + view);
+    page.classList.remove("rise");
+    void page.offsetWidth;
+    page.classList.add("rise");
+  }
+  $("go-home").addEventListener("click", () => show("home"));
+  $("back").addEventListener("click", () => show("home"));
+  $("new").addEventListener("click", () => show("session"));
+  $("needs").addEventListener("click", () => {
+    const pop = $("needs-pop");
+    pop.hidden = !pop.hidden;
+    $("needs").setAttribute("aria-expanded", String(!pop.hidden));
+  });
+  $("needs-pop").addEventListener("click", (e) => e.target.closest("button") && show("session"));
+  addEventListener("pointerdown", (e) => {
+    if (!e.target.closest("#needs, #needs-pop")) $("needs-pop").hidden = true;
+  });
+  const places = [
+    ...sessions.map((sn) => ["Session", sn.title, sn.why, () => show("session")]),
+    [
+      "Page",
+      "Drafts",
+      "All six, with where each one lives",
+      () => (show("home"), setTimeout(() => $("sec-drafts").scrollIntoView(), 60)),
+    ],
+    [
+      "Page",
+      "Ideas",
+      "Four, not in a session yet",
+      () => (show("home"), setTimeout(() => $("sec-ideas").scrollIntoView(), 60)),
+    ],
+    ["Page", "Settings", "Agents, roles, spending", null],
+    ["Page", "Trash", "Removed in the last 30 days", null],
+  ];
+  const palette = $("palette"),
+    query = $("palette-q");
+  function listPlaces() {
+    const q = query.value.trim().toLowerCase(),
+      list = $("palette-list");
+    list.replaceChildren();
+    let kind = "";
+    places
+      .filter(([, name, hint]) => !q || (name + " " + hint).toLowerCase().includes(q))
+      .forEach(([k, name, hint, act], i) => {
+        if (k !== kind) list.append(html("small", "", (kind = k) + "s"));
+        const b = html("button", i === 0 ? "on" : "");
+        b.append(html("b", "", name), html("span", "", act ? hint : hint + " · not in this sketch"));
+        b.addEventListener("click", () => {
+          palette.close();
+          act?.();
+        });
+        list.append(b);
+      });
+  }
+  function jump() {
+    query.value = "";
+    listPlaces();
+    palette.showModal();
+  }
+  $("jump").addEventListener("click", jump);
+  query.addEventListener("input", listPlaces);
+  query.addEventListener("keydown", (e) => e.key === "Enter" && $("palette-list").querySelector("button")?.click());
+  palette.addEventListener("click", (e) => e.target === palette && palette.close());
+  addEventListener("keydown", (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      jump();
+    }
+  });
+
+  refresh();
+  draw();
+  let last = performance.now();
+  (function loop(now) {
+    const dt = Math.min(0.034, Math.max(0.001, (now - last) / 1000));
+    frame(dt);
+    homeFrame(dt);
+    last = now;
+    requestAnimationFrame(loop);
+  })(last);
+  // For checking the motion by hand: step the same frame function without the clock.
+  window.vcLine = { show, homeFrame, minis, frame, cab, beads, spans, plumbLine, wind, sideAt, heightAt, xAt };
+</script>

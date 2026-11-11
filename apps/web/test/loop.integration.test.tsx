@@ -127,13 +127,20 @@ it("declines with a reason, and switches the agent to Manual", async () => {
   const thread = await card(container, "Add a map.");
   tl.fireEvent.click(tl.within(thread).getByRole("button", { name: "Decline" }));
   tl.fireEvent.change(tl.within(thread).getByLabelText("Why not? (optional)"), { target: { value: "No room." } });
-  tl.fireEvent.click(tl.within(thread.querySelector("form") as HTMLElement).getByRole("button", { name: "Decline" }));
+  // A second click lands before the first answer is back: only one Decline may go out.
+  const send = tl.within(thread.querySelector("form") as HTMLElement).getByRole("button", { name: "Decline" });
+  tl.fireEvent.click(send);
+  tl.fireEvent.click(send);
   await tl.waitFor(async () => {
     const items = await query<Array<{ body: string; state: string; declineReason?: string }>>("vc.FeedbackItems", {
       sessionId,
     });
     expect(items.find((c) => c.body === "Add a map.")).toMatchObject({ state: "declined", declineReason: "No room." });
   });
+  // The screen follows: a declined thread is finished with, so it leaves the open threads, and nothing went wrong.
+  const shown = () => [...container.querySelectorAll(".vc-thread")].map((node) => node.textContent ?? "");
+  await tl.waitFor(() => expect(shown().some((text) => text.includes("Add a map."))).toBe(false), long);
+  expect(tl.screen.queryByText(/VibeCab cannot do this now/)).toBeNull();
 });
 
 it("surfaces a conflict and resolves it with Choose this one", async () => {

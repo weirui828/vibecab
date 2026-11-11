@@ -1,0 +1,883 @@
+<meta charset="utf-8" />
+<title>VibeCab Cable Line</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap"
+/>
+<style>
+  /* Layout: a wide landscape with the cable line on top; under it the draft in one column, tickets in its margin. */
+  :root {
+    --sky: #eef4f8;
+    --sky-low: #dfeaf1;
+    --paper: #fbfcfd;
+    --ink: #16242c;
+    --ink-soft: #5a6b75;
+    --line: #cfdbe2;
+    --moss: #5f7a52;
+    --moss-far: #c9d8c6;
+    --moss-mid: #a4bd9c;
+    --hill-near: #5f7a52;
+    --orb: #d9a441;
+    --cab: #e8553d;
+    --cab-dark: #b53d2a;
+    --brass: #d9a441;
+    --board: #1b2a31;
+    --board-ink: #f3ead2;
+    --glow: #fff3c4;
+    --display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+    --body: "Instrument Sans", "Helvetica Neue", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --sky: #0b1622;
+      --sky-low: #12283a;
+      --paper: #101d28;
+      --ink: #e6eef2;
+      --ink-soft: #93a7b3;
+      --line: #25394a;
+      --moss: #7fa06f;
+      --moss-far: #16303a;
+      --moss-mid: #1e4038;
+      --hill-near: #2a5244;
+      --orb: #f1ecd8;
+      --cab: #f06a50;
+      --cab-dark: #c24a34;
+      --brass: #e6b655;
+      --board: #060d13;
+      --board-ink: #f3ead2;
+      --glow: #ffe9a3;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --sky: #0b1622;
+    --sky-low: #12283a;
+    --paper: #101d28;
+    --ink: #e6eef2;
+    --ink-soft: #93a7b3;
+    --line: #25394a;
+    --moss: #7fa06f;
+    --moss-far: #16303a;
+    --moss-mid: #1e4038;
+    --hill-near: #2a5244;
+    --orb: #f1ecd8;
+    --cab: #f06a50;
+    --cab-dark: #c24a34;
+    --brass: #e6b655;
+    --board: #060d13;
+    --board-ink: #f3ead2;
+    --glow: #ffe9a3;
+    color-scheme: dark;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 16px/1.6 var(--body);
+  }
+  button {
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 2px solid var(--cab);
+    outline-offset: 3px;
+  }
+
+  /* ---------- The line ---------- */
+  .scene {
+    position: relative;
+    background: linear-gradient(var(--sky), var(--sky-low));
+    overflow: hidden;
+  }
+  .scene > svg {
+    display: block;
+    width: 100%;
+    height: clamp(220px, 34vw, 340px);
+  }
+  .hill-far {
+    fill: var(--moss-far);
+  }
+  .hill-mid {
+    fill: var(--moss-mid);
+  }
+  .hill-near {
+    fill: var(--hill-near);
+  }
+  .ground {
+    fill: var(--paper);
+  }
+  .tower {
+    stroke: var(--ink);
+    stroke-width: 3;
+    stroke-linecap: round;
+    fill: none;
+  }
+  .platform {
+    fill: var(--ink);
+  }
+  .cable {
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: 1.6;
+  }
+  .cable.future {
+    stroke-dasharray: 5 7;
+    opacity: 0.45;
+  }
+  .sun {
+    fill: var(--orb);
+  }
+  .sun-glow {
+    fill: var(--glow);
+    opacity: 0.5;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: breathe 6s ease-in-out infinite alternate;
+  }
+  @keyframes breathe {
+    from {
+      transform: scale(0.85);
+      opacity: 0.3;
+    }
+  }
+  .aurora {
+    fill: none;
+    stroke-width: 26;
+    stroke-linecap: round;
+    opacity: 0;
+    filter: blur(14px);
+  }
+  .night .aurora {
+    opacity: 0.55;
+    animation: aurora 9s ease-in-out infinite alternate;
+  }
+  .aurora.a1 {
+    stroke: #58d6a5;
+  }
+  .aurora.a2 {
+    stroke: #6aa8ff;
+    animation-delay: -4s !important;
+  }
+  @keyframes aurora {
+    to {
+      transform: translate(40px, 14px) skewX(-8deg);
+      opacity: 0.25;
+    }
+  }
+  .star {
+    fill: var(--board-ink);
+    opacity: 0;
+  }
+  .night .star {
+    opacity: 0.9;
+    animation: twinkle 3s ease-in-out infinite alternate;
+  }
+  @keyframes twinkle {
+    from {
+      opacity: 0.2;
+    }
+  }
+  /* The cab */
+  #cab {
+    transition: none;
+  }
+  .cab-swing {
+    transform-box: fill-box;
+    transform-origin: 50% 0;
+    animation: sway 3.4s ease-in-out infinite alternate;
+  }
+  .moving .cab-swing {
+    animation: lean 0.6s var(--ease) forwards;
+  }
+  @keyframes sway {
+    from {
+      transform: rotate(-2.2deg);
+    }
+    to {
+      transform: rotate(2.2deg);
+    }
+  }
+  @keyframes lean {
+    to {
+      transform: rotate(-7deg);
+    }
+  }
+  .cab-body {
+    fill: var(--cab);
+  }
+  .cab-roof {
+    fill: var(--cab-dark);
+  }
+  .cab-window {
+    fill: var(--glow);
+  }
+  .cab-arm {
+    stroke: var(--ink);
+    stroke-width: 2.4;
+    stroke-linecap: round;
+  }
+  .wheel {
+    fill: var(--ink);
+  }
+  .bell {
+    fill: var(--brass);
+    transform-box: fill-box;
+    transform-origin: 50% 0;
+  }
+  .ringing .bell {
+    animation: ring 0.5s ease-in-out 3;
+  }
+  @keyframes ring {
+    25% {
+      transform: rotate(24deg);
+    }
+    75% {
+      transform: rotate(-24deg);
+    }
+  }
+  .rider {
+    fill: var(--ink);
+    transition:
+      transform 0.5s var(--ease),
+      opacity 0.3s;
+    transform-box: fill-box;
+  }
+  .rider.hop {
+    animation: hop 0.5s var(--ease);
+  }
+  @keyframes hop {
+    40% {
+      transform: translateY(-9px);
+    }
+  }
+  .sign text {
+    font: 700 13px var(--mono);
+    fill: var(--board-ink);
+    text-anchor: middle;
+  }
+  .sign rect {
+    fill: var(--board);
+  }
+  .sign.next rect {
+    opacity: 0.4;
+  }
+
+  /* Split-flap board */
+  .board {
+    position: absolute;
+    left: max(16px, env(safe-area-inset-left, 0px));
+    top: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--board);
+    color: var(--board-ink);
+    font: 700 13px/1 var(--mono);
+    letter-spacing: 0.04em;
+    box-shadow: 0 8px 24px -10px rgb(0 0 0 / 0.5);
+  }
+  .board .cell {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .board small {
+    font-size: 10px;
+    font-weight: 500;
+    opacity: 0.55;
+    letter-spacing: 0.14em;
+  }
+  .flap {
+    display: inline-flex;
+    gap: 2px;
+  }
+  .flap span {
+    display: inline-grid;
+    place-items: center;
+    min-width: 15px;
+    height: 22px;
+    padding: 0 2px;
+    border-radius: 3px;
+    background: linear-gradient(#2b3d46 49%, #0d1a20 50%, #223440 51%);
+    transform-origin: 50% 50%;
+  }
+  .flap span.flip {
+    animation: flip 0.42s ease-in;
+  }
+  @keyframes flip {
+    0% {
+      transform: rotateX(0);
+    }
+    50% {
+      transform: rotateX(-90deg);
+    }
+    100% {
+      transform: rotateX(0);
+    }
+  }
+  .skyswitch {
+    position: absolute;
+    right: max(16px, env(safe-area-inset-right, 0px));
+    top: 16px;
+    width: 44px;
+    height: 44px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--board);
+    color: var(--board-ink);
+    display: grid;
+    place-items: center;
+    transition: transform 0.5s var(--ease);
+  }
+  .skyswitch:hover {
+    transform: rotate(40deg);
+  }
+
+  /* ---------- The draft ---------- */
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding-block: 28px 120px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .route {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 14px;
+    color: var(--ink-soft);
+    font: 500 12px var(--mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  h1 {
+    margin: 8px 0 28px;
+    font: 700 clamp(30px, 5vw, 46px) / 1.05 var(--display);
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+    max-width: 16ch;
+  }
+  .rows {
+    display: grid;
+    gap: 22px;
+  }
+  .row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 320px);
+    gap: 28px;
+    align-items: start;
+  }
+  .row p {
+    margin: 0;
+    max-width: 62ch;
+    font-size: 17.5px;
+  }
+  .row h2 {
+    margin: 10px 0 0;
+    font: 600 22px var(--display);
+  }
+  mark {
+    background: linear-gradient(transparent 62%, color-mix(in srgb, var(--brass) 55%, transparent) 62%);
+    color: inherit;
+    padding: 0 1px;
+  }
+  .fresh {
+    animation: fresh 2.4s var(--ease);
+  }
+  @keyframes fresh {
+    from {
+      background: color-mix(in srgb, var(--brass) 45%, transparent);
+    }
+    to {
+      background: transparent;
+    }
+  }
+
+  /* Tickets: a comment is a ticket for one change. */
+  .ticket {
+    position: relative;
+    padding: 14px 16px 14px 18px;
+    border-radius: 10px;
+    background: var(--sky);
+    border: 1px dashed var(--line);
+    font-size: 14.5px;
+    line-height: 1.45;
+    transition:
+      transform 0.4s var(--ease),
+      box-shadow 0.4s var(--ease);
+    /* Notches on both sides, like a torn-off ticket. */
+    -webkit-mask:
+      radial-gradient(circle 9px at 0 50%, transparent 98%, #000) 0 0 / 51% 100% no-repeat,
+      radial-gradient(circle 9px at 100% 50%, transparent 98%, #000) 100% 0 / 51% 100% no-repeat;
+    mask:
+      radial-gradient(circle 9px at 0 50%, transparent 98%, #000) 0 0 / 51% 100% no-repeat,
+      radial-gradient(circle 9px at 100% 50%, transparent 98%, #000) 100% 0 / 51% 100% no-repeat;
+  }
+  .ticket:hover {
+    transform: translateY(-2px) rotate(-0.4deg);
+  }
+  .ticket .kicker {
+    display: flex;
+    justify-content: space-between;
+    color: var(--ink-soft);
+    font: 500 10.5px var(--mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .ticket .who {
+    margin-top: 8px;
+    font-weight: 600;
+  }
+  .ticket .agent {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--line);
+    color: var(--ink-soft);
+  }
+  .ticket .agent b {
+    color: var(--moss);
+  }
+  .punch {
+    margin-top: 12px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px 7px 10px;
+    border: 1.5px solid var(--ink);
+    border-radius: 999px;
+    background: none;
+    font-weight: 600;
+    font-size: 13.5px;
+    transition:
+      background 0.2s,
+      color 0.2s,
+      transform 0.15s;
+  }
+  .punch:hover {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .punch:active {
+    transform: scale(0.94);
+  }
+  .punch i {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1.5px solid currentColor;
+  }
+  .ticket .hole {
+    position: absolute;
+    right: 18px;
+    bottom: 14px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--paper);
+    box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.35);
+    transform: scale(0);
+  }
+  .ticket.punched .hole {
+    transform: scale(1);
+    animation: punch 0.35s var(--ease);
+  }
+  @keyframes punch {
+    from {
+      transform: scale(0);
+    }
+    60% {
+      transform: scale(1.35);
+    }
+  }
+  .ticket.punched .punch {
+    display: none;
+  }
+  .ticket .state {
+    display: none;
+    margin-top: 12px;
+    color: var(--moss);
+    font: 700 11px var(--mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .ticket.punched .state {
+    display: block;
+  }
+  .chad {
+    position: absolute;
+    right: 22px;
+    bottom: 18px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--brass);
+    pointer-events: none;
+    animation: chad 0.9s ease-in forwards;
+  }
+  @keyframes chad {
+    to {
+      transform: translate(var(--dx), 70px) rotate(200deg);
+      opacity: 0;
+    }
+  }
+
+  /* The departure lever */
+  .dock {
+    position: sticky;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    display: flex;
+    justify-content: center;
+    margin-top: 40px;
+    pointer-events: none;
+  }
+  .depart {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 22px 10px 10px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--board);
+    color: var(--board-ink);
+    box-shadow: 0 14px 30px -12px rgb(0 0 0 / 0.55);
+    font: 600 15px var(--body);
+    transition:
+      transform 0.3s var(--ease),
+      opacity 0.3s;
+  }
+  .depart[disabled] {
+    opacity: 0.55;
+    cursor: default;
+  }
+  .depart:not([disabled]):hover {
+    transform: translateY(-2px);
+  }
+  .depart .knob {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: var(--cab);
+    transition: transform 0.5s var(--ease);
+  }
+  .depart:not([disabled]):hover .knob {
+    transform: rotate(-28deg);
+  }
+  .depart small {
+    display: block;
+    font: 500 11px var(--mono);
+    opacity: 0.6;
+    letter-spacing: 0.08em;
+  }
+  .note {
+    margin: 26px 0 0;
+    color: var(--ink-soft);
+    font-size: 13.5px;
+    max-width: 62ch;
+  }
+  @media (max-width: 760px) {
+    .row {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 12px;
+    }
+    .board {
+      font-size: 11px;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+</style>
+
+<div class="scene" id="scene">
+  <svg viewBox="0 0 1200 320" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+    <circle class="star" cx="140" cy="50" r="1.6" />
+    <circle class="star" cx="420" cy="28" r="1.3" style="animation-delay: 1s" />
+    <circle class="star" cx="700" cy="60" r="1.6" style="animation-delay: 2s" />
+    <circle class="star" cx="930" cy="34" r="1.2" style="animation-delay: 0.5s" />
+    <circle class="star" cx="1110" cy="70" r="1.5" style="animation-delay: 1.6s" />
+    <path class="aurora a1" d="M-40 90 C 200 20, 420 130, 660 60 S 1040 40, 1260 100" />
+    <path class="aurora a2" d="M-40 130 C 240 70, 460 160, 720 100 S 1060 90, 1260 140" />
+    <circle class="sun-glow" cx="840" cy="62" r="46" />
+    <circle class="sun" cx="840" cy="62" r="20" />
+    <path class="hill-far" d="M0 250 Q 150 150 330 220 T 640 200 T 930 190 T 1200 230 V320 H0Z" />
+    <path class="hill-mid" d="M0 280 Q 200 200 420 262 T 800 240 T 1200 262 V320 H0Z" />
+    <path class="hill-near" d="M0 300 Q 260 250 520 296 T 1200 286 V320 H0Z" />
+    <rect class="ground" x="0" y="312" width="1200" height="8" />
+    <!-- towers and stations -->
+    <g id="towers"></g>
+    <path id="cable-future" class="cable future" />
+    <path id="cable" class="cable" />
+    <g id="riders"></g>
+    <g id="cab">
+      <g class="cab-swing">
+        <circle class="wheel" r="4" />
+        <path class="cab-arm" d="M0 0V20" />
+        <path class="bell" d="M-5 16h10l-2-7a3 3 0 0 0-6 0z" />
+        <rect class="cab-roof" x="-22" y="20" width="44" height="8" rx="3" />
+        <rect class="cab-body" x="-20" y="26" width="40" height="30" rx="6" />
+        <rect class="cab-window" x="-15" y="31" width="13" height="11" rx="2" />
+        <rect class="cab-window" x="2" y="31" width="13" height="11" rx="2" />
+      </g>
+    </g>
+  </svg>
+  <div class="board" role="status" aria-label="Line status">
+    <span class="cell"><small>LINE</small><span class="flap" id="f-line"></span></span>
+    <span class="cell"><small>AT</small><span class="flap" id="f-at"></span></span>
+    <span class="cell"><small>BOARDED</small><span class="flap" id="f-on"></span></span>
+    <span class="cell"><small>STATUS</small><span class="flap" id="f-st"></span></span>
+  </div>
+  <button class="skyswitch" id="sky" aria-label="Switch between day and polar night" title="Day / polar night">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" />
+    </svg>
+  </button>
+</div>
+
+<div class="wrap">
+  <div class="route"><span>Covibe explainer line</span><span>·</span><span id="route-v">Station v2 of 3</span></div>
+  <h1>Covibe: shaping one piece of work together</h1>
+  <div class="rows">
+    <div class="row">
+      <p id="p1">
+        Covibe is how a person and an agent shape one piece of work together. You comment; the agent replies;
+        <mark>nothing changes until you agree</mark>.
+      </p>
+      <div class="ticket" data-t="1">
+        <div class="kicker"><span>Ticket · one change</span><span>No. 014</span></div>
+        <div class="who">You</div>
+        Maybe say this earlier. It is the whole point.
+        <div class="agent"><b>Station agent</b> — I can open with it: “Nothing changes until you agree.”</div>
+        <button class="punch" type="button"><i></i>Punch to board</button>
+        <div class="state">Boarded · leaves with the next cab</div>
+        <span class="hole"></span>
+      </div>
+    </div>
+    <div class="row">
+      <h2>How a round works</h2>
+      <span></span>
+    </div>
+    <div class="row">
+      <p id="p2">
+        Read the draft and leave comments where something feels off. The agent answers in the thread, sometimes with a
+        concrete proposal. <mark>When you agree, the next Update rewrites only what you agreed to.</mark>
+      </p>
+      <div class="ticket" data-t="2">
+        <div class="kicker"><span>Ticket · one change</span><span>No. 015</span></div>
+        <div class="who">You</div>
+        Shorter. One sentence is enough here.
+        <div class="agent"><b>Station agent</b> — “Agree, and the next Update rewrites only that.”</div>
+        <button class="punch" type="button"><i></i>Punch to board</button>
+        <div class="state">Boarded · leaves with the next cab</div>
+        <span class="hole"></span>
+      </div>
+    </div>
+    <div class="row">
+      <p>Snapshots freeze a set of drafts so you can share or export them later.</p>
+      <span></span>
+    </div>
+  </div>
+  <p class="note">
+    Concept A. A session is a cable line, each version a station. A comment is a ticket; agreeing punches it and the
+    change boards the cab. An Update is the cab leaving for the next station. Punch a ticket, then send the cab.
+  </p>
+  <div class="dock">
+    <button class="depart" id="depart" disabled>
+      <span class="knob">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2">
+          <path d="M5 12h13M13 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+      </span>
+      <span><span id="depart-label">Send the cab</span><small id="depart-sub">Nothing has boarded yet</small></span>
+    </button>
+  </div>
+</div>
+
+<script>
+  const NS = "http://www.w3.org/2000/svg";
+  const stations = [
+    { x: 190, y: 150, name: "v1" },
+    { x: 600, y: 118, name: "v2" },
+    { x: 1010, y: 96, name: "v3" },
+  ];
+  const el = (tag, attrs = {}, parent) => {
+    const node = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+    parent?.appendChild(node);
+    return node;
+  };
+  const towers = document.getElementById("towers");
+  stations.forEach((s, i) => {
+    el("path", { class: "tower", d: `M${s.x} ${s.y}V300M${s.x - 26} 300L${s.x} ${s.y + 70}L${s.x + 26} 300` }, towers);
+    el("rect", { class: "platform", x: s.x - 46, y: s.y + 62, width: 92, height: 5, rx: 2 }, towers);
+    const sign = el("g", { class: "sign" + (i === 2 ? " next" : ""), id: "sign" + i }, towers);
+    el("rect", { x: s.x - 20, y: s.y - 34, width: 40, height: 20, rx: 4 }, sign);
+    el("text", { x: s.x, y: s.y - 20 }, sign).textContent = s.name;
+  });
+
+  // The cable hangs between towers and dips where the cab pulls on it.
+  let at = 1, // station index the cab is at
+    pos = 0, // 0..1 along the span to the next station
+    boarded = 0,
+    moving = false;
+  const cab = document.getElementById("cab"),
+    cable = document.getElementById("cable"),
+    future = document.getElementById("cable-future"),
+    scene = document.getElementById("scene");
+  const span = (a, b, sag) => `M${a.x} ${a.y}Q${(a.x + b.x) / 2} ${(a.y + b.y) / 2 + sag} ${b.x} ${b.y}`;
+  function draw() {
+    const a = stations[at],
+      b = stations[Math.min(at + 1, 2)];
+    const gx = a.x + (b.x - a.x) * pos,
+      weight = 10 + boarded * 4,
+      gy = a.y + (b.y - a.y) * pos + Math.sin(Math.PI * pos) * (26 + boarded * 5) + (pos === 0 ? 0 : 0);
+    cab.setAttribute("transform", `translate(${gx} ${gy})`);
+    const done = [span(stations[0], stations[1], 20)];
+    if (at >= 1 && pos > 0) {
+      done.push(span(a, { x: gx, y: gy }, weight * pos), span({ x: gx, y: gy }, b, weight * (1 - pos)));
+      future.setAttribute("d", "");
+    } else if (at === 1) future.setAttribute("d", span(stations[1], stations[2], 22));
+    else {
+      done.push(span(stations[1], stations[2], 20));
+      future.setAttribute("d", "");
+    }
+    cable.setAttribute("d", done.join(""));
+  }
+
+  // Split-flap board.
+  function flap(id, text) {
+    const host = document.getElementById(id),
+      old = [...host.children].map((c) => c.textContent);
+    host.replaceChildren(
+      ...[...text].map((ch, i) => {
+        const cell = document.createElement("span");
+        cell.textContent = ch;
+        if (old[i] !== ch) {
+          cell.style.animationDelay = i * 45 + "ms";
+          cell.classList.add("flip");
+        }
+        return cell;
+      }),
+    );
+  }
+  function board(status) {
+    flap("f-line", "COVIBE");
+    flap("f-at", "V" + (at + 1));
+    flap("f-on", String(boarded).padStart(2, "0"));
+    flap("f-st", status);
+  }
+
+  // Riders wait on the platform; each punched ticket adds one.
+  const riders = document.getElementById("riders");
+  function addRider() {
+    const s = stations[at],
+      r = el("g", { class: "rider hop" }, riders),
+      x = s.x - 34 + riders.children.length * 14;
+    el("circle", { cx: x, cy: s.y + 50, r: 4 }, r);
+    el("rect", { x: x - 3.5, y: s.y + 54, width: 7, height: 9, rx: 3 }, r);
+  }
+
+  const depart = document.getElementById("depart"),
+    label = document.getElementById("depart-label"),
+    sub = document.getElementById("depart-sub");
+  document.querySelectorAll(".ticket").forEach((ticket) => {
+    ticket.querySelector(".punch").addEventListener("click", () => {
+      ticket.classList.add("punched");
+      for (let i = 0; i < 3; i++) {
+        const chad = document.createElement("span");
+        chad.className = "chad";
+        chad.style.setProperty("--dx", (i - 1) * 22 + "px");
+        chad.style.animationDelay = i * 40 + "ms";
+        ticket.appendChild(chad);
+        setTimeout(() => chad.remove(), 1100);
+      }
+      boarded++;
+      addRider();
+      draw();
+      board("BOARDING");
+      depart.disabled = false;
+      sub.textContent = boarded === 1 ? "1 change on board" : boarded + " changes on board";
+      scene.classList.add("ringing");
+      setTimeout(() => scene.classList.remove("ringing"), 1600);
+    });
+  });
+
+  const rewrite = {
+    1: [
+      "p1",
+      "<span class='fresh'>Nothing changes until you agree.</span> Covibe is how a person and an agent shape one piece of work together: you comment, the agent replies.",
+    ],
+    2: [
+      "p2",
+      "Read the draft and leave comments where something feels off. The agent answers in the thread. <span class='fresh'>Agree, and the next Update rewrites only that.</span>",
+    ],
+  };
+  depart.addEventListener("click", () => {
+    if (moving || at !== 1) return;
+    moving = true;
+    depart.disabled = true;
+    label.textContent = "On the way to v3";
+    sub.textContent = "The agent is rewriting what you agreed to";
+    board("EN ROUTE");
+    [...riders.children].forEach((r, i) => setTimeout(() => (r.style.opacity = 0), i * 120));
+    scene.classList.add("moving");
+    const start = performance.now(),
+      long = matchMedia("(prefers-reduced-motion: reduce)").matches ? 1 : 3600;
+    const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+    (function step(now) {
+      pos = ease(Math.min(1, (now - start) / long));
+      draw();
+      if (pos < 1) return requestAnimationFrame(step);
+      at = 2;
+      pos = 0;
+      scene.classList.remove("moving");
+      document.getElementById("sign2").classList.remove("next");
+      document.querySelectorAll(".ticket.punched").forEach((t) => {
+        const [id, html] = rewrite[t.dataset.t];
+        document.getElementById(id).innerHTML = html;
+        t.querySelector(".state").textContent = "Arrived · written into v3";
+      });
+      boarded = 0;
+      riders.replaceChildren();
+      draw();
+      board("ARRIVED");
+      document.getElementById("route-v").textContent = "Station v3 of 3";
+      label.textContent = "Arrived at v3";
+      sub.textContent = "Only the agreed lines changed";
+    })(start);
+  });
+
+  // Day and polar night follow the theme; the round button switches by hand.
+  const dark = () =>
+    document.documentElement.dataset.theme
+      ? document.documentElement.dataset.theme === "dark"
+      : matchMedia("(prefers-color-scheme: dark)").matches;
+  const sky = () => scene.classList.toggle("night", dark());
+  document.getElementById("sky").addEventListener("click", () => {
+    document.documentElement.dataset.theme = dark() ? "light" : "dark";
+    sky();
+  });
+  matchMedia("(prefers-color-scheme: dark)").addEventListener("change", sky);
+  new MutationObserver(sky).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  sky();
+  draw();
+  board("WAITING");
+</script>

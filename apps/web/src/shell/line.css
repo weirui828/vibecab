@@ -1,0 +1,740 @@
+/* The line: one bar instead of a sidebar, the tundra as a place, a cable for time and a plumb line for place.
+   Layout: bar on top (52px, sticky); under it each page in one centred column. Colours are Tundra palette steps
+   and semantic tokens only. */
+
+@layer base {
+  /* Summer on a cleaner ground: the page is the lightest basalt step, and cards sit one step under it. */
+  [data-theme="tundra"]:not(.dark) {
+    --color-surface-base: var(--color-basalt-25);
+    --color-surface-overlay: var(--color-basalt-25);
+    --color-surface-raised: var(--color-basalt-50);
+    --color-surface-sunken: var(--color-basalt-100);
+  }
+  :root {
+    --vc-topbar: 52px;
+    --vc-spring: cubic-bezier(0.22, 1, 0.36, 1);
+    --vc-lit: var(--color-sedge-300);
+    --vc-board: var(--color-basalt-800);
+    --vc-board-ink: var(--color-basalt-50);
+    --vc-sky: var(--color-glacier-100);
+    --vc-hill-far: var(--color-tundra-200);
+    --vc-hill-mid: var(--color-tundra-400);
+    --vc-hill-near: var(--color-tundra-600);
+    --vc-orb: var(--color-sedge-300);
+    --vc-glass: 0.22;
+  }
+  :root.dark {
+    --vc-board: color-mix(in srgb, var(--color-basalt-950) 70%, black);
+    --vc-sky: color-mix(in srgb, var(--color-glacier-800) 38%, var(--color-basalt-950));
+    --vc-hill-far: color-mix(in srgb, var(--color-tundra-900) 40%, var(--color-basalt-950));
+    --vc-hill-mid: color-mix(in srgb, var(--color-tundra-900) 70%, var(--color-basalt-950));
+    --vc-hill-near: var(--color-tundra-900);
+    --vc-orb: var(--color-basalt-50);
+    --vc-glass: 0.7;
+  }
+}
+
+/* ---------- Shell ---------- */
+.vc-app {
+  display: block;
+}
+.vc-main {
+  min-height: calc(100dvh - var(--vc-topbar));
+}
+.vc-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: var(--vc-topbar);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: color-mix(in srgb, var(--color-surface-base) 86%, transparent);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  font-size: 14px;
+}
+.vc-top-space {
+  flex: 1;
+}
+.vc-top-mark {
+  display: grid;
+  padding: 4px;
+  border-radius: 8px;
+  transition: transform 0.4s var(--vc-spring);
+}
+.vc-top-mark:hover {
+  transform: translateY(-1px) rotate(-3deg);
+}
+.vc-top-tagline,
+.vc-crumb span {
+  color: var(--color-fg-muted);
+}
+.vc-top-tagline {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.vc-crumb {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  white-space: nowrap;
+}
+.vc-crumb a {
+  color: var(--color-fg-muted);
+  text-decoration: none;
+}
+.vc-crumb a:hover {
+  color: var(--color-fg-default);
+}
+.vc-crumb b {
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+}
+.vc-top-pill,
+.vc-top-round {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 34px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 999px;
+  background: none;
+  color: var(--color-fg-default);
+  cursor: pointer;
+  transition:
+    border-color var(--vc-base),
+    transform 0.3s var(--vc-spring),
+    opacity var(--vc-base);
+}
+.vc-top-pill {
+  padding: 0 12px;
+  font-weight: 500;
+}
+.vc-top-round {
+  width: 34px;
+}
+.vc-top-pill:hover,
+.vc-top-round:hover,
+.vc-top-round[aria-current="page"] {
+  border-color: var(--color-border-strong);
+  transform: translateY(-1px);
+}
+.vc-top-pill i {
+  width: 10px;
+  height: 10px;
+  border: 1.8px solid var(--color-fg-muted);
+  border-radius: 50%;
+}
+/* A hollow bead, like an open thread: it stirs now and then while something waits. */
+.vc-top-pill[data-waiting] i {
+  border-color: var(--color-fg-default);
+  animation: vc-nudge 2.8s var(--vc-spring) infinite;
+}
+@keyframes vc-nudge {
+  8% {
+    transform: translateX(-2.5px);
+  }
+  16% {
+    transform: translateX(2px);
+  }
+  24% {
+    transform: none;
+  }
+}
+.vc-top-pill .count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+.vc-jump {
+  color: var(--color-fg-muted);
+}
+.vc-topbar kbd {
+  padding: 1px 5px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+.vc-needs {
+  position: relative;
+}
+.vc-pop {
+  position: absolute;
+  top: 42px;
+  right: 0;
+  z-index: 40;
+  display: grid;
+  width: min(360px, calc(100vw - 32px));
+  padding: 6px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 12px;
+  background: var(--color-surface-base);
+  box-shadow: var(--shadow-lg);
+  animation: vc-rise 0.3s var(--vc-spring);
+}
+.vc-pop a,
+.vc-jump-list a {
+  display: grid;
+  gap: 2px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  color: inherit;
+  text-decoration: none;
+}
+.vc-pop a:hover,
+.vc-jump-list a[data-active] {
+  background: var(--color-surface-raised);
+}
+.vc-pop span,
+.vc-jump-list span {
+  color: var(--color-fg-muted);
+  font-size: 13px;
+}
+.vc-pop-empty {
+  margin: 0;
+  padding: 10px;
+  color: var(--color-fg-muted);
+}
+.vc-jump-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  align-items: start;
+  justify-items: center;
+  padding: 14vh 16px 0;
+  background: color-mix(in srgb, var(--color-basalt-950) 28%, transparent);
+}
+.vc-jump-box {
+  width: min(540px, 100%);
+  padding: 8px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 14px;
+  background: var(--color-surface-base);
+  box-shadow: var(--shadow-xl);
+  animation: vc-rise 0.3s var(--vc-spring);
+}
+.vc-jump-box input {
+  width: 100%;
+  padding: 10px;
+  border: 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: none;
+  font-size: 17px;
+  outline: none;
+}
+.vc-jump-list {
+  max-height: 52vh;
+  padding-top: 6px;
+  overflow: auto;
+}
+.vc-jump-list small {
+  display: block;
+  padding: 8px 10px 2px;
+  color: var(--color-fg-muted);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+/* Arrivals move into place but never start invisible, so a paused tab still shows them whole. */
+@keyframes vc-rise {
+  from {
+    transform: translateY(8px);
+  }
+}
+
+/* The Mac app has no title bar: the bar is where the window is dragged, clear of the window buttons. */
+.vc-mac .vc-topbar {
+  padding-left: 84px;
+  -webkit-app-region: drag;
+}
+.vc-mac .vc-topbar a,
+.vc-mac .vc-topbar button,
+.vc-mac .vc-topbar .vc-pop {
+  -webkit-app-region: no-drag;
+}
+
+/* ---------- The tundra ---------- */
+.vc-scene {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(var(--vc-sky), var(--color-surface-base) 78%);
+}
+.vc-scene > svg {
+  display: block;
+  width: 100%;
+}
+.vc-hill.far {
+  fill: var(--vc-hill-far);
+}
+.vc-hill.mid {
+  fill: var(--vc-hill-mid);
+}
+.vc-hill.near {
+  fill: var(--vc-hill-near);
+}
+.vc-orb {
+  fill: var(--vc-orb);
+}
+.vc-orb-glow {
+  fill: var(--vc-orb);
+  opacity: 0.22;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: vc-orb-breathe 6s ease-in-out infinite alternate;
+}
+@keyframes vc-orb-breathe {
+  from {
+    transform: scale(0.82);
+    opacity: 0.1;
+  }
+}
+.vc-stars circle {
+  fill: var(--color-basalt-50);
+  opacity: 0;
+}
+.dark .vc-stars circle {
+  opacity: 0.9;
+  animation: vc-twinkle 3s ease-in-out infinite alternate;
+}
+@keyframes vc-twinkle {
+  from {
+    opacity: 0.2;
+  }
+}
+.vc-aurora {
+  fill: none;
+  stroke-width: 26;
+  stroke-linecap: round;
+  opacity: 0;
+  filter: blur(14px);
+}
+.vc-aurora.a1 {
+  stroke: var(--color-juniper-500);
+}
+.vc-aurora.a2 {
+  stroke: var(--color-glacier-500);
+}
+.dark .vc-aurora {
+  opacity: 0.4;
+  animation: vc-aurora 9s ease-in-out infinite alternate;
+}
+.dark .vc-aurora.a2 {
+  animation-delay: -4s;
+}
+@keyframes vc-aurora {
+  to {
+    transform: translate(40px, 14px) skewX(-8deg);
+    opacity: 0.18;
+  }
+}
+/* The cab: the gondola from the mark, in ink, with its window and handle lit. */
+.vc-cab-ink,
+.vc-grip {
+  fill: var(--color-fg-default);
+}
+.vc-cab-lit {
+  fill: var(--vc-lit);
+}
+.vc-cab-glass {
+  fill: var(--vc-lit);
+  opacity: var(--vc-glass);
+}
+.vc-rod {
+  stroke: var(--color-fg-default);
+  stroke-width: 1.9;
+  stroke-linecap: round;
+}
+.vc-cable {
+  fill: none;
+  stroke: var(--color-fg-default);
+  stroke-width: 1.7;
+  stroke-linejoin: round;
+}
+
+/* ---------- Home ---------- */
+.vc-home-scene > svg {
+  height: clamp(170px, 22vw, 240px);
+}
+.vc-far-line {
+  fill: none;
+  stroke: var(--color-fg-default);
+  stroke-width: 1;
+  opacity: 0.45;
+}
+.vc-far-cab {
+  opacity: 0.6;
+}
+.vc-hello {
+  position: absolute;
+  top: 26px;
+  right: 16px;
+  left: max(16px, calc((100% - 1080px) / 2 + 16px));
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+.vc-hello .vc-display {
+  font-size: clamp(28px, 4.4vw, 42px);
+}
+.vc-home-body {
+  max-width: 1112px;
+  margin: 0 auto;
+  padding: 0 max(16px, env(safe-area-inset-right, 0px)) 120px max(16px, env(safe-area-inset-left, 0px));
+}
+.vc-home-body > .vc-section {
+  scroll-margin-top: 120px;
+}
+.vc-anchors {
+  position: sticky;
+  top: var(--vc-topbar);
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 22px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: var(--color-surface-base);
+}
+.vc-anchors > button[type="button"]:not([class]) {
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--color-fg-muted);
+  font-weight: 500;
+  cursor: pointer;
+}
+.vc-anchors > button[type="button"]:not([class]):hover {
+  color: var(--color-fg-default);
+}
+.vc-anchors b {
+  margin-left: 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.6;
+}
+.vc-line-group h3 {
+  margin: 26px 0 2px;
+}
+.vc-line-group h3 a {
+  color: inherit;
+  text-decoration: none;
+}
+.vc-line-group h3 a:hover {
+  color: var(--color-fg-default);
+}
+/* One session, one line. The title is the way in, and it covers the row. */
+.vc-lines,
+.vc-idea-lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.vc-line {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, auto);
+  align-items: center;
+  gap: 8px 28px;
+  margin: 0 -12px;
+  padding: 12px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  border-radius: 10px 10px 0 0;
+  transition: background var(--vc-base);
+  animation: vc-rise 0.6s var(--vc-spring) backwards;
+}
+.vc-line:hover {
+  background: var(--color-surface-raised);
+}
+.vc-line .main {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.vc-line .title {
+  color: inherit;
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-decoration: none;
+}
+.vc-line .title::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+}
+.vc-line .why {
+  color: var(--color-fg-muted);
+  font-size: 14px;
+}
+.vc-line[data-waiting] .why {
+  color: var(--color-fg-default);
+}
+.vc-line[data-waiting] .why::before {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 7px;
+  border: 1.7px solid var(--color-fg-default);
+  border-radius: 50%;
+  content: "";
+}
+.vc-line[data-state="paused"],
+.vc-line[data-state="ended"] {
+  opacity: 0.62;
+}
+.vc-line .end {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-self: end;
+  min-width: 0;
+}
+.vc-line .cargo {
+  overflow: hidden;
+  max-width: 22ch;
+  color: var(--color-fg-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.vc-mini {
+  display: block;
+  width: 100%;
+  height: 70px;
+  overflow: visible;
+}
+.vc-mini-cable {
+  fill: none;
+  stroke: var(--color-fg-default);
+  stroke-width: 1.3;
+}
+.vc-mini-cable.ahead {
+  stroke-dasharray: 3 5;
+  opacity: 0.45;
+}
+.vc-mini-stop,
+.vc-mini-bead {
+  fill: var(--color-surface-base);
+  stroke: var(--color-fg-default);
+  stroke-width: 1.5;
+}
+.vc-mini .ahead .vc-mini-stop {
+  stroke-dasharray: 2 2.5;
+  opacity: 0.5;
+}
+.vc-mini .ahead .vc-mini-label {
+  opacity: 0.5;
+}
+.vc-mini-label {
+  fill: var(--color-fg-muted);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 500;
+  text-anchor: middle;
+}
+.vc-mini-bead.agreed {
+  fill: var(--color-accent-default);
+  stroke: var(--color-accent-default);
+}
+.vc-idea-lines li {
+  padding: 11px 0;
+  border-bottom: 1px dashed var(--color-border-subtle);
+}
+
+/* ---------- A session: the cable is time ---------- */
+.vc-cable-scene > svg {
+  height: clamp(210px, 28vw, 320px);
+}
+.vc-cable.tail {
+  stroke-dasharray: 4 7;
+  opacity: 0.4;
+}
+.vc-tower {
+  fill: none;
+  stroke: var(--color-fg-default);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.vc-tower.thin {
+  stroke-width: 1.2;
+}
+.vc-deck {
+  stroke: var(--color-fg-default);
+  stroke-width: 3;
+  stroke-linecap: round;
+}
+.vc-sheave {
+  fill: var(--color-surface-base);
+  stroke: var(--color-fg-default);
+  stroke-width: 1.6;
+}
+.vc-sign rect {
+  fill: var(--vc-board);
+}
+.vc-sign text {
+  fill: var(--vc-board-ink);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+.vc-station.ahead .vc-sign,
+.vc-station.ahead .vc-tower,
+.vc-station.ahead .vc-deck,
+.vc-station.ahead .vc-sheave {
+  opacity: 0.4;
+}
+/* The status board: split flaps, and a tuner whose two waves close up as threads are agreed. */
+.vc-board {
+  position: absolute;
+  bottom: 14px;
+  left: max(16px, calc((100% - 1080px) / 2 + 16px));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: var(--vc-board);
+  color: var(--vc-board-ink);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  box-shadow: var(--shadow-lg);
+}
+.vc-board .cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.vc-board small {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  opacity: 0.55;
+}
+.vc-flap {
+  display: inline-flex;
+  gap: 2px;
+}
+.vc-flap span {
+  display: inline-grid;
+  place-items: center;
+  min-width: 14px;
+  height: 21px;
+  padding: 0 2px;
+  border-radius: 3px;
+  background: linear-gradient(
+    color-mix(in srgb, var(--vc-board-ink) 16%, var(--vc-board)) 49%,
+    var(--vc-board) 50%,
+    color-mix(in srgb, var(--vc-board-ink) 12%, var(--vc-board)) 51%
+  );
+  animation: vc-flip 0.42s ease-in;
+}
+@keyframes vc-flip {
+  50% {
+    transform: rotateX(-90deg);
+  }
+}
+.vc-tuner path {
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+.vc-tuner .you {
+  stroke: var(--color-sedge-300);
+}
+.vc-tuner .agent {
+  stroke: var(--color-glacier-300);
+}
+
+/* ---------- A session: the plumb line is place ---------- */
+.vc-plumb {
+  position: absolute;
+  top: 0;
+  left: -84px;
+  z-index: 2;
+  width: 28px;
+  overflow: visible;
+  pointer-events: none;
+}
+.vc-plumb .vc-cable {
+  stroke-width: 1.4;
+}
+.vc-plumb-bob,
+.vc-plumb-riser {
+  fill: var(--color-accent-default);
+}
+.vc-bead {
+  fill: var(--color-surface-base);
+  stroke: var(--color-fg-default);
+  stroke-width: 1.8;
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    fill 0.3s,
+    stroke 0.3s,
+    r 0.3s var(--vc-spring);
+}
+.vc-bead:hover {
+  r: 8px;
+}
+.vc-bead[data-state="agreed"] {
+  fill: var(--color-accent-default);
+  stroke: var(--color-accent-default);
+}
+.vc-bead[data-state="applied"] {
+  r: 4px;
+  fill: var(--color-accent-default);
+  stroke: var(--color-accent-default);
+  opacity: 0.5;
+}
+
+@media (max-width: 760px) {
+  .vc-line {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .vc-line .end {
+    justify-self: start;
+  }
+  .vc-top-tagline,
+  .vc-top-pill .label {
+    display: none;
+  }
+  .vc-board {
+    font-size: 11px;
+  }
+  .vc-plumb {
+    left: -24px;
+  }
+}
