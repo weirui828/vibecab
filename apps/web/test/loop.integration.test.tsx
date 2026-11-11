@@ -28,6 +28,8 @@ beforeAll(async () => {
   // These tests cover threads in the margin beside the text; threads under each block have their own tests.
   localStorage.setItem("vc-comments", "beside");
   tl = await import("@testing-library/react");
+  // These tests drive a real engine beside eighty other test files: give a slow moment five seconds, not one.
+  tl.configure({ asyncUtilTimeout: 5000 });
   bridge = webBridge({ base: t.host.url, fetch: t.fetch, retryMs: 50 });
   const model = {
     provider: "openai-compatible",
