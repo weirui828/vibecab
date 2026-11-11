@@ -46,7 +46,7 @@ export abstract class QueryOperations extends CommandOperations {
         return {
           contractVersion: CONTRACT_VERSION,
           callContext: { channel: ctx.channel, scope: ctx.scope },
-          mediaKinds: ["doc"],
+          mediaKinds: ["doc", "html"],
           operations,
         };
       }

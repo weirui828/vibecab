@@ -69,4 +69,24 @@ export type ElementDraft =
         tone: "info" | "note" | "warning";
       };
       text: string;
+    }
+  | {
+      type: "html_head";
+      props: {
+        htmlAttrs: [string, string][];
+        bodyAttrs: [string, string][];
+      };
+      html: string;
+    }
+  | {
+      type: "html_node";
+      props: {
+        tag: string;
+        attrs: [string, string][];
+      };
+    }
+  | {
+      type: "html_block";
+      props: {};
+      html: string;
     };

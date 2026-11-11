@@ -3,6 +3,7 @@ import type { Anchor, AnchorResolution, DiffResult, Element, Outline } from "../
 import type { Repository } from "../storage/repository.js";
 import { canonical } from "./hash.js";
 import { inlineMarkdownToPlainText, locateQuote } from "../../../contract/src/inline-markdown.js";
+import { htmlPlainText } from "../../../contract/src/index.js";
 export function diffVersions(store: Repository, id: string, from: number, to: number): DiffResult {
   const a = store.version(id, from),
     b = store.version(id, to),
@@ -58,7 +59,7 @@ export function outline(elements: Element[]): Outline {
       .map((e) => ({
         elementId: e.elementId,
         type: e.type,
-        preview: "text" in e ? e.text.slice(0, 60) : "",
+        preview: ("text" in e ? e.text : e.type === "html_block" ? htmlPlainText(e.html) : "").slice(0, 60),
         children: children(e.elementId),
       }));
   return children(null);

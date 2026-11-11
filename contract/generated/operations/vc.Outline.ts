@@ -24,7 +24,10 @@ export interface Node {
     | "table_cell"
     | "image"
     | "divider"
-    | "callout";
+    | "callout"
+    | "html_head"
+    | "html_node"
+    | "html_block";
   preview: string;
   children: Node[];
 }

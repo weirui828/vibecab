@@ -3,5 +3,5 @@
 export interface ArtifactCreated {
   artifactId: string;
   title: string;
-  mediaKind: "doc";
+  mediaKind: "doc" | "html";
 }

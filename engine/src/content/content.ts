@@ -12,6 +12,7 @@ import type { Repository } from "../storage/repository.js";
 import type { Clock, IdGenerator } from "../dependencies.js";
 import { canonical, revisionHash } from "./hash.js";
 import { importContent } from "./import.js";
+import { importHtml } from "./html.js";
 export class Content {
   constructor(
     private readonly store: Repository,
@@ -58,12 +59,17 @@ export class Content {
     input: {
       artifactId?: string;
       title?: string;
-      format: "markdown" | "text";
+      format: "markdown" | "text" | "html";
       content: string;
     },
     principal: Principal,
   ) {
-    const nodes = importContent(input.content, input.format),
+    // An HTML file is its own kind of Draft: it starts one, and is never poured into an existing one.
+    if (input.format === "html" && input.artifactId) fail("invalid", "HTML starts a new Draft");
+    const html = input.format === "html" ? importHtml(input.content) : undefined,
+      nodes = html?.changes ?? importContent(input.content, input.format === "html" ? "text" : input.format),
+      mediaKind = html ? "html" : "doc",
+      title = input.title ?? html?.title ?? "Untitled",
       source = { importId: this.ids.next("imp_") };
     if (!input.artifactId) {
       // Initial import is version 1, rather than an observable empty version followed by version 2.
@@ -71,8 +77,8 @@ export class Content {
         ts = this.clock.now();
       this.store.createArtifact({
         artifactId,
-        title: input.title ?? "Untitled",
-        mediaKind: "doc",
+        title,
+        mediaKind,
         headVersion: 1,
         createdAt: ts,
         updatedAt: ts,
@@ -83,8 +89,8 @@ export class Content {
         entity: { kind: "artifact", id: artifactId },
         payload: {
           artifactId,
-          title: input.title ?? "Untitled",
-          mediaKind: "doc",
+          title,
+          mediaKind,
         },
       });
       const result = this.commitInitial(artifactId, nodes, principal, source);

@@ -17,7 +17,7 @@
         },
         "format": {
           "type": "string",
-          "enum": ["markdown", "text"]
+          "enum": ["markdown", "text", "html"]
         },
         "content": {
           "type": "string"

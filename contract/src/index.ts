@@ -4,6 +4,8 @@ import type { ErrorObject } from "ajv";
 import type { AnySchema } from "ajv";
 import type { ContractError, Element, Json, OperationMeta } from "../generated/index.js";
 import { schemasById, schemasByPath } from "../generated/schemas.js";
+import { isOneHtmlElement } from "./html.js";
+export { htmlPlainText, htmlTag, isOneHtmlElement } from "./html.js";
 export type * from "../generated/index.js";
 export type JsonSchema = Exclude<AnySchema, boolean>;
 export const CONTRACT_VERSION = "1.0";
@@ -107,6 +109,12 @@ export class Contract {
       type: "string",
       schemaType: "boolean",
       validate: (_: boolean, data: string) => inlineText(data),
+    });
+    this.ajv.addKeyword({
+      keyword: "htmlElement",
+      type: "string",
+      schemaType: "boolean",
+      validate: (_: boolean, data: string) => isOneHtmlElement(data),
     });
     this.ajv.addKeyword({ keyword: "operation", valid: true });
     this.ajv.addKeyword({ keyword: "docChildren", valid: true });
@@ -212,6 +220,10 @@ export class Contract {
       ? (this.children[parent.type] ?? []).includes(child.type)
       : !["list_item", "table_row", "table_cell"].includes(child.type);
   }
+  /** The media kind a tree of these elements belongs to; an empty tree is a `doc`. */
+  mediaKind(elements: Element[]): "doc" | "html" {
+    return elements.some((e) => e.type.startsWith("html_")) ? "html" : "doc";
+  }
   private validTree(values: unknown[]): boolean {
     const elements: Element[] = [];
     try {
@@ -221,6 +233,10 @@ export class Contract {
     }
     const map = new Map(elements.map((e) => [e.elementId, e]));
     if (map.size !== elements.length) return false;
+    // An artifact is one media kind: `doc` blocks and `html` elements never share a tree, and a head is single.
+    const html = elements.filter((e) => e.type.startsWith("html_")).length;
+    if (html !== 0 && html !== elements.length) return false;
+    if (elements.filter((e) => e.type === "html_head").length > 1) return false;
     const siblings = new Set<string>();
     for (const element of elements) {
       const parent = element.parentId === null ? undefined : map.get(element.parentId);

@@ -23,6 +23,7 @@ import { LifecycleHelpersRuntime } from "./helpers-runtime.js";
 import { escapeHtml } from "./helpers-runtime.js";
 import { sessionPreferences } from "../session-preferences.js";
 import { renderHtmlDocument, renderHtmlFragment, renderMarkdown } from "./render.js";
+import { htmlDocument } from "../content/index.js";
 import { baseModelRef } from "../session-preferences.js";
 import { isQuiet, nextSweepDeferral, shouldForceSweep } from "./sweep-policy.js";
 
@@ -51,6 +52,9 @@ export abstract class LifecycleJobsRuntime extends LifecycleHelpersRuntime {
     let content: string;
     if (request.format === "markdown")
       content = documents.map((document) => renderMarkdown(document.elements)).join("\n\n---\n\n");
+    else if (request.format === "html" && documents.length === 1 && documents[0]?.artifact.mediaKind === "html")
+      // One HTML Draft is exported as the file it is, not wrapped in the engine's own page.
+      content = htmlDocument(documents[0].elements);
     else if (request.format === "html") {
       const imageSources = await this.loadImageSources(documents.flatMap((document) => document.elements));
       const body = documents

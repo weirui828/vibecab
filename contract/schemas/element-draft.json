@@ -255,6 +255,101 @@
       },
       "required": ["type", "props", "text"],
       "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "html_head"
+        },
+        "props": {
+          "type": "object",
+          "properties": {
+            "htmlAttrs": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 2,
+                "maxItems": 2
+              }
+            },
+            "bodyAttrs": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 2,
+                "maxItems": 2
+              }
+            }
+          },
+          "required": ["htmlAttrs", "bodyAttrs"],
+          "additionalProperties": false
+        },
+        "html": {
+          "type": "string"
+        }
+      },
+      "required": ["type", "props", "html"],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "html_node"
+        },
+        "props": {
+          "type": "object",
+          "properties": {
+            "tag": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*$"
+            },
+            "attrs": {
+              "type": "array",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 2,
+                "maxItems": 2
+              }
+            }
+          },
+          "required": ["tag", "attrs"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["type", "props"],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "type": {
+          "const": "html_block"
+        },
+        "props": {
+          "type": "object",
+          "properties": {},
+          "required": [],
+          "additionalProperties": false
+        },
+        "html": {
+          "type": "string",
+          "minLength": 1,
+          "htmlElement": true
+        }
+      },
+      "required": ["type", "props", "html"],
+      "additionalProperties": false
     }
   ]
 }

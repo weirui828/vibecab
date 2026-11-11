@@ -23,9 +23,7 @@
         "title": {
           "type": "string"
         },
-        "mediaKind": {
-          "const": "doc"
-        },
+        "mediaKind": { "enum": ["doc", "html"] },
         "headVersion": {
           "type": "integer",
           "minimum": 1

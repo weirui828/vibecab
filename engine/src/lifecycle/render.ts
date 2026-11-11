@@ -1,4 +1,6 @@
 import type { Element } from "../../../contract/src/index.js";
+import { htmlPlainText } from "../../../contract/src/index.js";
+import { htmlBody } from "../content/index.js";
 
 function escapeHtml(value: string): string {
   return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
@@ -18,6 +20,15 @@ export function renderMarkdown(elements: Element[]): string {
   const render = (element: Element, depth = 0): string => {
     const nested = children(element.elementId);
     switch (element.type) {
+      // An HTML Draft has no Markdown form: its blocks are given as the words a reader sees.
+      case "html_head":
+      case "html_node":
+        return nested
+          .map((child) => render(child, depth))
+          .filter(Boolean)
+          .join("\n\n");
+      case "html_block":
+        return htmlPlainText(element.html);
       case "heading":
         return "#".repeat(element.props.level) + " " + element.text;
       case "paragraph":
@@ -78,6 +89,12 @@ export function renderMarkdown(elements: Element[]): string {
 
 function renderHtmlBlock(element: Element, children: string[], imageSources: Map<string, string>): string {
   switch (element.type) {
+    // Among other documents an HTML Draft gives its body; alone, it is exported as its own file (see the export job).
+    case "html_head":
+      return "";
+    case "html_node":
+    case "html_block":
+      return htmlBody([{ ...element, parentId: null }]);
     case "heading":
       return `<h${element.props.level}>${inlineHtml(element.text)}</h${element.props.level}>`;
     case "paragraph":

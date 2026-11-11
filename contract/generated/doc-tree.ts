@@ -12,7 +12,10 @@ export type Element =
   | TableCellElement
   | ImageElement
   | DividerElement
-  | CalloutElement;
+  | CalloutElement
+  | HtmlHeadElement
+  | HtmlNodeElement
+  | HtmlBlockElement;
 export type DocTree = Element[];
 
 export interface HeadingElement {
@@ -119,4 +122,33 @@ export interface CalloutElement {
     tone: "info" | "note" | "warning";
   };
   text: string;
+}
+export interface HtmlHeadElement {
+  elementId: string;
+  type: "html_head";
+  parentId: string | null;
+  order: string;
+  props: {
+    htmlAttrs: [string, string][];
+    bodyAttrs: [string, string][];
+  };
+  html: string;
+}
+export interface HtmlNodeElement {
+  elementId: string;
+  type: "html_node";
+  parentId: string | null;
+  order: string;
+  props: {
+    tag: string;
+    attrs: [string, string][];
+  };
+}
+export interface HtmlBlockElement {
+  elementId: string;
+  type: "html_block";
+  parentId: string | null;
+  order: string;
+  props: {};
+  html: string;
 }

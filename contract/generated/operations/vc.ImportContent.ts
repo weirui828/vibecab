@@ -4,7 +4,7 @@ export interface VcImportContentOperation {
   payload: {
     artifactId?: string;
     title?: string;
-    format: "markdown" | "text";
+    format: "markdown" | "text" | "html";
     content: string;
   };
   result: {
