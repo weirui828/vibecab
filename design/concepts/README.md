@@ -11,3 +11,10 @@ plays the whole loop: comment, agree, Update.
 | `c-field-notes.html` | The draft is print, everything added is by hand: pencil in the margin, the agent on a sticky note, a rubber stamp to agree, a page turn for an Update.                                   |
 
 These are sketches, not app code: nothing here is wired to the engine.
+
+## A + B together
+
+- `ab-resonant-line.html` — the session page after Wei's feedback on A and B. The cable is the string: open threads
+  are beads that keep it humming, agreeing rings the bead and slides it to the cab. The cab is the C of the logo
+  (the mark's own outline, clipped), hung on the cable point for point, with an ease out, cruise and brake and a
+  pendulum swing from its own acceleration. Colours are Tundra palette steps only.
