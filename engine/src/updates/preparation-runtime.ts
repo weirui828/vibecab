@@ -244,7 +244,11 @@ export abstract class UpdatePreparationRuntime extends AgentRuntime {
       results: Update["itemResults"] = [...blocked],
       remaining: Agreement[] = [];
     for (const agreement of agreements) {
-      if (agreement.explicitInstruction || discussionFor(comments, agreement.commentId).length > 1) {
+      // An exact suggestion is applied as written unless the person said more in its thread: a later word of
+      // theirs may refine it, so then the planner reads the whole discussion. What the agent replied is context,
+      // not a request, and the engine's own notices (a conflict was found) are not something anybody said.
+      const said = discussionFor(comments, agreement.commentId).filter((comment) => comment.author.kind === "human");
+      if (agreement.explicitInstruction || said.length > 1) {
         remaining.push(agreement);
         continue;
       }

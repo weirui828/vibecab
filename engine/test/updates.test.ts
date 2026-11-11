@@ -525,6 +525,54 @@ it("uses an explicit agreement instruction and skips its verbatim fast path", as
   }
 });
 
+it("sends an exact suggestion to the planner once the person says more in its thread", async () => {
+  const f = await fixture();
+  try {
+    // One suggestion with nothing more said (applied as written), and one the person then adds a word to.
+    const { artifactId, sessionId, target } = await addAgreedInstruction(f.engine, "said-more", "The quick fox.", 0, {
+      quote: "quick",
+      prefix: "The ",
+      suffix: " fox",
+      replacement: "swift",
+    });
+    const send = async (commandId: string, type: string, payload: Json) => {
+      const result = await f.engine.command(ctx, { commandId, type, payload });
+      if (!result.ok) throw Error(`${commandId}: ${result.error.message}`);
+      return new Contract().read<Record<string, Json>>("json", result.result);
+    };
+    const second = await send("said-more-second", "vc.Comment", {
+      sessionId,
+      body: "And the animal.",
+      anchor: {
+        artifactId,
+        elementId: target.elementId,
+        seenVersion: 1,
+        locator: { quote: "fox", prefix: "quick ", suffix: "." },
+      },
+      suggestion: { replacement: "hare" },
+    });
+    // A later word from the person may refine the request, so this wording is no longer applied as written.
+    await send("said-more-second-reply", "vc.Comment", {
+      sessionId,
+      body: "On second thought, a smaller animal.",
+      replyTo: String(second.commentId),
+    });
+    await send("said-more-second-agree", "vc.Agree", { commentId: String(second.commentId), kind: "as_written" });
+    const started = await send("said-more-update", "vc.StartUpdate", { artifactId });
+    // No model is set up here, so the item that needs the planner cannot be written.
+    const update = await waitForUpdate(f.engine, String(started.updateId));
+    expect(update.status).not.toBe("committed");
+    const elements = new Contract().read<import("../../contract/src/index.js").Element[]>(
+      "operations/vc.Elements",
+      await f.engine.query(ctx, { name: "vc.Elements", args: { artifactId } }),
+      "#/properties/result",
+    );
+    expect(JSON.stringify(elements[0])).not.toContain("hare");
+  } finally {
+    await f.close();
+  }
+});
+
 it("preserves every hash outside Update write sets for random valid and rejected writer outputs", async () => {
   const model = {
     provider: "openai-compatible",

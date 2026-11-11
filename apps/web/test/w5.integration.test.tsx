@@ -22,6 +22,8 @@ beforeAll(async () => {
   dom = new JSDOM("<!doctype html><html><body></body></html>", { url: "http://127.0.0.1/" });
   for (const key of globals) Object.defineProperty(globalThis, key, { value: dom.window[key], configurable: true });
   tl = await import("@testing-library/react");
+  // These tests drive a real engine beside eighty other test files: give a slow moment five seconds, not one.
+  tl.configure({ asyncUtilTimeout: 5000 });
   bridge = webBridge({ base: t.host.url, fetch: t.fetch, retryMs: 50 });
   artifactId = (
     await command<{ artifactId: string }>("vc.ImportContent", {

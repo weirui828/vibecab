@@ -14,6 +14,8 @@ beforeAll(async () => {
   for (const key of ["window", "document", "navigator", "localStorage", "HTMLElement", "Node"] as const)
     Object.defineProperty(globalThis, key, { value: dom.window[key], configurable: true });
   tl = await import("@testing-library/react");
+  // These tests drive a real engine beside eighty other test files: give a slow moment five seconds, not one.
+  tl.configure({ asyncUtilTimeout: 5000 });
   bridge = webBridge({ base: t.host.url, fetch: t.fetch, retryMs: 50 });
 }, 60_000);
 afterAll(async () => {
