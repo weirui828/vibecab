@@ -1,0 +1,723 @@
+<meta charset="utf-8" />
+<title>VibeCab Resonance</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Syne:wght@500;700;800&family=Inter+Tight:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap"
+/>
+<style>
+  /* Layout: one string runs down the left of the draft; threads hang off it on the right; a tuner sits on top. */
+  :root {
+    --bg: #ffffff;
+    --ink: #10131a;
+    --soft: #636b7a;
+    --hair: #e4e7ee;
+    --wash: #f5f6fa;
+    --you: #ff5a36;
+    --agent: #0f8f8a;
+    --tuned: #10131a;
+    --display: "Syne", "Avenir Next", system-ui, sans-serif;
+    --body: "Inter Tight", "Helvetica Neue", system-ui, sans-serif;
+    --mono: "Space Mono", ui-monospace, Menlo, monospace;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0c0e13;
+      --ink: #f1f3f8;
+      --soft: #98a1b3;
+      --hair: #232733;
+      --wash: #151821;
+      --you: #ff7a5c;
+      --agent: #3fc7c0;
+      --tuned: #f1f3f8;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0c0e13;
+    --ink: #f1f3f8;
+    --soft: #98a1b3;
+    --hair: #232733;
+    --wash: #151821;
+    --you: #ff7a5c;
+    --agent: #3fc7c0;
+    --tuned: #f1f3f8;
+    color-scheme: dark;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.6 var(--body);
+  }
+  button {
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 2px solid var(--you);
+    outline-offset: 3px;
+  }
+  .page {
+    max-width: 1060px;
+    margin: 0 auto;
+    padding-block: 28px 140px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+
+  /* ---------- Tuner: are you and the agent in tune? ---------- */
+  .tuner {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px 22px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--hair);
+  }
+  .tuner canvas {
+    width: min(100%, 340px);
+    height: 56px;
+  }
+  .tuner .read {
+    font: 400 12px/1.5 var(--mono);
+    color: var(--soft);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .tuner .read b {
+    display: block;
+    color: var(--ink);
+    font: 700 15px var(--mono);
+    letter-spacing: 0.02em;
+  }
+  .legend {
+    display: flex;
+    gap: 14px;
+    margin-left: auto;
+    font: 400 12px var(--mono);
+    color: var(--soft);
+  }
+  .legend i {
+    display: inline-block;
+    width: 18px;
+    height: 3px;
+    border-radius: 2px;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  .take {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-top: 34px;
+    font: 700 12px var(--mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--soft);
+  }
+  /* The take number rolls like an odometer. */
+  .roll {
+    display: inline-block;
+    height: 1.2em;
+    overflow: hidden;
+    color: var(--you);
+    font-size: 15px;
+  }
+  .roll span {
+    display: block;
+    transition: transform 0.7s var(--ease);
+  }
+  h1 {
+    margin: 6px 0 34px;
+    font: 800 clamp(32px, 6vw, 58px) / 1 var(--display);
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+    max-width: 14ch;
+  }
+
+  /* ---------- The draft, with its string ---------- */
+  .sheet {
+    position: relative;
+    display: grid;
+    gap: 26px;
+    padding-left: 44px;
+  }
+  #string {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 44px;
+    height: 100%;
+    pointer-events: none;
+  }
+  .bar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 330px);
+    gap: 30px;
+    align-items: start;
+  }
+  .bar p {
+    margin: 0;
+    max-width: 60ch;
+    font-size: 18px;
+    transition: color 0.3s;
+  }
+  .bar h2 {
+    margin: 8px 0 0;
+    font: 700 22px var(--display);
+    letter-spacing: -0.01em;
+  }
+  /* The words a thread is about carry a small wave under them. */
+  .anchor {
+    background: linear-gradient(90deg, var(--you), var(--you)) 0 100% / 100% 2px no-repeat;
+    padding-bottom: 2px;
+    transition: background-size 0.5s var(--ease);
+  }
+  .tunedline .anchor {
+    background-image: linear-gradient(90deg, var(--tuned), var(--tuned));
+  }
+  .shimmer {
+    background: linear-gradient(
+        90deg,
+        transparent 0 30%,
+        color-mix(in srgb, var(--agent) 35%, transparent) 50%,
+        transparent 70%
+      )
+      0 0 / 300% 100%;
+    animation: shimmer 1.1s linear infinite;
+    border-radius: 4px;
+  }
+  @keyframes shimmer {
+    to {
+      background-position: -150% 0;
+    }
+  }
+  .landed {
+    animation: landed 2.2s var(--ease);
+    border-radius: 4px;
+  }
+  @keyframes landed {
+    from {
+      background: color-mix(in srgb, var(--agent) 30%, transparent);
+    }
+  }
+
+  /* Threads */
+  .thread {
+    position: relative;
+    padding: 14px 16px;
+    border-radius: 14px;
+    background: var(--wash);
+    font-size: 14.5px;
+    line-height: 1.5;
+    transition: transform 0.35s var(--ease);
+  }
+  .thread:hover {
+    transform: translateX(3px);
+  }
+  .thread .line {
+    display: flex;
+    gap: 10px;
+  }
+  .thread .line + .line {
+    margin-top: 10px;
+  }
+  .dot {
+    flex: none;
+    width: 9px;
+    height: 9px;
+    margin-top: 6px;
+    border-radius: 50%;
+    background: var(--you);
+  }
+  .dot.agent {
+    background: var(--agent);
+  }
+  .thread b {
+    font-weight: 600;
+  }
+  .acts {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 14px;
+  }
+  .agree {
+    position: relative;
+    padding: 7px 16px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--bg);
+    font-weight: 600;
+    font-size: 13.5px;
+    transition: transform 0.15s;
+  }
+  .agree:active {
+    transform: scale(0.94);
+  }
+  /* Agreeing rings out, like a struck tuning fork. */
+  .agree::before,
+  .agree::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    border: 1.5px solid var(--ink);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .rang .agree::before {
+    animation: ring 0.9s var(--ease);
+  }
+  .rang .agree::after {
+    animation: ring 0.9s var(--ease) 0.15s;
+  }
+  @keyframes ring {
+    from {
+      opacity: 0.7;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(1.9, 2.6);
+    }
+  }
+  .ghost {
+    padding: 7px 10px;
+    border: 0;
+    background: none;
+    color: var(--soft);
+    font-size: 13.5px;
+  }
+  .ghost:hover {
+    color: var(--ink);
+  }
+  .thread .tuned-tag {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    font: 700 11px var(--mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  .thread.tuned .acts {
+    display: none;
+  }
+  .thread.tuned .tuned-tag {
+    display: flex;
+  }
+  /* A tiny tuning fork that keeps humming after you agree. */
+  .fork {
+    width: 14px;
+    height: 16px;
+    animation: hum 0.12s linear infinite alternate;
+  }
+  @keyframes hum {
+    to {
+      transform: translateX(0.8px);
+    }
+  }
+
+  /* ---------- Record the next take ---------- */
+  .deck {
+    position: sticky;
+    bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+    display: flex;
+    justify-content: center;
+    margin-top: 44px;
+    pointer-events: none;
+  }
+  .record {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 9px 22px 9px 9px;
+    border: 1px solid var(--hair);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 16px 40px -18px color-mix(in srgb, var(--ink) 55%, transparent);
+    font-weight: 600;
+    transition:
+      transform 0.3s var(--ease),
+      opacity 0.3s;
+  }
+  .record[disabled] {
+    opacity: 0.5;
+    cursor: default;
+  }
+  .record:not([disabled]):hover {
+    transform: translateY(-2px);
+  }
+  .rec {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: var(--you);
+  }
+  .rec i {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    transition: border-radius 0.3s var(--ease);
+  }
+  .recording .rec i {
+    border-radius: 3px;
+  }
+  .recording .rec {
+    animation: pulse 1s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    50% {
+      box-shadow: 0 0 0 9px color-mix(in srgb, var(--you) 0%, transparent);
+    }
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, var(--you) 50%, transparent);
+    }
+  }
+  .record small {
+    display: block;
+    font: 400 11px var(--mono);
+    color: var(--soft);
+    letter-spacing: 0.06em;
+  }
+  /* Level meter: the agent at work. */
+  .meter {
+    display: flex;
+    align-items: end;
+    gap: 3px;
+    height: 22px;
+  }
+  .meter i {
+    width: 3px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--agent);
+    transition: height 0.12s;
+  }
+  .note {
+    margin: 30px 0 0;
+    max-width: 60ch;
+    color: var(--soft);
+    font-size: 13.5px;
+  }
+  @media (max-width: 760px) {
+    .bar {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 12px;
+    }
+    .sheet {
+      padding-left: 30px;
+    }
+    #string {
+      width: 30px;
+    }
+    .legend {
+      margin-left: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+</style>
+
+<div class="page">
+  <div class="tuner">
+    <canvas id="scope" width="680" height="112" aria-hidden="true"></canvas>
+    <div class="read" role="status">In tune<b id="tune">0 of 2 threads</b></div>
+    <div class="legend">
+      <span><i style="background: var(--you)"></i>You</span><span><i style="background: var(--agent)"></i>Agent</span>
+    </div>
+  </div>
+
+  <div class="take">
+    Covibe explainer · Take
+    <span class="roll"
+      ><span id="roll">02<br />03</span></span
+    >
+  </div>
+  <h1>Covibe: shaping one piece of work together</h1>
+
+  <div class="sheet" id="sheet">
+    <canvas id="string" aria-hidden="true"></canvas>
+    <div class="bar" data-thread="1">
+      <p id="p1">
+        Covibe is how a person and an agent shape one piece of work together. You comment; the agent replies;
+        <span class="anchor">nothing changes until you agree</span>.
+      </p>
+      <div class="thread" id="t1">
+        <div class="line">
+          <span class="dot"></span><span><b>You</b> · Maybe say this earlier. It is the whole point.</span>
+        </div>
+        <div class="line">
+          <span class="dot agent"></span
+          ><span><b>Agent</b> · I can open with it: “Nothing changes until you agree.”</span>
+        </div>
+        <div class="acts">
+          <button class="agree" type="button">Agree</button><button class="ghost" type="button">Decline</button>
+        </div>
+        <div class="tuned-tag">
+          <svg
+            class="fork"
+            viewBox="0 0 14 16"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+          >
+            <path d="M3 1v6a4 4 0 0 0 8 0V1M7 11v4" />
+          </svg>
+          In tune · goes into the next take
+        </div>
+      </div>
+    </div>
+    <div class="bar">
+      <h2>How a round works</h2>
+      <span></span>
+    </div>
+    <div class="bar" data-thread="2">
+      <p id="p2">
+        Read the draft and leave comments where something feels off. The agent answers in the thread, sometimes with a
+        concrete proposal.
+        <span class="anchor">When you agree, the next Update rewrites only what you agreed to.</span>
+      </p>
+      <div class="thread" id="t2">
+        <div class="line">
+          <span class="dot"></span><span><b>You</b> · Shorter. One sentence is enough here.</span>
+        </div>
+        <div class="line">
+          <span class="dot agent"></span><span><b>Agent</b> · “Agree, and the next take rewrites only that.”</span>
+        </div>
+        <div class="acts">
+          <button class="agree" type="button">Agree</button><button class="ghost" type="button">Decline</button>
+        </div>
+        <div class="tuned-tag">
+          <svg
+            class="fork"
+            viewBox="0 0 14 16"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.6"
+            stroke-linecap="round"
+          >
+            <path d="M3 1v6a4 4 0 0 0 8 0V1M7 11v4" />
+          </svg>
+          In tune · goes into the next take
+        </div>
+      </div>
+    </div>
+    <div class="bar">
+      <p>Snapshots freeze a set of drafts so you can share or export them later.</p>
+      <span></span>
+    </div>
+  </div>
+
+  <p class="note">
+    Concept B. Every thread is a pluck on the string beside the draft: move over a paragraph and it sounds. The two
+    waves on top are you and the agent; each agreement pulls them into phase. A version is a take: agree, then record
+    the next one.
+  </p>
+
+  <div class="deck">
+    <button class="record" id="record" disabled>
+      <span class="rec"><i></i></span>
+      <span><span id="rec-label">Record take 03</span><small id="rec-sub">Agree on a thread first</small></span>
+      <span class="meter" id="meter" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+    </button>
+  </div>
+</div>
+
+<script>
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  let tuned = 0,
+    recording = false;
+
+  // ---- The string: a damped wave along the left of the draft. ----
+  const sheet = document.getElementById("sheet"),
+    string = document.getElementById("string"),
+    sctx = string.getContext("2d");
+  const N = 160;
+  let y = new Float32Array(N),
+    v = new Float32Array(N);
+  function fit() {
+    const r = string.getBoundingClientRect(),
+      d = devicePixelRatio || 1;
+    string.width = r.width * d;
+    string.height = r.height * d;
+    sctx.setTransform(d, 0, 0, d, 0, 0);
+  }
+  function pluck(clientY, force = 9) {
+    const r = string.getBoundingClientRect(),
+      at = Math.max(2, Math.min(N - 3, Math.round(((clientY - r.top) / r.height) * N)));
+    for (let i = -6; i <= 6; i++) if (y[at + i] !== undefined) y[at + i] += force * Math.exp(-(i * i) / 8);
+  }
+  function beads() {
+    const r = string.getBoundingClientRect();
+    return [...document.querySelectorAll(".bar[data-thread]")].map((bar) => {
+      const b = bar.getBoundingClientRect();
+      return { at: (b.top + 16 - r.top) / r.height, tuned: bar.querySelector(".thread").classList.contains("tuned") };
+    });
+  }
+  function drawString() {
+    const r = string.getBoundingClientRect(),
+      w = r.width,
+      h = r.height,
+      x0 = w / 2 - 6;
+    // wave equation, lightly damped
+    for (let i = 1; i < N - 1; i++) v[i] += (y[i - 1] + y[i + 1] - 2 * y[i]) * 0.32;
+    for (let i = 1; i < N - 1; i++) {
+      v[i] *= 0.985;
+      y[i] += v[i];
+    }
+    sctx.clearRect(0, 0, w, h);
+    sctx.lineWidth = 1.6;
+    sctx.strokeStyle = css("--ink");
+    sctx.beginPath();
+    for (let i = 0; i < N; i++) {
+      const px = x0 + y[i],
+        py = (i / (N - 1)) * h;
+      i ? sctx.lineTo(px, py) : sctx.moveTo(px, py);
+    }
+    sctx.stroke();
+    for (const bead of beads()) {
+      const i = Math.round(bead.at * (N - 1)),
+        px = x0 + (y[i] || 0),
+        py = bead.at * h;
+      sctx.beginPath();
+      sctx.arc(px, py, 6, 0, 7);
+      sctx.fillStyle = bead.tuned ? css("--tuned") : css("--bg");
+      sctx.fill();
+      sctx.lineWidth = 2;
+      sctx.strokeStyle = bead.tuned ? css("--tuned") : css("--you");
+      sctx.stroke();
+    }
+  }
+  document
+    .querySelectorAll(".bar")
+    .forEach((bar) =>
+      bar.addEventListener("pointerenter", (e) => !still && pluck(e.clientY, bar.dataset.thread ? 10 : 4)),
+    );
+
+  // ---- The tuner: two waves, in phase when everything is agreed. ----
+  const scope = document.getElementById("scope"),
+    c = scope.getContext("2d");
+  let phase = Math.PI * 0.9,
+    target = phase,
+    t = 0;
+  function drawScope() {
+    const w = scope.width,
+      h = scope.height;
+    phase += (target - phase) * 0.04;
+    t += recording ? 0.09 : 0.035;
+    c.clearRect(0, 0, w, h);
+    const wave = (color, shift, amp) => {
+      c.beginPath();
+      for (let x = 0; x <= w; x += 4) {
+        const env = Math.sin((x / w) * Math.PI);
+        const yy = h / 2 + Math.sin(x / 46 + t + shift) * amp * env;
+        x ? c.lineTo(x, yy) : c.moveTo(x, yy);
+      }
+      c.lineWidth = 4;
+      c.lineCap = "round";
+      c.strokeStyle = color;
+      c.stroke();
+    };
+    wave(css("--agent"), phase, 30);
+    wave(css("--you"), 0, 30);
+  }
+
+  function loop() {
+    drawString();
+    drawScope();
+    if (!still) requestAnimationFrame(loop);
+  }
+  addEventListener("resize", fit);
+  new ResizeObserver(fit).observe(sheet);
+  fit();
+  loop();
+
+  // ---- Agree: the thread rings, the string sounds, the waves move closer. ----
+  const record = document.getElementById("record"),
+    label = document.getElementById("rec-label"),
+    sub = document.getElementById("rec-sub");
+  document.querySelectorAll(".thread").forEach((thread) => {
+    thread.querySelector(".agree").addEventListener("click", (e) => {
+      thread.classList.add("rang");
+      pluck(e.clientY, 16);
+      setTimeout(() => {
+        thread.classList.add("tuned");
+        thread.closest(".bar").classList.add("tunedline");
+      }, 420);
+      tuned++;
+      target = Math.PI * 0.9 * (1 - tuned / 2);
+      document.getElementById("tune").textContent = `${tuned} of 2 threads`;
+      record.disabled = false;
+      sub.textContent = tuned === 1 ? "1 agreed change" : tuned + " agreed changes";
+    });
+    thread.querySelector(".ghost").addEventListener("click", () => (thread.style.opacity = 0.45));
+  });
+
+  // ---- Record the next take: the agent rewrites only the agreed lines. ----
+  const next = {
+    t1: [
+      "p1",
+      "<span class='landed'>Nothing changes until you agree.</span> Covibe is how a person and an agent shape one piece of work together: you comment, the agent replies.",
+    ],
+    t2: [
+      "p2",
+      "Read the draft and leave comments where something feels off. The agent answers in the thread. <span class='landed'>Agree, and the next take rewrites only that.</span>",
+    ],
+  };
+  const meter = [...document.querySelectorAll("#meter i")];
+  record.addEventListener("click", () => {
+    if (recording) return;
+    recording = true;
+    record.classList.add("recording");
+    record.disabled = true;
+    label.textContent = "Recording take 03";
+    sub.textContent = "The agent rewrites what you agreed to";
+    const agreed = [...document.querySelectorAll(".thread.tuned")];
+    agreed.forEach((th) => th.closest(".bar").querySelector(".anchor")?.classList.add("shimmer"));
+    const hum = setInterval(() => {
+      meter.forEach((bar) => (bar.style.height = 4 + Math.random() * 18 + "px"));
+      if (!still) pluck(string.getBoundingClientRect().top + Math.random() * string.getBoundingClientRect().height, 3);
+    }, 110);
+    setTimeout(
+      () => {
+        clearInterval(hum);
+        meter.forEach((bar) => (bar.style.height = "4px"));
+        agreed.forEach((th) => {
+          const [id, html] = next[th.id];
+          document.getElementById(id).innerHTML = html;
+          th.querySelector(".tuned-tag").lastChild.textContent = " In take 03";
+        });
+        document.getElementById("roll").style.transform = "translateY(-50%)";
+        record.classList.remove("recording");
+        recording = false;
+        label.textContent = "Take 03 is down";
+        sub.textContent = "Only the agreed lines changed";
+        document.getElementById("tune").textContent = "All in tune";
+      },
+      still ? 10 : 2800,
+    );
+  });
+</script>
