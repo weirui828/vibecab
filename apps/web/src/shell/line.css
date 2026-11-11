@@ -11,7 +11,7 @@
     --color-surface-sunken: var(--color-basalt-100);
   }
   :root {
-    --vc-bar: 52px;
+    --vc-topbar: 52px;
     --vc-spring: cubic-bezier(0.22, 1, 0.36, 1);
     --vc-lit: var(--color-sedge-300);
     --vc-board: var(--color-basalt-800);
@@ -39,16 +39,16 @@
   display: block;
 }
 .vc-main {
-  min-height: calc(100dvh - var(--vc-bar));
+  min-height: calc(100dvh - var(--vc-topbar));
 }
-.vc-bar {
+.vc-topbar {
   position: sticky;
   top: 0;
   z-index: 30;
   display: flex;
   align-items: center;
   gap: 10px;
-  height: var(--vc-bar);
+  height: var(--vc-topbar);
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
   border-bottom: 1px solid var(--color-border-subtle);
@@ -166,7 +166,7 @@
 .vc-jump {
   color: var(--color-fg-muted);
 }
-.vc-bar kbd {
+.vc-topbar kbd {
   padding: 1px 5px;
   border: 1px solid var(--color-border-subtle);
   border-radius: 5px;
@@ -264,13 +264,13 @@
 }
 
 /* The Mac app has no title bar: the bar is where the window is dragged, clear of the window buttons. */
-.vc-mac .vc-bar {
+.vc-mac .vc-topbar {
   padding-left: 84px;
   -webkit-app-region: drag;
 }
-.vc-mac .vc-bar a,
-.vc-mac .vc-bar button,
-.vc-mac .vc-bar .vc-pop {
+.vc-mac .vc-topbar a,
+.vc-mac .vc-topbar button,
+.vc-mac .vc-topbar .vc-pop {
   -webkit-app-region: no-drag;
 }
 
@@ -407,7 +407,7 @@
 }
 .vc-anchors {
   position: sticky;
-  top: var(--vc-bar);
+  top: var(--vc-topbar);
   z-index: 5;
   display: flex;
   flex-wrap: wrap;

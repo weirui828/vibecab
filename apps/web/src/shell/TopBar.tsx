@@ -102,7 +102,7 @@ export function TopBar({ route, here, sessions, drafts, attention, connection, t
   const dark =
     theme === "dark" || (theme === "auto" && window.matchMedia?.("(prefers-color-scheme: dark)").matches === true);
   return (
-    <header className="vc-bar">
+    <header className="vc-topbar">
       <a className="vc-top-mark" href="#/" aria-label="Home" title="Home">
         <Mark height={22} />
       </a>

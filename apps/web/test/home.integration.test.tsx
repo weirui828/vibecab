@@ -193,8 +193,8 @@ it("draws each session on Home as its own line, with the reason in words", async
   const { container } = await renderApp();
   const line = (await tl.screen.findByRole("link", { name: "Tundra walk" })).closest("li") as HTMLElement;
   expect(line.querySelector(".why")?.textContent).toBe("Nothing is waiting.");
-  // One stop per version of its Draft, and one more, faint, for the version to come.
-  expect(line.querySelectorAll(".vc-mini-stop")).toHaveLength(2);
+  // One stop per version of its Draft, and one more, faint, for the version to come (once its Draft has loaded).
+  await tl.waitFor(() => expect(line.querySelectorAll(".vc-mini-stop")).toHaveLength(2), { timeout: 5000 });
   expect(line.querySelectorAll(".ahead .vc-mini-stop")).toHaveLength(1);
   expect(line.querySelector("use")?.getAttribute("href")).toBe("#vc-gondola");
   // The cab is cut from the mark itself, once, for every line to use.

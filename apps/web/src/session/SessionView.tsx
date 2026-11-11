@@ -19,7 +19,7 @@ import { plural, relativeTime } from "../ui/time.js";
 import { navigate } from "../shell/prefs.js";
 import { CatchUp } from "./CatchUp.js";
 import { DraftDocument } from "./DraftDocument.js";
-import { useLoop } from "./loop.js";
+import { useLoop, waitingAgreements } from "./loop.js";
 import type { Loop } from "./loop.js";
 import { useMarkSeen } from "./useMarkSeen.js";
 import { byElementId } from "./textRanges.js";
@@ -55,7 +55,8 @@ export function SessionView({ session, artifactId }: { session: SessionRow; arti
       head={current?.headVersion ?? 0}
       running={loop.current !== undefined}
       open={beads.filter((b) => b.state === "open").length}
-      agreed={beads.filter((b) => b.state === "agreed").length}
+      // What rides with the next Update: the agreed changes on this Draft (a thread with no place in it counts too).
+      agreed={Math.max(waitingAgreements(loop).length, beads.filter((b) => b.state === "agreed").length)}
     />
   );
   if (drafts.loading)

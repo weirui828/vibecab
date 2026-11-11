@@ -35,6 +35,7 @@ interface Motion extends Pendulum {
   t: number; // 0 at the station the cab left, 1 at the next
   from: number;
   time: number;
+  /** How far along the span the cab was a frame ago, and how fast it was going. */
   x: number;
   speed: number;
   /** After an arrival the whole line slides back by one station, so the cab ends where it always rests. */
@@ -94,7 +95,7 @@ export function CableScene({
       t: 0,
       from: 0,
       time: 0,
-      x: HOME_X,
+      x: 0,
       speed: 0,
       shift: 0,
       spin: 0,
@@ -160,6 +161,8 @@ export function CableScene({
         m.t = 0;
         m.shift = 1;
         m.time = 0;
+        m.x = 0;
+        m.speed = 0;
         pluck(strings[1]!, 0.94, 5);
         pluck(strings[2]!, 0.1, 4);
         setShown(head);
@@ -212,11 +215,13 @@ export function CableScene({
     // The cab is a pendulum under its grips: it hangs back when the line pulls away and swings forward on braking.
     const gx = post(0).x + SPAN * m.t,
       gy = heightAt(2, m.t),
-      speed = (gx - m.x) / dt,
+      // Speed along the line itself: the slide after an arrival moves the picture, not the cab.
+      travelled = SPAN * m.t,
+      speed = (travelled - m.x) / dt,
       push = Math.abs(speed - m.speed) / dt > 4000 ? 0 : (speed - m.speed) / dt / 140;
-    m.spin += (gx - m.x) / 5;
+    m.spin += (travelled - m.x) / 5;
     m.speed = speed;
-    m.x = gx;
+    m.x = travelled;
     swing(m, dt, push + 0.02 * Math.sin(clock * 0.9) + wind.level * 0.16 * Math.sin((wind.clock - wind.from) * 1.3));
     car.current?.setAttribute(
       "transform",
@@ -308,7 +313,7 @@ export function CableScene({
         {[0, 1].map((i) => (
           <line key={i} className="vc-rod" ref={(node) => void (rods.current[i] = node)} />
         ))}
-        <g ref={car}>
+        <g ref={car} className="vc-cab">
           <use href="#vc-gondola" transform={gondolaTransform(SCALE)} />
         </g>
         {[0, 1].map((i) => (
