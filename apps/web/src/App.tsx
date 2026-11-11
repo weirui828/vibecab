@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Button, Icon, IconButton } from "@wei/design-system";
+import { useCallback, useEffect, useState } from "react";
+import { Alert, Button } from "@wei/design-system";
 import { terms } from "./copy/terms.js";
 import type { ConnectionState } from "./connection.js";
 import { webBridge } from "./bridge/webBridge.js";
@@ -7,11 +7,12 @@ import type { WebBridge } from "./bridge/webBridge.js";
 import { LiveStoreProvider } from "./live/LiveStore.js";
 import { useWorkspace } from "./live/workspace.js";
 import { ToastProvider } from "./ui/Toast.js";
-import { Wordmark } from "./ui/Brand.js";
+import { GondolaDefs } from "./ui/Gondola.js";
 import { PageBoundary } from "./ui/PageBoundary.js";
-import { useRoute, useSidebarRail, useTheme } from "./shell/prefs.js";
-import { Sidebar } from "./shell/Navigation.js";
-import type { NavProps } from "./shell/Navigation.js";
+import { useRoute, useTheme } from "./shell/prefs.js";
+import { TopBar, pageName } from "./shell/TopBar.js";
+import type { BarProps } from "./shell/TopBar.js";
+import { WindProvider } from "./shell/wind.js";
 import { DialogHost } from "./home/DialogHost.js";
 import { DraftsView, HomeView, LaterView, NeedsYouView, PageSkeleton } from "./home/Views.js";
 import { SessionView, parseSessionRoute } from "./session/SessionView.js";
@@ -48,13 +49,11 @@ const defaultBridge = () => (pageBridge ??= webBridge());
 export function App({ bridge = defaultBridge() }: { bridge?: WebBridge }) {
   const [access, setAccess] = useState<Access>("checking"),
     [connection, setConnection] = useState<ConnectionState>("Starting"),
-    [version, setVersion] = useState("0.1.0"),
     [theme, setTheme] = useTheme();
   const check = useCallback(async () => {
     try {
       const state = await bridge.app.state();
       setConnection(state.connection);
-      setVersion(state.version);
       setAccess("ready");
     } catch {
       setConnection("Engine unreachable");
@@ -81,14 +80,15 @@ export function App({ bridge = defaultBridge() }: { bridge?: WebBridge }) {
   return (
     <LiveStoreProvider bridge={bridge}>
       <ToastProvider>
-        <Shell
-          connection={connection}
-          ready={access === "ready" && connection === "Connected"}
-          theme={theme}
-          setTheme={setTheme}
-          version={version}
-          onRestart={() => void restart()}
-        />
+        <WindProvider>
+          <Shell
+            connection={connection}
+            ready={access === "ready" && connection === "Connected"}
+            theme={theme}
+            setTheme={setTheme}
+            onRestart={() => void restart()}
+          />
+        </WindProvider>
       </ToastProvider>
     </LiveStoreProvider>
   );
@@ -99,14 +99,12 @@ function Shell({
   ready,
   theme,
   setTheme,
-  version,
   onRestart,
-}: Pick<NavProps, "connection" | "theme" | "setTheme" | "version"> & {
+}: Pick<BarProps, "connection" | "theme" | "setTheme"> & {
   ready: boolean;
   onRestart(): void;
 }) {
   const route = useRoute(),
-    [railed, setRailed] = useSidebarRail(),
     workspace = useWorkspace(ready),
     settings = useLiveQuery<SettingsShape>("sys.Settings", {}, ready),
     [firstRunDone, setFirstRunDone] = useState(() => readFlag("vc-first-run-done")),
@@ -114,13 +112,7 @@ function Shell({
       writeFlag("vc-first-run-done");
       setFirstRunDone(true);
     }, []),
-    [firstRun, setFirstRun] = useState<"unknown" | "show" | "hide">("unknown"),
-    sheet = useRef<HTMLDialogElement>(null);
-  const needsYou = useMemo(
-    () => [...workspace.attention.values()].filter((items) => items.length > 0).length,
-    [workspace.attention],
-  );
-  useEffect(() => sheet.current?.close?.(), [route]);
+    [firstRun, setFirstRun] = useState<"unknown" | "show" | "hide">("unknown");
   // Decided once, when everything has loaded: saving a model during the first run must not end it halfway.
   useEffect(() => {
     if (firstRun !== "unknown" || !settings.data || !workspace.sessions || !workspace.drafts) return;
@@ -130,16 +122,6 @@ function Shell({
       workspace.drafts.length === 0;
     setFirstRun(empty ? "show" : "hide");
   }, [firstRun, settings.data, workspace.sessions, workspace.drafts]);
-  const nav: NavProps = {
-    route,
-    sessions: workspace.sessions,
-    attention: workspace.attention,
-    needsYou,
-    connection,
-    theme,
-    setTheme,
-    version,
-  };
   const sessionRoute = parseSessionRoute(route),
     session = sessionRoute ? workspace.sessions?.find((s) => s.sessionId === sessionRoute.sessionId) : undefined;
   let page;
@@ -193,28 +175,19 @@ function Shell({
     ) : null;
   return (
     <DialogHost sessions={workspace.sessions ?? []} drafts={workspace.drafts ?? []}>
-      <div className="vc-app" data-rail={railed || undefined}>
-        <Sidebar {...nav} onToggleRail={() => setRailed(!railed)} />
-        <dialog
-          ref={sheet}
-          className="vc-sheet"
-          aria-label="Navigation"
-          onClick={(e) => e.target === sheet.current && sheet.current?.close()}
-        >
-          <Sidebar {...nav} onNavigate={() => sheet.current?.close()} />
-        </dialog>
+      <div className="vc-app">
+        <GondolaDefs />
+        <TopBar
+          route={route}
+          here={session?.title ?? pageName(route) ?? (route.startsWith("/p/") ? terms.project : undefined)}
+          sessions={workspace.sessions}
+          drafts={workspace.drafts}
+          attention={workspace.attention}
+          connection={connection}
+          theme={theme}
+          setTheme={setTheme}
+        />
         <main className="vc-main">
-          <div className="vc-mobilebar">
-            <a href="#/" aria-label="Home" style={{ display: "inline-flex" }}>
-              <Wordmark height={24} />
-            </a>
-            <IconButton
-              variant="ghost"
-              label="Menu"
-              icon={<Icon name="bars-3" size={20} />}
-              onClick={() => sheet.current?.showModal?.()}
-            />
-          </div>
           {banner}
           <PageBoundary key={route}>{page}</PageBoundary>
         </main>

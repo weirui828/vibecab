@@ -99,21 +99,6 @@
 .vc-glider[data-on] {
   opacity: 1;
 }
-/* Sidebar: the glider is the highlight; links sit above it. */
-.vc-sidebar .vc-nav-link,
-.vc-sidebar .vc-session-link,
-.vc-sidebar .vc-sidebar-brand,
-.vc-sidebar .vc-nav-section,
-.vc-sidebar .vc-sidebar-foot,
-.vc-sidebar .vc-nav-more,
-.vc-sidebar .vc-rail-mark {
-  position: relative;
-  z-index: 1;
-}
-.vc-sidebar:has(> .vc-glider[data-on]) .vc-nav-link[aria-current="page"],
-.vc-sidebar:has(> .vc-glider[data-on]) .vc-session-link[aria-current="page"] {
-  background: transparent;
-}
 /* Settings tabs: the same glider, drawn as the underline. */
 .vc-tabs {
   position: relative;
@@ -403,36 +388,4 @@ button:not(:disabled):active,
 /* ---------- In the Mac window ----------
    The Mac app adds `vc-mac` to <html>. Its window has no title bar: the window buttons sit over the top left, and
    these strips are where the window is dragged. */
-.vc-mac .vc-sidebar {
-  padding-top: 50px;
-}
-.vc-mac .vc-sidebar::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: 0;
-  height: 44px;
-  -webkit-app-region: drag;
-}
-.vc-mac .vc-main::before {
-  content: "";
-  position: fixed;
-  top: 0;
-  right: 0;
-  left: var(--vc-sidebar);
-  z-index: 40;
-  height: 12px;
-  -webkit-app-region: drag;
-}
-.vc-mac .vc-app[data-rail] .vc-main::before {
-  left: var(--vc-rail);
-}
-.vc-mac .vc-mobilebar {
-  padding-left: 84px;
-  -webkit-app-region: drag;
-}
-.vc-mac .vc-mobilebar a,
-.vc-mac .vc-mobilebar button {
-  -webkit-app-region: no-drag;
-}
+/* The bar is the drag strip now; see shell/line.css. */

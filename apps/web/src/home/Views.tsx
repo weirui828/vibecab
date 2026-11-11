@@ -1,12 +1,15 @@
 import { useState } from "react";
 import { Button, Icon, Input } from "@wei/design-system";
+import type { Idea, Project } from "../../../../contract/generated/index.js";
+import { useLiveQuery } from "../live/LiveStore.js";
 import { terms } from "../copy/terms.js";
 import { sortSessions } from "../live/workspace.js";
 import type { useWorkspace } from "../live/workspace.js";
 import { Hills } from "../ui/Brand.js";
-import { Horizon } from "../ui/Horizon.js";
+import { HomeScene } from "./HomeScene.js";
+import { SessionLines } from "./SessionLines.js";
 import { greeting, plural } from "../ui/time.js";
-import { AttentionRows, DraftRows, SessionRows } from "./Rows.js";
+import { AttentionRows, DraftRows } from "./Rows.js";
 import { useDialogs } from "./DialogHost.js";
 
 type Workspace = ReturnType<typeof useWorkspace>;
@@ -15,86 +18,116 @@ const byNewest = <T extends { createdAt: string }>(a: T, b: T) => b.createdAt.lo
 
 export function HomeView({ workspace }: { workspace: Workspace }) {
   const dialogs = useDialogs(),
-    [showEnded, setShowEnded] = useState(false);
+    projects = useLiveQuery<Project[]>("vc.Projects", {}),
+    ideas = useLiveQuery<Idea[]>("vc.Ideas", {});
   const sessions = sortSessions(workspace.sessions ?? [], workspace.attention),
     drafts = [...(workspace.drafts ?? [])].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)),
     waiting = sessions.filter((s) => (workspace.attention.get(s.sessionId)?.length ?? 0) > 0);
   if (workspace.loading && !workspace.sessions) return <PageSkeleton />;
   if (sessions.length === 0 && drafts.length === 0) return <EmptyHome />;
   const live = sessions.filter((s) => s.state !== "ended"),
-    ended = sessions.filter((s) => s.state === "ended");
+    ended = sessions.length - live.length,
+    loose = [...(ideas.data ?? [])].filter((idea) => !idea.sessionIds?.length).sort(byNewest);
   const facts = [
     plural(live.length, terms.session.toLowerCase()),
     plural(drafts.length, terms.draft),
     waiting.length ? `${waiting.length} need${waiting.length === 1 ? "s" : ""} you` : "nothing waiting",
   ].join(" · ");
+  // A session sits under its Project; what needs you stays first within each, and the Projects keep that order too.
+  const titles = new Map((projects.data ?? []).map((p) => [p.projectId, p.title])),
+    groups = new Map<string, typeof live>();
+  for (const session of live) {
+    const key = session.primaryProjectId && titles.has(session.primaryProjectId) ? session.primaryProjectId : "";
+    groups.set(key, [...(groups.get(key) ?? []), session]);
+  }
+  const to = (id: string) => () => document.getElementById(id)?.scrollIntoView?.({ behavior: "smooth", block: "start" });
   return (
-    <div className="vc-page">
-      <header className="vc-header with-horizon">
-        <Horizon />
+    <div className="vc-home">
+      <HomeScene>
         <h1 className="vc-display">{greeting()}</h1>
         <p className="vc-facts">{facts}</p>
-        <div className="vc-actions">
-          <Button variant="primary" leadingIcon={<Icon name="plus" />} onClick={() => dialogs.newDraft()}>
-            New {terms.draft.toLowerCase()}
-          </Button>
+      </HomeScene>
+      <div className="vc-home-body">
+        <nav className="vc-anchors" aria-label="On this page">
+          <button type="button" onClick={to("sessions")}>
+            {terms.session}s <b>{live.length}</b>
+          </button>
+          <button type="button" onClick={to("drafts")}>
+            {terms.draft}s <b>{drafts.length}</b>
+          </button>
+          {loose.length > 0 && (
+            <button type="button" onClick={to("ideas")}>
+              {terms.idea}s <b>{loose.length}</b>
+            </button>
+          )}
+          <span className="vc-top-space" />
           <Button variant="ghost" onClick={dialogs.newSession}>
             New {terms.session.toLowerCase()}
           </Button>
-        </div>
-      </header>
+          <Button variant="primary" leadingIcon={<Icon name="plus" />} onClick={() => dialogs.newDraft()}>
+            New {terms.draft.toLowerCase()}
+          </Button>
+        </nav>
 
-      {waiting.length > 0 && (
-        <section className="vc-section" aria-labelledby="needs-you">
-          <div className="vc-section-head">
-            <h2 className="vc-label" id="needs-you">
-              Needs you
-            </h2>
-            {waiting.length > 4 && (
-              <a className="vc-link-button" href="#/needs-you">
-                All {waiting.length}
-              </a>
-            )}
-          </div>
-          <AttentionRows sessions={waiting} attention={workspace.attention} limit={4} />
-        </section>
-      )}
-
-      {sessions.length > 0 && (
         <section className="vc-section" aria-labelledby="sessions">
           <div className="vc-section-head">
             <h2 className="vc-label" id="sessions">
               {terms.session}s
             </h2>
-            {ended.length > 0 && (
-              <button type="button" className="vc-link-button" onClick={() => setShowEnded((v) => !v)}>
-                {showEnded ? "Hide ended" : `Show ended (${ended.length})`}
-              </button>
-            )}
-          </div>
-          <SessionRows
-            sessions={showEnded ? [...live, ...ended] : live}
-            drafts={drafts}
-            attention={workspace.attention}
-          />
-        </section>
-      )}
-
-      {drafts.length > 0 && (
-        <section className="vc-section" aria-labelledby="drafts">
-          <div className="vc-section-head">
-            <h2 className="vc-label" id="drafts">
-              Recent {terms.draft.toLowerCase()}s
-            </h2>
-            {drafts.length > 5 && (
-              <a className="vc-link-button" href="#/drafts">
-                All {drafts.length}
+            {ended > 0 && (
+              <a className="vc-link-button" href="#/sessions/ended">
+                {plural(ended, terms.ended.toLowerCase())}
               </a>
             )}
           </div>
-          <DraftRows drafts={drafts.slice(0, 5)} sessions={sessions} />
+          {live.length === 0 && <p className="vc-muted">None open. Start one, or open a {terms.draft.toLowerCase()}.</p>}
+          {[...groups].map(([projectId, list]) => (
+            <div key={projectId} className="vc-line-group">
+              {(projectId || groups.size > 1) && (
+                <h3 className="vc-label">
+                  {projectId ? <a href={"#/p/" + projectId}>{titles.get(projectId)}</a> : `No ${terms.project.toLowerCase()}`}
+                </h3>
+              )}
+              <SessionLines sessions={list} drafts={drafts} attention={workspace.attention} />
+            </div>
+          ))}
         </section>
-      )}
+
+        {drafts.length > 0 && (
+          <section className="vc-section" aria-labelledby="drafts">
+            <div className="vc-section-head">
+              <h2 className="vc-label" id="drafts">
+                {terms.draft}s
+              </h2>
+              {drafts.length > 6 && (
+                <a className="vc-link-button" href="#/drafts">
+                  All {drafts.length}
+                </a>
+              )}
+            </div>
+            <DraftRows drafts={drafts.slice(0, 6)} sessions={sessions} />
+          </section>
+        )}
+
+        {loose.length > 0 && (
+          <section className="vc-section" aria-labelledby="ideas">
+            <div className="vc-section-head">
+              <h2 className="vc-label" id="ideas">
+                {terms.idea}s
+              </h2>
+              <a className="vc-link-button" href="#/ideas">
+                {loose.length > 4 ? `All ${loose.length}` : "Open"}
+              </a>
+            </div>
+            <p className="vc-hint">Not in a {terms.session.toLowerCase()} yet.</p>
+            <ul className="vc-idea-lines">
+              {loose.slice(0, 4).map((idea) => (
+                <li key={idea.ideaId}>{idea.text}</li>
+              ))}
+            </ul>
+          </section>
+        )}
+      </div>
     </div>
   );
 }
