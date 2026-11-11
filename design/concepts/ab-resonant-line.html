@@ -231,6 +231,31 @@
   .bead.lit {
     r: 8;
   }
+  .bead.written {
+    r: 4;
+    opacity: 0.55;
+  }
+  /* The plumb line: it hangs from the scene down the side of the draft and marks where the threads are. */
+  .wrap {
+    position: relative;
+  }
+  .wrap > :not(.string):not(.dock) {
+    margin-left: 44px;
+  }
+  .string {
+    position: absolute;
+    top: 0;
+    left: max(16px, env(safe-area-inset-left, 0px));
+    width: 28px;
+    overflow: visible;
+  }
+  .plumb,
+  .riser {
+    fill: var(--moss);
+  }
+  .riser {
+    opacity: 0;
+  }
   .sign text {
     font: 700 12px var(--mono);
     fill: var(--board-ink);
@@ -538,6 +563,9 @@
     max-width: 62ch;
   }
   @media (max-width: 760px) {
+    .wrap > :not(.string):not(.dock) {
+      margin-left: 32px;
+    }
     .row {
       grid-template-columns: minmax(0, 1fr);
       gap: 12px;
@@ -601,7 +629,6 @@
       <g id="grips"></g>
       <g id="landed"></g>
     </g>
-    <g id="beads"></g>
   </svg>
   <div class="board" role="status" aria-label="Session status">
     <span class="cell"><small>AT</small><span class="flap" id="f-at"></span></span>
@@ -621,7 +648,13 @@
   </button>
 </div>
 
-<div class="wrap">
+<div class="wrap" id="wrap">
+  <svg class="string" id="string">
+    <path class="cable" id="string-path" />
+    <path class="plumb" id="plumb" d="M0 0l5 9-5 9-5-9z" />
+    <circle class="riser" id="riser" r="4.5" />
+    <g id="beads"></g>
+  </svg>
   <div class="route"><span>Covibe explainer</span><span>·</span><span id="route-v">v2 of 3</span></div>
   <h1>Covibe: shaping one piece of work together</h1>
   <div class="rows">
@@ -631,7 +664,7 @@
         <mark>nothing changes until you agree</mark>.
       </p>
       <div class="thread" data-t="0">
-        <div class="kicker"><i></i><span>Thread on the line</span></div>
+        <div class="kicker"><i></i><span>Thread</span></div>
         <div class="who">You</div>
         Maybe say this earlier. It is the whole point.
         <div class="agent"><b>Agent</b> — I can open with it: “Nothing changes until you agree.”</div>
@@ -649,7 +682,7 @@
         concrete proposal. <mark>When you agree, the next Update rewrites only what you agreed to.</mark>
       </p>
       <div class="thread" data-t="1">
-        <div class="kicker"><i></i><span>Thread on the line</span></div>
+        <div class="kicker"><i></i><span>Thread</span></div>
         <div class="who">You</div>
         Shorter. One sentence is enough here.
         <div class="agent"><b>Agent</b> — “Agree, and the next Update rewrites only that.”</div>
@@ -663,9 +696,10 @@
     </div>
   </div>
   <p class="note">
-    Concept A + B. The session is one line, and the line is a string. Every open thread is a bead on it and keeps it
-    humming; move over a paragraph to pluck its bead. Agree, and the bead rings, slides down to the cab and the line
-    quiets. Update sends the cab to the next version with only what you agreed to.
+    Concept A + B. Two lines, two jobs. The cable above is time: one station per version, and it only moves when the cab
+    does. The plumb line beside the draft is place: a bead where each thread sits, hollow while it is open and humming,
+    moss once you agree. Move over a paragraph to pluck its bead. Agree, and the bead rings and sends its change up to
+    the cab. Update carries only what you agreed to.
   </p>
   <div class="dock">
     <button class="depart" id="depart" disabled>
@@ -756,9 +790,11 @@
       [35.5 * K, 49 * K],
     ];
   const beads = [
-    { t: 0.36, home: 0.36, state: "open" },
-    { t: 0.64, home: 0.64, state: "open" },
+    { y: 0, state: "open" },
+    { y: 0, state: "open" },
   ];
+  // The plumb line beside the draft is the same kind of string as the cable, turned upright.
+  const plumbLine = { n: 8, h: 1, u: new Float32Array(8), v: new Float32Array(8) };
   let clock = 0,
     ride = null, // { tau } while an Update is running
     arrived = false,
@@ -791,16 +827,15 @@
   function simulate() {
     const open = calm ? [] : beads.filter((b) => b.state === "open");
     for (let sub = 0; sub < 3; sub++) {
-      for (const s of spans) {
+      for (const s of [...spans, plumbLine]) {
         const { u, v, n } = s;
         for (let j = 1; j < n - 1; j++) v[j] = (v[j] + 0.25 * (u[j - 1] + u[j + 1] - 2 * u[j])) * 0.9955;
         for (let j = 1; j < n - 1; j++) u[j] += v[j];
       }
-      // Open threads keep the span ahead humming: two close notes that beat against each other.
-      const s = spans[2];
+      // Open threads keep the plumb line humming: two close notes that beat against each other.
       for (const b of open) {
-        const j = Math.round(b.t * (s.n - 1));
-        s.v[j] += 0.02 * (Math.sin(clock * 15) + Math.sin(clock * 17.3 + b.home * 9));
+        const j = Math.min(plumbLine.n - 2, Math.max(1, Math.round((b.y / plumbLine.h) * (plumbLine.n - 1))));
+        plumbLine.v[j] += 0.016 * (Math.sin(clock * 15) + Math.sin(clock * 17.3 + b.y));
       }
       // The cab is heavy: the wave mostly stops at it.
       const cs = spans[cab.span],
@@ -843,7 +878,8 @@
     cabEl = $("cab"),
     gripsEl = $("grips"),
     rodsEl = $("rods"),
-    beadsEl = $("beads");
+    beadsEl = $("beads"),
+    riser = $("riser");
   const gripEls = [0, 1].map(() => el("circle", { class: "grip", r: 2.7 }, gripsEl));
   const rodEls = [0, 1].map(() => el("line", { class: "rod" }, rodsEl));
   const threads = [...document.querySelectorAll(".thread")];
@@ -903,10 +939,22 @@
       rodEls[i].setAttribute("x2", (gx + rx * cos - ry * sin).toFixed(2));
       rodEls[i].setAttribute("y2", (gy + rx * sin + ry * cos + 0.6).toFixed(2));
     });
+    let d = "";
+    for (let j = 0; j < plumbLine.n; j++)
+      d += `${j ? "L" : "M"}${(14 + plumbLine.u[j]).toFixed(2)} ${((j / (plumbLine.n - 1)) * plumbLine.h).toFixed(1)}`;
+    $("string-path").setAttribute("d", d);
     for (const b of beads) {
-      b.el.setAttribute("cx", xAt(spans[2], b.t).toFixed(2));
-      b.el.setAttribute("cy", heightAt(spans[2], b.t).toFixed(2));
+      b.el.setAttribute("cx", (14 + wave(plumbLine, b.y / plumbLine.h)).toFixed(2));
+      b.el.setAttribute("cy", b.y.toFixed(1));
     }
+    const up = beads.find((b) => b.state === "rising");
+    if (up) {
+      const e = up.k * up.k * (3 - 2 * up.k),
+        y = up.y * (1 - e);
+      riser.setAttribute("cx", (14 + wave(plumbLine, y / plumbLine.h)).toFixed(2));
+      riser.setAttribute("cy", y.toFixed(1));
+    }
+    riser.style.opacity = up ? Math.min(1, (1 - up.k) * 5) : 0;
     sheaves.forEach(({ wheel, p }) =>
       wheel.setAttribute("transform", `rotate(${(spin * 57.3).toFixed(1)} ${p.x} ${p.y + 5})`),
     );
@@ -931,10 +979,7 @@
     let ax = 0;
     if (ride) {
       ride.tau += dt;
-      const before = cab.t;
       cab.t = along(ride.tau);
-      // A thread still open is passed, not carried: the cab brushes its bead on the way.
-      for (const b of beads) if (b.state === "open" && before < b.t && cab.t >= b.t && !calm) pluck(spans[2], b.t, 4);
       const x = xAt(spans[2], cab.t),
         vx = (x - cab.x) / dt;
       ax = calm ? 0 : (vx - cab.vx) / dt;
@@ -949,16 +994,13 @@
     cab.omega += (-w * w * cab.theta - 1.5 * cab.omega + ax / 140 + breeze) * dt;
     cab.theta += cab.omega * dt;
     for (const b of beads) {
-      if (b.state !== "sliding") continue;
-      b.k = Math.min(1, b.k + dt / 0.95);
-      const e = b.k * b.k * (3 - 2 * b.k);
-      b.t = b.home + (0.012 - b.home) * e;
+      if (b.state !== "rising") continue;
+      b.k = Math.min(1, b.k + dt / 0.9);
       if (b.k >= 1) {
         b.state = "aboard";
-        b.el.style.display = "none";
         cab.load++;
         cab.omega += 0.1; // the cab takes the weight
-        pluck(spans[2], 0.06, 3);
+        if (!calm) pluck(spans[2], 0.06, 3);
         refresh();
       }
     }
@@ -1003,7 +1045,7 @@
     const b = beads[i];
     if (b.state !== "open" || calm || clock - lastRing[i] < 0.45) return;
     lastRing[i] = clock;
-    pluck(spans[2], b.t, amp);
+    pluck(plumbLine, b.y / plumbLine.h, amp);
   }
   document.querySelectorAll(".row[data-t]").forEach((row) => {
     const i = Number(row.dataset.t);
@@ -1020,8 +1062,8 @@
       thread.classList.add("agreed");
       b.el.classList.add("agreed");
       b.el.setAttribute("aria-label", `Agreed thread ${i + 1}`);
-      if (!calm) pluck(spans[2], b.t, 11); // the bead rings once, then the line quiets
-      b.state = "sliding";
+      if (!calm) pluck(plumbLine, b.y / plumbLine.h, 10); // the bead rings once, then the line quiets
+      b.state = "rising";
       b.k = calm ? 1 : 0;
       refresh();
     });
@@ -1064,6 +1106,8 @@
       const [id, html] = rewrite[i];
       $(id).innerHTML = html;
       threads[i].querySelector(".state").textContent = "Written into v3";
+      b.state = "written";
+      b.el.classList.add("written");
       el(
         "circle",
         { class: "landed", cx: posts[3].x - 8 + $("landed").children.length * 16, cy: posts[3].y - 46, r: 4 },
@@ -1094,6 +1138,23 @@
   new MutationObserver(sky).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
   sky();
 
+  // The plumb line runs from the scene's edge to the end of the draft; a bead sits at the first line of its paragraph.
+  function layout() {
+    const wrap = $("wrap").getBoundingClientRect(),
+      rows = document.querySelector(".rows").getBoundingClientRect();
+    const h = Math.max(60, rows.bottom - wrap.top + 6),
+      n = Math.max(8, Math.round(h / 6) + 1);
+    if (n !== plumbLine.n) Object.assign(plumbLine, { n, u: new Float32Array(n), v: new Float32Array(n) });
+    plumbLine.h = h;
+    $("string").setAttribute("height", h + 22);
+    $("plumb").setAttribute("transform", `translate(14 ${h})`);
+    document.querySelectorAll(".row[data-t]").forEach((row) => {
+      beads[Number(row.dataset.t)].y = row.getBoundingClientRect().top - wrap.top + 14;
+    });
+  }
+  new ResizeObserver(layout).observe($("wrap"));
+  layout();
+
   refresh();
   draw();
   let last = performance.now();
@@ -1103,5 +1164,5 @@
     requestAnimationFrame(loop);
   })(last);
   // For checking the motion by hand: step the same frame function without the clock.
-  window.vcLine = { frame, cab, beads, spans, heightAt, xAt };
+  window.vcLine = { frame, cab, beads, spans, plumbLine, heightAt, xAt };
 </script>
