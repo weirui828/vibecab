@@ -51,7 +51,11 @@ export function HomeScene({ children }: { children: ReactNode }) {
           {body === "sun" ? (
             <circle className="vc-orb" r="18" />
           ) : (
-            <path className="vc-orb" transform="scale(1.8)" d="M3.5 -9.2A9.6 9.6 0 1 0 9.2 6.4 7.6 7.6 0 0 1 3.5 -9.2Z" />
+            <path
+              className="vc-orb"
+              transform="scale(1.8)"
+              d="M3.5 -9.2A9.6 9.6 0 1 0 9.2 6.4 7.6 7.6 0 0 1 3.5 -9.2Z"
+            />
           )}
         </g>
         <path className="vc-hill far" d="M0 160 Q 150 84 330 140 T 640 122 T 930 114 T 1200 148 V240 H0Z" />

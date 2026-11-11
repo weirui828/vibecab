@@ -33,7 +33,11 @@ const pages: Array<{ path: string; label: string; hint: string }> = [
   { path: "/sessions", label: `${terms.session}s`, hint: "Active, paused and ended" },
   { path: "/drafts", label: `${terms.draft}s`, hint: "All of them, newest first" },
   { path: "/ideas", label: `${terms.idea}s`, hint: "Notes that are not being worked on yet" },
-  { path: "/projects", label: `${terms.project}s`, hint: `${terms.session}s and ${terms.idea.toLowerCase()}s that belong together` },
+  {
+    path: "/projects",
+    label: `${terms.project}s`,
+    hint: `${terms.session}s and ${terms.idea.toLowerCase()}s that belong together`,
+  },
   { path: "/settings", label: "Settings", hint: "Agents, roles, spending, appearance" },
   { path: "/trash", label: "Trash", hint: "What you removed" },
 ];
@@ -208,12 +212,26 @@ function JumpBox({ sessions, drafts, onClose }: { sessions: SessionRow[]; drafts
         path: "/s/" + s.sessionId,
       })),
       ...(ended > 0
-        ? [{ kind: `${terms.session}s`, label: plural(ended, terms.ended.toLowerCase()), hint: "Read-only records", path: "/sessions/ended" }]
+        ? [
+            {
+              kind: `${terms.session}s`,
+              label: plural(ended, terms.ended.toLowerCase()),
+              hint: "Read-only records",
+              path: "/sessions/ended",
+            },
+          ]
         : []),
       ...drafts.flatMap((d) => {
         const home = d.sessionIds.map((id) => byId.get(id)).find((s) => s !== undefined);
         return home
-          ? [{ kind: `${terms.draft}s`, label: d.title, hint: "In " + home.title, path: `/s/${home.sessionId}/d/${d.artifactId}` }]
+          ? [
+              {
+                kind: `${terms.draft}s`,
+                label: d.title,
+                hint: "In " + home.title,
+                path: `/s/${home.sessionId}/d/${d.artifactId}`,
+              },
+            ]
           : [];
       }),
       ...pages.map((p) => ({ kind: "Pages", label: p.label, hint: p.hint, path: p.path })),

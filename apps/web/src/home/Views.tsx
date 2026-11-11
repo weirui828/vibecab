@@ -40,7 +40,8 @@ export function HomeView({ workspace }: { workspace: Workspace }) {
     const key = session.primaryProjectId && titles.has(session.primaryProjectId) ? session.primaryProjectId : "";
     groups.set(key, [...(groups.get(key) ?? []), session]);
   }
-  const to = (id: string) => () => document.getElementById(id)?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+  const to = (id: string) => () =>
+    document.getElementById(id)?.scrollIntoView?.({ behavior: "smooth", block: "start" });
   return (
     <div className="vc-home">
       <HomeScene>
@@ -80,12 +81,18 @@ export function HomeView({ workspace }: { workspace: Workspace }) {
               </a>
             )}
           </div>
-          {live.length === 0 && <p className="vc-muted">None open. Start one, or open a {terms.draft.toLowerCase()}.</p>}
+          {live.length === 0 && (
+            <p className="vc-muted">None open. Start one, or open a {terms.draft.toLowerCase()}.</p>
+          )}
           {[...groups].map(([projectId, list]) => (
             <div key={projectId} className="vc-line-group">
               {(projectId || groups.size > 1) && (
                 <h3 className="vc-label">
-                  {projectId ? <a href={"#/p/" + projectId}>{titles.get(projectId)}</a> : `No ${terms.project.toLowerCase()}`}
+                  {projectId ? (
+                    <a href={"#/p/" + projectId}>{titles.get(projectId)}</a>
+                  ) : (
+                    `No ${terms.project.toLowerCase()}`
+                  )}
                 </h3>
               )}
               <SessionLines sessions={list} drafts={drafts} attention={workspace.attention} />

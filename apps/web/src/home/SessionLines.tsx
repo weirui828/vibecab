@@ -59,7 +59,13 @@ function MiniLine({ shape }: { shape: LineShape }) {
     rods = useRef<Array<SVGLineElement | null>>([]),
     grips = useRef<Array<SVGCircleElement | null>>([]),
     beads = useRef<Array<SVGCircleElement | null>>([]),
-    hang = useRef<Pendulum & { t: number; speed: number; since: number }>({ theta: 0, omega: 0, t: 0, speed: 0, since: 0 });
+    hang = useRef<Pendulum & { t: number; speed: number; since: number }>({
+      theta: 0,
+      omega: 0,
+      t: 0,
+      speed: 0,
+      since: 0,
+    });
   const stops = shape.head === 0 ? 1 : shape.head - shape.first + 1 + (shape.next ? 1 : 0),
     gap = stops > 1 ? Math.min(96, (WIDTH - 40) / (stops - 1)) : 0,
     stopX = (i: number) => 20 + i * gap,
@@ -98,7 +104,10 @@ function MiniLine({ shape }: { shape: LineShape }) {
     }
     swing(h, dt, push + wind.level * 0.2 * Math.sin(clock * 1.3));
     const [x, y] = h.t > 0 ? point(at, h.t) : [stopX(at), stopY(at)];
-    car.current?.setAttribute("transform", `translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${(h.theta * 57.3).toFixed(2)})`);
+    car.current?.setAttribute(
+      "transform",
+      `translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${(h.theta * 57.3).toFixed(2)})`,
+    );
     const cos = Math.cos(h.theta),
       sin = Math.sin(h.theta);
     gondola.rods.forEach(([rx, ry], k) => {

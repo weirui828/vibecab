@@ -618,7 +618,7 @@
 /* The status board: split flaps, and a tuner whose two waves close up as threads are agreed. */
 .vc-board {
   position: absolute;
-  top: 14px;
+  bottom: 14px;
   left: max(16px, calc((100% - 1080px) / 2 + 16px));
   display: flex;
   flex-wrap: wrap;
@@ -685,7 +685,7 @@
 .vc-plumb {
   position: absolute;
   top: 0;
-  left: -34px;
+  left: -84px;
   z-index: 2;
   width: 28px;
   overflow: visible;
@@ -738,6 +738,6 @@
     font-size: 11px;
   }
   .vc-plumb {
-    left: -14px;
+    left: -24px;
   }
 }

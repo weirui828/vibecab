@@ -10,6 +10,7 @@ import { ActionBar } from "./ActionBar.js";
 import { ChangeHistory, changedBlocks, historyEntries } from "./ChangeHistory.js";
 import type { ReplyMode } from "./ActionBar.js";
 import { canDecide, threadStatus } from "./loop.js";
+import { PlumbLine } from "./PlumbLine.js";
 import type { Loop } from "./loop.js";
 import { Composer } from "./Composer.js";
 import { ThreadCard } from "./ThreadCard.js";
@@ -402,6 +403,7 @@ export function CommentSurface({
         onDoubleClick={() => clearTimeout(clickTimer.current)}
         onKeyDown={inline ? onMarginKey : undefined}
       >
+        <PlumbLine host={surface} threads={threads} onOpen={(id) => (setShown(true), focusThread(id, true))} />
         {inline && inPlace(GENERAL)}
         <AfterBlock.Provider value={inline ? inPlace : undefined}>{children}</AfterBlock.Provider>
         {gutter && (

@@ -17,7 +17,8 @@ export function makeString(n: number): StringLine {
 export function stepString(s: StringLine, steps = 3, keep = 0.9955): void {
   const { u, v, n } = s;
   for (let step = 0; step < steps; step++) {
-    for (let j = 1; j < n - 1; j++) v[j] = ((v[j] ?? 0) + 0.25 * ((u[j - 1] ?? 0) + (u[j + 1] ?? 0) - 2 * (u[j] ?? 0))) * keep;
+    for (let j = 1; j < n - 1; j++)
+      v[j] = ((v[j] ?? 0) + 0.25 * ((u[j - 1] ?? 0) + (u[j + 1] ?? 0) - 2 * (u[j] ?? 0))) * keep;
     for (let j = 1; j < n - 1; j++) u[j] = (u[j] ?? 0) + (v[j] ?? 0);
   }
 }
