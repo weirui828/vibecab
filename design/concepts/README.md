@@ -14,9 +14,15 @@ These are sketches, not app code: nothing here is wired to the engine.
 
 ## A + B together
 
-- `ab-resonant-line.html` — the session page after Wei's feedback on A and B. Two lines with two jobs. The cable on
-  top is time: a station per version, and the cab is the gondola from the logo (cabin, roof and grips cut from the
-  mark's own outline, without the C), hung on the cable point for point, with an ease out, cruise and brake and a
-  pendulum swing from its own acceleration. The plumb line beside the draft is place: a bead where each thread sits,
-  hollow while open, moss once agreed. It is still until the pointer passes a paragraph; now and then a slow gust
-  leans it, with a low wind sound that can be switched off. Colours are Tundra palette steps only.
+- `ab-resonant-line.html` — the direction Wei chose, now two pages in one file: Home and a Session, with the
+  navigation between them.
+  - Shell: no sidebar. One bar: the mark (Home), where you are, Needs you with its count, a jump box (Cmd/Ctrl K)
+    for everything else, wind sound, Summer / Polar night.
+  - Home: every session once, as its own line: a stop per version, the cab where the work stands, open threads as
+    beads beside it, the reason in words. What needs you comes first. Drafts and Ideas are sections of the page.
+  - Session: the cable on top is time, a station per version; the cab is the gondola from the logo (cabin, roof and
+    grips cut from the mark's own outline), hung on the cable point for point, with an ease out, cruise and brake
+    and a pendulum swing from its own acceleration. The plumb line beside the draft is place: a bead where each
+    thread sits, hollow while open, moss once agreed. It is still until the pointer passes a paragraph; now and
+    then a slow gust leans it, with a low wind sound that can be switched off.
+  - Colours are Tundra palette steps only.
