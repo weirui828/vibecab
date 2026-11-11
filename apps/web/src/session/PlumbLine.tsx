@@ -131,39 +131,43 @@ export function PlumbLine({
     }
   }, [beads, layout]);
 
-  useFrame((dt, clock) => {
-    clockNow.current = clock;
-    const s = line.current,
-      h = layout.height;
-    if (h === 0) return;
-    if (!isStill(s)) stepString(s);
-    // Where the line is at height y: its own ringing plus the lean of the gust.
-    const side = (y: number) => X + waveAt(s, y / h) + 5 * lean(wind, y / h);
-    let d = "";
-    for (let j = 0; j < s.n; j++) {
-      const y = (j / (s.n - 1)) * h;
-      d += `${j ? "L" : "M"}${side(y).toFixed(2)} ${y.toFixed(1)}`;
-    }
-    path.current?.setAttribute("d", d);
-    bob.current?.setAttribute("transform", `translate(${X} ${h.toFixed(1)})`);
-    for (const [threadId, dot] of dots.current) {
-      const y = layout.at[threadId];
-      if (y !== undefined) dot.setAttribute("cx", side(y).toFixed(2));
-    }
-    const up = rising.current;
-    if (up) {
-      up.part = Math.min(1, up.part + dt / 0.9);
-      const eased = up.part * up.part * (3 - 2 * up.part),
-        y = up.from * (1 - eased);
-      riser.current?.setAttribute("cx", side(y).toFixed(2));
-      riser.current?.setAttribute("cy", y.toFixed(1));
-      riser.current?.setAttribute("opacity", String(Math.min(1, (1 - up.part) * 5)));
-      if (up.part >= 1) {
-        rising.current = undefined;
-        cab.current?.board();
+  useFrame(
+    (dt, clock) => {
+      clockNow.current = clock;
+      const s = line.current,
+        h = layout.height;
+      if (h === 0) return;
+      if (!isStill(s)) stepString(s);
+      // Where the line is at height y: its own ringing plus the lean of the gust.
+      const side = (y: number) => X + waveAt(s, y / h) + 5 * lean(wind, y / h);
+      let d = "";
+      for (let j = 0; j < s.n; j++) {
+        const y = (j / (s.n - 1)) * h;
+        d += `${j ? "L" : "M"}${side(y).toFixed(2)} ${y.toFixed(1)}`;
       }
-    }
-  });
+      path.current?.setAttribute("d", d);
+      bob.current?.setAttribute("transform", `translate(${X} ${h.toFixed(1)})`);
+      for (const [threadId, dot] of dots.current) {
+        const y = layout.at[threadId];
+        if (y !== undefined) dot.setAttribute("cx", side(y).toFixed(2));
+      }
+      const up = rising.current;
+      if (up) {
+        up.part = Math.min(1, up.part + dt / 0.9);
+        const eased = up.part * up.part * (3 - 2 * up.part),
+          y = up.from * (1 - eased);
+        riser.current?.setAttribute("cx", side(y).toFixed(2));
+        riser.current?.setAttribute("cy", y.toFixed(1));
+        riser.current?.setAttribute("opacity", String(Math.min(1, (1 - up.part) * 5)));
+        if (up.part >= 1) {
+          rising.current = undefined;
+          cab.current?.board();
+        }
+      }
+    },
+    true,
+    layout,
+  );
 
   if (layout.height === 0) return null;
   return (

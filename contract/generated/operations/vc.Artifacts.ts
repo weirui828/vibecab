@@ -8,7 +8,7 @@ export interface VcArtifactsOperation {
   result: {
     artifactId: string;
     title: string;
-    mediaKind: "doc";
+    mediaKind: "doc" | "html";
     headVersion: number;
     createdAt: string;
     updatedAt: string;

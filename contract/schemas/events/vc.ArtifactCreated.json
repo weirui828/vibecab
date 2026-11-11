@@ -11,9 +11,7 @@
     "title": {
       "type": "string"
     },
-    "mediaKind": {
-      "const": "doc"
-    }
+    "mediaKind": { "enum": ["doc", "html"] }
   },
   "required": ["artifactId", "title", "mediaKind"],
   "additionalProperties": false

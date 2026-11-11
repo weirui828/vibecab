@@ -2296,6 +2296,118 @@ export const schemasById: Record<string, AnySchema> = {
           "text"
         ],
         "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "type": {
+            "const": "html_head"
+          },
+          "props": {
+            "type": "object",
+            "properties": {
+              "htmlAttrs": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "minItems": 2,
+                  "maxItems": 2
+                }
+              },
+              "bodyAttrs": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "minItems": 2,
+                  "maxItems": 2
+                }
+              }
+            },
+            "required": [
+              "htmlAttrs",
+              "bodyAttrs"
+            ],
+            "additionalProperties": false
+          },
+          "html": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "props",
+          "html"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "type": {
+            "const": "html_node"
+          },
+          "props": {
+            "type": "object",
+            "properties": {
+              "tag": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]*$"
+              },
+              "attrs": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "minItems": 2,
+                  "maxItems": 2
+                }
+              }
+            },
+            "required": [
+              "tag",
+              "attrs"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "type",
+          "props"
+        ],
+        "additionalProperties": false
+      },
+      {
+        "type": "object",
+        "properties": {
+          "type": {
+            "const": "html_block"
+          },
+          "props": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": false
+          },
+          "html": {
+            "type": "string",
+            "minLength": 1,
+            "htmlElement": true
+          }
+        },
+        "required": [
+          "type",
+          "props",
+          "html"
+        ],
+        "additionalProperties": false
       }
     ]
   },
@@ -2339,6 +2451,15 @@ export const schemasById: Record<string, AnySchema> = {
       },
       {
         "$ref": "https://vibecab.local/schemas/doc/callout.json"
+      },
+      {
+        "$ref": "https://vibecab.local/schemas/html/head.json"
+      },
+      {
+        "$ref": "https://vibecab.local/schemas/html/node.json"
+      },
+      {
+        "$ref": "https://vibecab.local/schemas/html/block.json"
       }
     ],
     "docChildren": {
@@ -2353,6 +2474,10 @@ export const schemasById: Record<string, AnySchema> = {
       ],
       "table_row": [
         "table_cell"
+      ],
+      "html_node": [
+        "html_node",
+        "html_block"
       ]
     }
   },
@@ -2624,7 +2749,10 @@ export const schemasById: Record<string, AnySchema> = {
         "type": "string"
       },
       "mediaKind": {
-        "const": "doc"
+        "enum": [
+          "doc",
+          "html"
+        ]
       }
     },
     "required": [
@@ -3782,6 +3910,193 @@ export const schemasById: Record<string, AnySchema> = {
       "elementId",
       "heldAt",
       "lastActivity"
+    ],
+    "additionalProperties": false
+  },
+  "https://vibecab.local/schemas/html/block.json": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://vibecab.local/schemas/html/block.json",
+    "title": "HtmlBlockElement",
+    "type": "object",
+    "properties": {
+      "elementId": {
+        "type": "string",
+        "pattern": "^el_[0-9A-HJKMNP-TV-Z]{26}$"
+      },
+      "type": {
+        "const": "html_block"
+      },
+      "parentId": {
+        "anyOf": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "order": {
+        "type": "string",
+        "minLength": 1
+      },
+      "props": {
+        "type": "object",
+        "properties": {},
+        "required": [],
+        "additionalProperties": false
+      },
+      "html": {
+        "type": "string",
+        "minLength": 1,
+        "htmlElement": true
+      }
+    },
+    "required": [
+      "elementId",
+      "type",
+      "parentId",
+      "order",
+      "props",
+      "html"
+    ],
+    "additionalProperties": false
+  },
+  "https://vibecab.local/schemas/html/head.json": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://vibecab.local/schemas/html/head.json",
+    "title": "HtmlHeadElement",
+    "type": "object",
+    "properties": {
+      "elementId": {
+        "type": "string",
+        "pattern": "^el_[0-9A-HJKMNP-TV-Z]{26}$"
+      },
+      "type": {
+        "const": "html_head"
+      },
+      "parentId": {
+        "anyOf": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "order": {
+        "type": "string",
+        "minLength": 1
+      },
+      "props": {
+        "type": "object",
+        "properties": {
+          "htmlAttrs": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          },
+          "bodyAttrs": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          }
+        },
+        "required": [
+          "htmlAttrs",
+          "bodyAttrs"
+        ],
+        "additionalProperties": false
+      },
+      "html": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "elementId",
+      "type",
+      "parentId",
+      "order",
+      "props",
+      "html"
+    ],
+    "additionalProperties": false
+  },
+  "https://vibecab.local/schemas/html/node.json": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://vibecab.local/schemas/html/node.json",
+    "title": "HtmlNodeElement",
+    "type": "object",
+    "properties": {
+      "elementId": {
+        "type": "string",
+        "pattern": "^el_[0-9A-HJKMNP-TV-Z]{26}$"
+      },
+      "type": {
+        "const": "html_node"
+      },
+      "parentId": {
+        "anyOf": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "null"
+          }
+        ]
+      },
+      "order": {
+        "type": "string",
+        "minLength": 1
+      },
+      "props": {
+        "type": "object",
+        "properties": {
+          "tag": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "attrs": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          }
+        },
+        "required": [
+          "tag",
+          "attrs"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "required": [
+      "elementId",
+      "type",
+      "parentId",
+      "order",
+      "props"
     ],
     "additionalProperties": false
   },
@@ -5857,7 +6172,10 @@ export const schemasById: Record<string, AnySchema> = {
             "type": "string"
           },
           "mediaKind": {
-            "const": "doc"
+            "enum": [
+              "doc",
+              "html"
+            ]
           },
           "headVersion": {
             "type": "integer",
@@ -5935,7 +6253,10 @@ export const schemasById: Record<string, AnySchema> = {
               "type": "string"
             },
             "mediaKind": {
-              "const": "doc"
+              "enum": [
+                "doc",
+                "html"
+              ]
             },
             "headVersion": {
               "type": "integer",
@@ -8259,7 +8580,8 @@ export const schemasById: Record<string, AnySchema> = {
             "type": "string",
             "enum": [
               "markdown",
-              "text"
+              "text",
+              "html"
             ]
           },
           "content": {
@@ -10812,7 +11134,10 @@ export const schemasById: Record<string, AnySchema> = {
               "table_cell",
               "image",
               "divider",
-              "callout"
+              "callout",
+              "html_head",
+              "html_node",
+              "html_block"
             ]
           },
           "preview": {
@@ -13267,6 +13592,9 @@ export const schemasByPath: Record<string, string> = {
   "feedback-conflict.json": "https://vibecab.local/schemas/feedback-conflict.json",
   "grant.json": "https://vibecab.local/schemas/grant.json",
   "hold.json": "https://vibecab.local/schemas/hold.json",
+  "html/block.json": "https://vibecab.local/schemas/html/block.json",
+  "html/head.json": "https://vibecab.local/schemas/html/head.json",
+  "html/node.json": "https://vibecab.local/schemas/html/node.json",
   "idea.json": "https://vibecab.local/schemas/idea.json",
   "job.json": "https://vibecab.local/schemas/job.json",
   "json.json": "https://vibecab.local/schemas/json.json",

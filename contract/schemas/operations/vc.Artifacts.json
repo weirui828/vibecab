@@ -19,7 +19,7 @@
         "properties": {
           "artifactId": { "type": "string", "minLength": 1 },
           "title": { "type": "string" },
-          "mediaKind": { "const": "doc" },
+          "mediaKind": { "enum": ["doc", "html"] },
           "headVersion": { "type": "integer", "minimum": 1 },
           "createdAt": { "type": "string", "format": "date-time" },
           "updatedAt": { "type": "string", "format": "date-time" },

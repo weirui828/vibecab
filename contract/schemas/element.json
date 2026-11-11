@@ -38,12 +38,22 @@
     },
     {
       "$ref": "https://vibecab.local/schemas/doc/callout.json"
+    },
+    {
+      "$ref": "https://vibecab.local/schemas/html/head.json"
+    },
+    {
+      "$ref": "https://vibecab.local/schemas/html/node.json"
+    },
+    {
+      "$ref": "https://vibecab.local/schemas/html/block.json"
     }
   ],
   "docChildren": {
     "list": ["list_item"],
     "list_item": ["list"],
     "table": ["table_row"],
-    "table_row": ["table_cell"]
+    "table_row": ["table_cell"],
+    "html_node": ["html_node", "html_block"]
   }
 }

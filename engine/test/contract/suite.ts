@@ -118,7 +118,7 @@ export function contractSuite(
       ).toEqual(elements);
       expect(await query("sys.Capabilities")).toMatchObject({
         contractVersion: "1.0",
-        mediaKinds: ["doc"],
+        mediaKinds: ["doc", "html"],
       });
     });
     it("rejects invalid input, unsupported operations, and inadequate authority", async () => {

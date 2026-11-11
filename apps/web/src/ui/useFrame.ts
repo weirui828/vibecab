@@ -7,13 +7,16 @@ export function prefersCalm(): boolean {
 
 /**
  * Calls `tick` once per animation frame with the seconds since the last one and the seconds since it started.
- * It draws once at the start, so the picture is whole where frames never come (a hidden tab, a test).
+ * It draws once at the start, and again whenever `redrawOn` changes, so the picture is whole and current where
+ * frames never come (a hidden tab, a test, a person who asked for less motion).
  */
-export function useFrame(tick: (dt: number, clock: number) => void, active = true): void {
+export function useFrame(tick: (dt: number, clock: number) => void, active = true, redrawOn?: unknown): void {
   const latest = useRef(tick);
   latest.current = tick;
   useEffect(() => {
     latest.current(1 / 60, 0);
+  }, [redrawOn]);
+  useEffect(() => {
     if (!active || prefersCalm() || typeof window.requestAnimationFrame !== "function") return;
     let frame = 0,
       last = performance.now(),

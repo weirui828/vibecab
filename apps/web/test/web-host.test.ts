@@ -18,6 +18,16 @@ const json = (body: unknown) => ({
 });
 
 describe("browser access", () => {
+  it("serves the frame an HTML Draft is shown in with a policy of its own, not the app's", async () => {
+    const res = await raw(t.host.port, "GET", "/draft-frame");
+    expect(res.status).toBe(200);
+    const policy = String(res.headers["content-security-policy"]);
+    expect(policy).toContain("default-src 'none'");
+    expect(policy).toContain("sandbox allow-scripts");
+    expect(policy).not.toContain("connect-src");
+    expect(res.body).toContain("vcFrame");
+  });
+
   it("needs no sign-in: VibeCab's own pages reach /v1 and /app with no cookie", async () => {
     expect((await raw(t.host.port, "GET", "/app/state")).status).toBe(200);
     const query = await raw(t.host.port, "POST", "/v1/queries/vc.Sessions", {

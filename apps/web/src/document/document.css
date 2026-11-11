@@ -256,3 +256,48 @@
     }
   }
 }
+
+/* ---------- An HTML Draft ----------
+   The file itself, in a frame of its own on a white sheet; over it one empty box per block, where the frame says
+   the block is. The boxes take no clicks: they only give comments and the plumb line a place to hold on to. */
+.vc-html {
+  position: relative;
+}
+.vc-html-frame {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 10px;
+  background: white;
+}
+.vc-html-block {
+  position: absolute;
+  border-radius: 4px;
+  pointer-events: none;
+  transition: outline-color var(--vc-base);
+  outline: 1px solid transparent;
+  outline-offset: 3px;
+}
+/* A block with a thread is marked like any other, but its box must stay where the frame put it. */
+.vc-doc .vc-html-block[data-mark] {
+  position: absolute;
+}
+.vc-html-block[data-hover] {
+  outline-color: var(--color-border-strong);
+}
+.vc-html-block[data-changed] {
+  outline: 2px solid var(--color-accent-default);
+  background: color-mix(in srgb, var(--color-accent-default) 8%, transparent);
+}
+.vc-html-threads {
+  display: grid;
+  gap: 12px;
+  margin-top: 24px;
+}
+/* A page is laid out for its own width, not for a column of prose. */
+.vc-surface:has(.vc-html) {
+  grid-template-columns: minmax(0, 1040px);
+}
+.vc-surface[data-margin]:has(.vc-html) {
+  grid-template-columns: minmax(0, 1040px) 280px;
+}

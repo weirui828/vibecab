@@ -21,7 +21,7 @@ export function NewDraftDialog({
   onClose(): void;
   onCreate(draft: NewDraft): Promise<boolean>;
 }) {
-  const [mode, setMode] = useState<"blank" | "import">("blank"),
+  const [mode, setMode] = useState<"blank" | "import" | "html">("blank"),
     [title, setTitle] = useState(""),
     [file, setFile] = useState<{ name: string; text: string }>(),
     [sessionId, setSessionId] = useState(NEW_SESSION),
@@ -37,15 +37,17 @@ export function NewDraftDialog({
   }, [open]);
   const active = sessions.filter((s) => s.state === "active");
   async function submit() {
-    const name = title.trim() || file?.name.replace(/\.(md|markdown|txt)$/i, "") || "";
+    const name = title.trim() || file?.name.replace(/\.(md|markdown|txt|html?)$/i, "") || "";
     if (!name) return setError("Give it a title.");
-    if (mode === "import" && !file) return setError("Choose a Markdown file.");
+    if (mode !== "blank" && !file)
+      return setError(mode === "html" ? "Choose an HTML file." : "Choose a Markdown file.");
     setBusy(true);
     const target = fixedSession ?? sessions.find((s) => s.sessionId === sessionId);
     const ok = await onCreate({
       title: name,
       role: target && target.artifactIds.length > 0 ? "reference" : "primary",
       ...(mode === "import" && file ? { markdown: file.text } : {}),
+      ...(mode === "html" && file ? { html: file.text } : {}),
       ...(fixedSession ? { sessionId: fixedSession.sessionId } : sessionId !== NEW_SESSION ? { sessionId } : {}),
       ...(fixedSession?.state === "paused" ? { resume: true } : {}),
     });
@@ -58,8 +60,8 @@ export function NewDraftDialog({
       title={fixedSession ? `Add a ${terms.draft.toLowerCase()}` : `New ${terms.draft.toLowerCase()}`}
       lede={
         fixedSession
-          ? `To “${fixedSession.title}”${fixedSession.state === "paused" ? `, which resumes` : ""}. Start from a blank page or import a Markdown file.`
-          : "Start from a blank page or import a Markdown file."
+          ? `To “${fixedSession.title}”${fixedSession.state === "paused" ? `, which resumes` : ""}. Start from a blank page, or import a Markdown or HTML file.`
+          : "Start from a blank page, or import a Markdown or HTML file."
       }
       onClose={onClose}
       onSubmit={() => void submit()}
@@ -101,13 +103,28 @@ export function NewDraftDialog({
           <strong>Import Markdown</strong>
           <span>A .md or .txt file from this computer.</span>
         </label>
+        <label>
+          <input
+            type="radio"
+            name="mode"
+            checked={mode === "html"}
+            onChange={() => {
+              setMode("html");
+              setFile(undefined);
+              setError(undefined);
+            }}
+          />
+          <strong>Import HTML</strong>
+          <span>An .html file, kept as it is. It is shown in a closed frame with no network.</span>
+        </label>
       </div>
-      {mode === "import" && (
+      {mode !== "blank" && (
         <Field label="File">
           <input
             className="vc-file"
             type="file"
-            accept=".md,.markdown,.txt,text/markdown,text/plain"
+            key={mode}
+            accept={mode === "html" ? ".html,.htm,text/html" : ".md,.markdown,.txt,text/markdown,text/plain"}
             onChange={(event) => {
               const chosen = event.target.files?.[0];
               if (!chosen) return setFile(undefined);
@@ -122,7 +139,7 @@ export function NewDraftDialog({
           inputSize="lg"
           autoFocus
           value={title}
-          placeholder={mode === "import" && file ? file.name.replace(/\.(md|markdown|txt)$/i, "") : "Untitled"}
+          placeholder={mode !== "blank" && file ? file.name.replace(/\.(md|markdown|txt|html?)$/i, "") : "Untitled"}
           onChange={(event) => {
             setTitle(event.target.value);
             setError(undefined);

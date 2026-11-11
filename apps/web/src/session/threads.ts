@@ -142,7 +142,8 @@ export function slotFinder(elements: Element[]): (elementId: string) => string |
   const byId = new Map(elements.map((e) => [e.elementId, e]));
   return (elementId) => {
     for (let e = byId.get(elementId); e; e = e.parentId === null ? undefined : byId.get(e.parentId))
-      if (e.parentId === null || e.type === "list_item") return e.elementId;
+      // In an HTML Draft every block is its own place: its wrappers are not something a thread can sit under.
+      if (e.parentId === null || e.type === "list_item" || e.type === "html_block") return e.elementId;
     return undefined;
   };
 }

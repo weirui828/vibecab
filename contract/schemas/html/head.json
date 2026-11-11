@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vibecab.local/schemas/html/head.json",
+  "title": "HtmlHeadElement",
+  "type": "object",
+  "properties": {
+    "elementId": {
+      "type": "string",
+      "pattern": "^el_[0-9A-HJKMNP-TV-Z]{26}$"
+    },
+    "type": {
+      "const": "html_head"
+    },
+    "parentId": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "order": {
+      "type": "string",
+      "minLength": 1
+    },
+    "props": {
+      "type": "object",
+      "properties": {
+        "htmlAttrs": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        },
+        "bodyAttrs": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        }
+      },
+      "required": ["htmlAttrs", "bodyAttrs"],
+      "additionalProperties": false
+    },
+    "html": {
+      "type": "string"
+    }
+  },
+  "required": ["elementId", "type", "parentId", "order", "props", "html"],
+  "additionalProperties": false
+}
