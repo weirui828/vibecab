@@ -13,7 +13,6 @@ import { plural } from "../ui/time.js";
 import { ConnectionLabel } from "./Navigation.js";
 import { navigate } from "./prefs.js";
 import type { ThemeChoice } from "./prefs.js";
-import { useWind } from "./wind.js";
 
 export interface BarProps {
   route: string;
@@ -49,30 +48,11 @@ export function pageName(route: string): string | undefined {
   return pages.find((p) => p.path !== "/" && (route === p.path || route.startsWith(p.path + "/")))?.label;
 }
 
-/** A gust, as three strokes. */
-function WindGlyph() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      aria-hidden="true"
-    >
-      <path d="M3 9h9a3 3 0 1 0-3-3M3 14h14a3 3 0 1 1-3 3M3 11.5h17" />
-    </svg>
-  );
-}
-
 /** One bar instead of a sidebar: where you are, what needs you, and one box that jumps anywhere. */
 export function TopBar({ route, here, sessions, drafts, attention, connection, theme, setTheme }: BarProps) {
   const [needsOpen, setNeedsOpen] = useState(false),
     [jumping, setJumping] = useState(false),
-    needs = useRef<HTMLDivElement>(null),
-    { sound, setSound } = useWind();
+    needs = useRef<HTMLDivElement>(null);
   const waiting = useMemo(
     () => sortSessions(sessions ?? [], attention).filter((s) => (attention.get(s.sessionId)?.length ?? 0) > 0),
     [sessions, attention],
@@ -149,16 +129,6 @@ export function TopBar({ route, here, sessions, drafts, attention, connection, t
       <button type="button" className="vc-top-pill vc-jump" onClick={() => setJumping(true)}>
         <span className="label">Jump to…</span>
         <kbd>⌘K</kbd>
-      </button>
-      <button
-        type="button"
-        className="vc-top-round"
-        aria-pressed={sound}
-        aria-label="Wind sound"
-        title="Wind sound"
-        onClick={() => setSound(!sound)}
-      >
-        <WindGlyph />
       </button>
       <button
         type="button"

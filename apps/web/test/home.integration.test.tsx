@@ -166,6 +166,8 @@ it("gets around from one bar: what needs you, a jump box for everything else, an
   const { container } = await renderApp();
   const bar = tl.within((await tl.screen.findByRole("banner")) as HTMLElement);
   expect(container.querySelector("aside")).toBeNull();
+  // The wind is silent: nothing in the bar makes sound.
+  expect(bar.queryByRole("button", { name: /sound/i })).toBeNull();
   // On Home the bar says the tagline; elsewhere it says where you are, with the way back.
   expect(bar.getByText("Thinking. Vibing. Building.")).toBeTruthy();
   // The jump box finds a session by a few letters and goes there on Enter.
@@ -181,12 +183,6 @@ it("gets around from one bar: what needs you, a jump box for everything else, an
   expect(here.textContent).toContain("Tundra walk");
   // Settings is a page like any other: one click from the bar, and listed in the jump box.
   expect(bar.getByRole("link", { name: "Settings" }).getAttribute("href")).toBe("#/settings");
-  // The wind can be heard or not, and the choice is remembered.
-  const sound = bar.getByRole("button", { name: "Wind sound" });
-  expect(sound.getAttribute("aria-pressed")).toBe("true");
-  tl.fireEvent.click(sound);
-  expect(sound.getAttribute("aria-pressed")).toBe("false");
-  expect(localStorage.getItem("vc-wind-sound")).toBe("off");
 });
 
 it("draws each session on Home as its own line, with the reason in words", async () => {
