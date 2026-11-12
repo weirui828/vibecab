@@ -48,6 +48,7 @@ export function SessionView({ session, artifactId }: { session: SessionRow; arti
       () => beadsOf(threadsForDraft(threads.data ?? [], current?.artifactId)),
       [threads.data, current?.artifactId],
     ),
+    turns = useLiveQuery<Array<{ status: string }>>("vc.AgentTurns", { sessionId: session.sessionId }),
     cab = useRef<CabSignals | undefined>(undefined);
   const scene = (
     <CableScene
@@ -56,6 +57,9 @@ export function SessionView({ session, artifactId }: { session: SessionRow; arti
       running={loop.current !== undefined}
       open={beads.filter((b) => b.state === "open").length}
       // What rides with the next Update: the agreed changes on this Draft (a thread with no place in it counts too).
+      working={
+        loop.current !== undefined || (turns.data ?? []).some((t) => t.status === "queued" || t.status === "running")
+      }
       agreed={Math.max(waitingAgreements(loop).length, beads.filter((b) => b.state === "agreed").length)}
     />
   );

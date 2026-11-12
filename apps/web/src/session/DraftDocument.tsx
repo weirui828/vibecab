@@ -18,6 +18,7 @@ import { VersionView } from "./VersionView.js";
 import type { Loop, Update } from "./loop.js";
 import type { Thread } from "./threads.js";
 import { byElementId } from "./textRanges.js";
+import { VIEW_VERSION } from "./CableScene.js";
 
 function flash(elementId: string) {
   const node = document.querySelector(byElementId(elementId));
@@ -86,6 +87,19 @@ export function DraftDocument({
     if (seenVersion.current !== undefined && version > seenVersion.current) toast(`Version ${version} is ready`);
     seenVersion.current = version;
   }, [artifact.data?.headVersion, toast]);
+
+  // A station on the line above asks for a version: an earlier one is shown, the latest goes back to work.
+  const headVersion = artifact.data?.headVersion;
+  useEffect(() => {
+    const onAsk = (event: Event) => {
+      const version = (event as CustomEvent<{ version?: number }>).detail?.version;
+      if (typeof version !== "number" || headVersion === undefined) return;
+      setChanges(undefined);
+      setViewing(version < headVersion ? version : undefined);
+    };
+    window.addEventListener(VIEW_VERSION, onAsk);
+    return () => window.removeEventListener(VIEW_VERSION, onAsk);
+  }, [headVersion]);
 
   const openChanges = useCallback(
     (version: number) => {

@@ -6,7 +6,7 @@ import { useFrame } from "../ui/useFrame.js";
 import { lean, useWind } from "../shell/wind.js";
 import { useCab } from "./CableScene.js";
 import { byElementId } from "./textRanges.js";
-import { anchorOf, threadState } from "./threads.js";
+import { anchorOf, threadState, visibleComments } from "./threads.js";
 import type { Thread } from "./threads.js";
 
 // The plumb line is place. It hangs beside the Document; a bead sits where each thread is: hollow while it is
@@ -17,6 +17,8 @@ export interface Bead {
   threadId: string;
   elementId: string;
   state: "open" | "agreed" | "applied";
+  /** The thread's first words, for whoever points at the bead. */
+  said: string;
 }
 
 /** The threads that have a place in the Draft, as beads. Declined and set-aside ones leave the line. */
@@ -29,6 +31,7 @@ export function beadsOf(threads: Thread[]): Bead[] {
       {
         threadId: thread.threadId,
         elementId,
+        said: (visibleComments(thread)[0]?.body ?? "").replace(/\s+/g, " ").slice(0, 90),
         state: state === "applied" ? "applied" : state === "agreed" || state === "scheduled" ? "agreed" : "open",
       } as const,
     ];
@@ -200,13 +203,15 @@ export function PlumbLine({
             r="6"
             role="button"
             tabIndex={0}
-            aria-label={label[bead.state]}
+            aria-label={bead.said ? `${label[bead.state]}: ${bead.said}` : label[bead.state]}
             onClick={(event) => {
               event.stopPropagation(); // a click on the Document itself starts a comment; this one opens a thread
               onOpen(bead.threadId);
             }}
             onKeyDown={(event) => (event.key === "Enter" || event.key === " ") && onOpen(bead.threadId)}
-          />
+          >
+            <title>{bead.said}</title>
+          </circle>
         );
       })}
     </svg>

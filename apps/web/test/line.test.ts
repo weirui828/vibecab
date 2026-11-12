@@ -3,6 +3,8 @@ import { along, isStill, makeString, pluck, rideTable, stepString, swing, waveAt
 import { lineReason, lineShape } from "../src/home/SessionLines.js";
 import { statusWord } from "../src/session/CableScene.js";
 import { lean } from "../src/shell/wind.js";
+import { starPlace } from "../src/home/HomeScene.js";
+import { beadsOf } from "../src/session/PlumbLine.js";
 import type { AttentionItem } from "../../../contract/generated/index.js";
 import type { SessionRow } from "../src/live/workspace.js";
 
@@ -52,6 +54,50 @@ it("leans a hanging line only while a gust blows, and never at its ends", () => 
   expect(lean(gust, 0.5)).toBeGreaterThan(0.4);
   expect(lean(gust, 0)).toBe(0);
   expect(Math.abs(lean(gust, 1))).toBeLessThan(1e-9);
+});
+
+it("gives every idea its own star over Home, always in the same place, inside the sky", () => {
+  const places = Array.from({ length: 60 }, (_, n) => starPlace(n));
+  expect(starPlace(7)).toEqual(places[7]);
+  for (const star of places) {
+    expect(star.x).toBeGreaterThan(20);
+    expect(star.x).toBeLessThan(1180);
+    expect(star.y).toBeGreaterThan(5);
+    expect(star.y).toBeLessThan(105);
+  }
+  // No two share a place.
+  expect(new Set(places.map((star) => `${Math.round(star.x)},${Math.round(star.y)}`)).size).toBe(60);
+});
+
+it("lets a bead say what its thread says", () => {
+  const thread = (state: string, body: string, elementId?: string) =>
+    ({
+      threadId: "t-" + body,
+      anchorResolutions: [],
+      comments: [
+        {
+          commentId: "c-" + body,
+          body,
+          state,
+          deleted: false,
+          author: { kind: "human" },
+          ...(elementId ? { anchor: { artifactId: "a", elementId } } : {}),
+        },
+      ],
+    }) as unknown as Parameters<typeof beadsOf>[0][number];
+  expect(
+    beadsOf([
+      thread("open", "Say  which\nseason.", "el_1"),
+      thread("agreed", "Shorter.", "el_2"),
+      thread("applied", "Done.", "el_3"),
+      thread("declined", "No.", "el_4"),
+      thread("open", "On the whole session"),
+    ]).map((bead) => [bead.elementId, bead.state, bead.said]),
+  ).toEqual([
+    ["el_1", "open", "Say which season."],
+    ["el_2", "agreed", "Shorter."],
+    ["el_3", "applied", "Done."],
+  ]);
 });
 
 const session = (state: SessionRow["state"]): SessionRow =>
