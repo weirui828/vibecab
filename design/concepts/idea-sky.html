@@ -507,28 +507,64 @@
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
   const tints = ["#a9bb8f", "#8fc0c4", "#d9b865", "#b06d89", "#e3936b", "#7fc29b"];
-  let links = [];
+  let links = [],
+    closeTo = new Map(),
+    constellations = [],
+    now = 0,
+    heat = 0;
+  const sim = (a, b) => closeTo.get(a)?.get(b) ?? 0;
   function relink() {
-    links = [];
-    const pair = new Map();
-    for (const a of ideas) {
-      const close = ideas
-        .filter((b) => b !== a)
-        .map((b) => ({ b, s: closeness(a, b) }))
-        .filter((k) => k.s >= LINK)
-        .sort((x, y) => y.s - x.s)
-        .slice(0, LINES);
-      for (const { b, s } of close) {
-        const key = [ideas.indexOf(a), ideas.indexOf(b)].sort((x, y) => x - y).join("-");
-        if (!pair.has(key)) pair.set(key, { a, b, s, born: 0 });
+    const drawn = new Map(links.map((l) => [l.a.text + "|" + l.b.text, l.born]));
+    closeTo = new Map(ideas.map((idea) => [idea, new Map()]));
+    for (let i = 0; i < ideas.length; i++)
+      for (let j = i + 1; j < ideas.length; j++) {
+        const s = closeness(ideas[i], ideas[j]);
+        closeTo.get(ideas[i]).set(ideas[j], s);
+        closeTo.get(ideas[j]).set(ideas[i], s);
       }
-    }
-    links = [...pair.values()];
-    // Constellations: ideas joined through lines, the largest first, each with its own tint and a name from
-    // the words its ideas share most.
+    // Lines worth drawing: from each idea to its closest few.
+    const pair = new Map();
+    for (const a of ideas)
+      for (const b of ideas
+        .filter((o) => o !== a && sim(a, o) >= LINK)
+        .sort((x, y) => sim(a, y) - sim(a, x))
+        .slice(0, LINES + 1)) {
+        const [first, second] = ideas.indexOf(a) < ideas.indexOf(b) ? [a, b] : [b, a];
+        pair.set(first.text + "|" + second.text, { a: first, b: second, s: sim(a, b) });
+      }
+    // A constellation is drawn as a tree of its strongest lines, so three stars never make a thin triangle.
     const group = new Map(ideas.map((idea) => [idea, idea]));
     const root = (n) => (group.get(n) === n ? n : (group.set(n, root(group.get(n))), group.get(n)));
-    for (const l of links) group.set(root(l.a), root(l.b));
+    const wanted = [...pair.values()].sort((x, y) => y.s - x.s),
+      tree = [],
+      spare = [];
+    for (const l of wanted) {
+      if (root(l.a) === root(l.b)) spare.push(l);
+      else {
+        group.set(root(l.a), root(l.b));
+        tree.push(l);
+      }
+    }
+    // A larger one gets a line or two more, closing a ring, but never between two stars that share a neighbour.
+    const beside = (n, among) => among.filter((l) => l.a === n || l.b === n).map((l) => (l.a === n ? l.b : l.a));
+    const size = new Map(),
+      rings = new Map();
+    for (const idea of ideas) size.set(root(idea), (size.get(root(idea)) ?? 0) + 1);
+    for (const l of spare) {
+      const home = root(l.a),
+        had = rings.get(home) ?? 0;
+      if (size.get(home) < 5 || had >= Math.floor(size.get(home) / 4)) continue;
+      if (beside(l.a, tree).some((n) => beside(l.b, tree).includes(n))) continue;
+      tree.push(l);
+      rings.set(home, had + 1);
+    }
+    links = tree.map((l) => {
+      const key = l.a.text + "|" + l.b.text;
+      // A line that was already there stays; a new one draws itself in.
+      return { ...l, born: drawn.has(key) ? drawn.get(key) : now > 0 ? now : 0 };
+    });
+    for (const idea of ideas) idea.beside = beside(idea, links);
+    // Each constellation has its own tint and a name from the words its ideas share most; the largest first.
     const sets = new Map();
     for (const idea of ideas) sets.set(root(idea), [...(sets.get(root(idea)) ?? []), idea]);
     constellations = [...sets.values()]
@@ -548,47 +584,140 @@
     for (const idea of ideas) idea.home = undefined;
     for (const c of constellations) for (const idea of c.set) idea.home = c;
   }
-  let constellations = [],
-    now = 0;
 
-  function settle(rounds, only) {
-    // Every pair has a distance it wants: close ideas a short one, unlike ideas only "not too near".
-    for (let r = 0; r < rounds; r++) {
-      const step = 0.5 * (1 - r / rounds) + 0.05;
-      for (const p of ideas) {
-        p.fx = 0;
-        p.fy = 0;
+  // One small step toward a sky that reads well. Run many times at the start, and a little each frame after a
+  // new idea arrives, so the stars that were there shift slowly to make room for it.
+  const EDGE = 0.17, // how long a line likes to be
+    ROOM = 0.11; // no two stars closer than this
+  function relax(step) {
+    const push = (a, b, dx, dy, d, amount) => {
+      a.fx += (dx / d) * amount;
+      a.fy += (dy / d) * amount;
+      b.fx -= (dx / d) * amount;
+      b.fy -= (dy / d) * amount;
+    };
+    for (const p of ideas) {
+      // Lean toward the middle, and stay inside the frame.
+      p.fx = -p.x * 0.004 + (p.x > 0.88 ? (0.88 - p.x) * 2 : p.x < -0.88 ? (-0.88 - p.x) * 2 : 0);
+      p.fy = -p.y * 0.006 + (p.y > 0.58 ? (0.58 - p.y) * 2 : p.y < -0.76 ? (-0.76 - p.y) * 2 : 0);
+    }
+    for (let i = 0; i < ideas.length; i++)
+      for (let j = i + 1; j < ideas.length; j++) {
+        const a = ideas[i],
+          b = ideas[j],
+          s = sim(a, b),
+          dx = b.x - a.x || 0.001,
+          dy = b.y - a.y || 0.001,
+          d = Math.hypot(dx, dy),
+          want = s >= LINK ? 0.2 + 0.3 * (1 - s) : 0.62;
+        // Kin are held near; strangers are only pushed off when they come too close; nobody crowds anybody.
+        push(a, b, dx, dy, d, s >= LINK ? (d - want) * 0.08 : d < want ? (d - want) * 0.2 : (d - want) * 0.0012);
+        if (d < ROOM) push(a, b, dx, dy, d, (d - ROOM) * 0.9);
       }
-      for (let i = 0; i < ideas.length; i++)
-        for (let j = i + 1; j < ideas.length; j++) {
-          const a = ideas[i],
-            b = ideas[j],
-            s = closeness(a, b),
-            dx = b.x - a.x || 0.001,
-            dy = b.y - a.y || 0.001,
-            d = Math.hypot(dx, dy),
-            want = s >= LINK ? 0.2 + 0.3 * (1 - s) : 0.62,
-            off = d - want,
-            // Kin are held at their distance; strangers are only pushed off when they come too near.
-            pull = s >= LINK ? off * 0.12 : off < 0 ? off * 0.2 : off * 0.0015;
-          a.fx += (dx / d) * pull;
-          a.fy += (dy / d) * pull;
-          b.fx -= (dx / d) * pull;
-          b.fy -= (dy / d) * pull;
+    for (const l of links) {
+      const dx = l.b.x - l.a.x || 0.001,
+        dy = l.b.y - l.a.y || 0.001,
+        d = Math.hypot(dx, dy);
+      // Lines of about one length make a constellation, not a tangle.
+      push(l.a, l.b, dx, dy, d, (d - EDGE) * 0.35);
+      // A star that sits almost on a line it is not part of is moved off it, and the line away from the star.
+      for (const c of l.a.home?.set ?? []) {
+        if (c === l.a || c === l.b) continue;
+        const t = Math.max(0.08, Math.min(0.92, ((c.x - l.a.x) * dx + (c.y - l.a.y) * dy) / (d * d))),
+          ox = c.x - (l.a.x + dx * t),
+          oy = c.y - (l.a.y + dy * t),
+          off = Math.hypot(ox, oy) || 0.001;
+        if (off > 0.08) continue;
+        const away = (0.08 - off) * 0.6,
+          nx = off < 0.002 ? -dy / d : ox / off,
+          ny = off < 0.002 ? dx / d : oy / off;
+        c.fx += nx * away;
+        c.fy += ny * away;
+        for (const end of [l.a, l.b]) {
+          end.fx -= nx * away * 0.5;
+          end.fy -= ny * away * 0.5;
         }
-      for (const p of only ?? ideas) {
-        p.x += Math.max(-0.06, Math.min(0.06, p.fx * step));
-        p.y += Math.max(-0.06, Math.min(0.06, p.fy * step));
       }
     }
-    if (only) return;
-    // Fit the whole sky into the frame, wider than it is tall.
+    // Two lines that cross are pulled apart, each to its own side.
+    for (const [k, l] of crossings()) {
+      const dx = (l.a.x + l.b.x - k.a.x - k.b.x) / 2 || 0.001,
+        dy = (l.a.y + l.b.y - k.a.y - k.b.y) / 2 || 0.001,
+        d = Math.hypot(dx, dy),
+        // Crossed through their middles, there is no "own side" yet: slide one along the other.
+        [ux, uy] = d < 0.02 ? [(k.b.x - k.a.x) / EDGE, (k.b.y - k.a.y) / EDGE] : [dx / d, dy / d];
+      for (const end of [l.a, l.b]) {
+        end.fx += ux * 0.03;
+        end.fy += uy * 0.03;
+      }
+      for (const end of [k.a, k.b]) {
+        end.fx -= ux * 0.03;
+        end.fy -= uy * 0.03;
+      }
+    }
+    // Two lines leaving one star open out, so they never run side by side.
+    for (const hub of ideas)
+      for (let i = 0; i < (hub.beside?.length ?? 0); i++)
+        for (let j = i + 1; j < hub.beside.length; j++) {
+          const a = hub.beside[i],
+            b = hub.beside[j],
+            dx = b.x - a.x || 0.001,
+            dy = b.y - a.y || 0.001,
+            d = Math.hypot(dx, dy);
+          if (d < 0.21) push(a, b, dx, dy, d, (d - 0.21) * 0.35);
+        }
+    for (const p of ideas) {
+      p.x += Math.max(-0.03, Math.min(0.03, p.fx * step));
+      p.y += Math.max(-0.03, Math.min(0.03, p.fy * step));
+    }
+  }
+  /** The pairs of lines that cross each other (lines that share a star do not count). */
+  function crossings() {
+    const turn = (p, q, r) => Math.sign((q.x - p.x) * (r.y - p.y) - (q.y - p.y) * (r.x - p.x));
+    const found = [];
+    for (let i = 0; i < links.length; i++)
+      for (let j = i + 1; j < links.length; j++) {
+        const k = links[i],
+          l = links[j];
+        if (k.a === l.a || k.a === l.b || k.b === l.a || k.b === l.b) continue;
+        if (turn(k.a, k.b, l.a) !== turn(k.a, k.b, l.b) && turn(l.a, l.b, k.a) !== turn(l.a, l.b, k.b))
+          found.push([k, l]);
+      }
+    return found;
+  }
+  /** At the start: where two lines cross, try the two stars the other way round, and keep it if fewer cross. */
+  function untangle() {
+    for (let tries = 0; tries < 24; tries++) {
+      const crossed = crossings();
+      if (!crossed.length) return;
+      const [k, l] = crossed[0];
+      let best = crossed.length,
+        swap;
+      for (const [p, q] of [
+        [k.a, l.a],
+        [k.a, l.b],
+        [k.b, l.a],
+        [k.b, l.b],
+      ]) {
+        [p.x, q.x, p.y, q.y] = [q.x, p.x, q.y, p.y];
+        const left = crossings().length;
+        if (left < best) [best, swap] = [left, [p, q]];
+        [p.x, q.x, p.y, q.y] = [q.x, p.x, q.y, p.y];
+      }
+      if (!swap) return;
+      const [p, q] = swap;
+      [p.x, q.x, p.y, q.y] = [q.x, p.x, q.y, p.y];
+      for (let r = 0; r < 60; r++) relax(0.12);
+    }
+  }
+  function fit() {
+    // Once, at the start: the whole sky into the frame, wider than it is tall.
     const xs = ideas.map((p) => p.x),
       ys = ideas.map((p) => p.y),
       [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
     for (const p of ideas) {
-      p.x = ((p.x - x0) / (x1 - x0 || 1)) * 1.72 - 0.86;
-      p.y = ((p.y - y0) / (y1 - y0 || 1)) * 1.3 - 0.74;
+      p.x = ((p.x - x0) / (x1 - x0 || 1)) * 1.7 - 0.85;
+      p.y = ((p.y - y0) / (y1 - y0 || 1)) * 1.26 - 0.72;
     }
   }
   function star(text, born) {
@@ -608,7 +737,11 @@
   ideas = seed.map((text) => star(text, 0));
   reweigh();
   relink();
-  settle(600);
+  for (let r = 0; r < 500; r++) relax(0.7 * (1 - r / 500) + 0.08);
+  fit();
+  for (let r = 0; r < 260; r++) relax(0.25 * (1 - r / 260) + 0.04);
+  untangle();
+  for (let r = 0; r < 120; r++) relax(0.06);
 
   // ---------- Drawing ----------
   const sky = document.getElementById("sky"),
@@ -640,12 +773,20 @@
   }
   new ResizeObserver(resize).observe(sky);
   resize();
-  const at = (p) => [W / 2 + p.x * (W / 2 - 24), H / 2 - 20 + p.y * (H / 2 - 30)];
+  // Where a star is on the screen. One that has just been joined by a new idea trembles for a moment.
+  const at = (p) => {
+    const stir = p.stirred === undefined || calm ? 0 : Math.max(0, 1 - (now - p.stirred) / 1.6),
+      phase = (now - (p.stirred ?? 0)) * 16 + p.beat;
+    return [
+      W / 2 + p.x * (W / 2 - 24) + Math.sin(phase) * 3.2 * stir * stir,
+      H / 2 - 20 + p.y * (H / 2 - 30) + Math.cos(phase * 1.3) * 3.2 * stir * stir,
+    ];
+  };
   const tintOf = (idea) => idea.home?.tint ?? "#ecebe3";
   const kin = (idea) =>
-    links
-      .filter((l) => l.a === idea || l.b === idea)
-      .map((l) => ({ idea: l.a === idea ? l.b : l.a, s: l.s }))
+    ideas
+      .filter((other) => other !== idea && sim(idea, other) >= LINK)
+      .map((other) => ({ idea: other, s: sim(idea, other) }))
       .sort((x, y) => y.s - x.s);
 
   function draw(t) {
@@ -758,7 +899,6 @@
       const sum = friends.reduce((a, k) => a + k.s, 0);
       idea.x = friends.reduce((a, k) => a + k.idea.x * k.s, 0) / sum + (rand() - 0.5) * 0.08;
       idea.y = friends.reduce((a, k) => a + k.idea.y * k.s, 0) / sum + (rand() - 0.5) * 0.08;
-      settle(90, [idea]);
     } else {
       // Nothing like it yet: it takes the emptiest patch of sky.
       let best = -1;
@@ -779,7 +919,10 @@
       ];
     idea.flying = !calm;
     idea.landed = now;
-    if (calm) land(idea, to);
+    // The sky starts to make room while the new star is still on its way.
+    heat = Math.max(heat, 0.3);
+    if (calm) for (let r = 0; r < 160; r++) relax(0.3 * (1 - r / 160) + 0.03);
+    if (calm) land(idea, at(idea));
     else flights.push({ idea, from, mid, to, t0: now, trail: [], flash: 1 });
     for (const l of links) if (l.a === idea || l.b === idea) l.born = calm ? now : Infinity;
     const home = idea.home,
@@ -809,15 +952,29 @@
       const [x, y] = at(k.idea);
       rings.push({ x, y, at: now + 0.25, tint: tintOf(k.idea), reach: 26 });
     }
+    // The whole constellation feels it arrive.
+    for (const member of idea.home?.set ?? []) if (member !== idea) member.stirred = now + 0.05;
     for (const l of links) if (l.a === idea || l.b === idea) l.born = now + 0.15;
+    // It has arrived: its kin settle around it, slowly.
+    heat = Math.max(heat, 0.55);
   }
 
   let last = performance.now();
   function frame(time) {
-    const dt = Math.min(0.05, (time - last) / 1000);
+    advance(Math.min(0.05, (time - last) / 1000));
     last = time;
+    requestAnimationFrame(frame);
+  }
+  function advance(dt) {
     now += dt;
+    // After a new idea, the whole sky shifts a little each frame until it is at rest again.
+    if (heat > 0.004 && !calm) {
+      relax(heat * 0.16);
+      heat *= 0.991;
+    }
     for (const f of flights) {
+      // Its place may be moving as the others make room: it flies to where that place is now.
+      f.to = at(f.idea);
       // Out of the flash slowly, fast across the sky, slow into its place.
       const k = Math.min(1, (now - f.t0 - 0.3) / 1.5),
         e = k <= 0 ? 0 : k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
@@ -834,7 +991,6 @@
     flights = flights.filter((f) => !f.done);
     rings = rings.filter((r) => now - r.at < 1.2);
     draw(now);
-    requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
 
@@ -952,5 +1108,12 @@
   }
   lists();
   // For looking at one moment of it by hand.
-  window.ideaSky = { add, ideas: () => ideas, links: () => links, constellations: () => constellations };
+  window.ideaSky = {
+    add,
+    ideas: () => ideas,
+    links: () => links,
+    constellations: () => constellations,
+    crossings,
+    advance,
+  };
 </script>
