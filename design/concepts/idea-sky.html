@@ -1,0 +1,956 @@
+<meta charset="utf-8" />
+<title>VibeCab Idea Sky</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap"
+/>
+<style>
+  /* Layout: the sky fills the page; a panel on the right holds the box for a new idea and what is selected.
+     The sky is the polar night in both themes (it is a night sky); the panel follows the theme. Tundra steps only. */
+  :root {
+    --paper: #f9f8f4;
+    --raised: #f3f1ea;
+    --ink: #1f2321;
+    --ink-soft: #585f58;
+    --line: #d9dacd;
+    --moss: #4c5d3f;
+    --sky-top: #0b1113;
+    --sky-low: #16282b;
+    --hill: #1c2a22;
+    --star: #ecebe3;
+    --display: Fraunces, Georgia, serif;
+    --body: "Instrument Sans", "Helvetica Neue", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #151917;
+      --raised: #1e2320;
+      --ink: #ecebe3;
+      --ink-soft: #a2a99e;
+      --line: #2a302c;
+      --moss: #a9bb8f;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #151917;
+    --raised: #1e2320;
+    --ink: #ecebe3;
+    --ink-soft: #a2a99e;
+    --line: #2a302c;
+    --moss: #a9bb8f;
+    color-scheme: dark;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font: 15px/1.5 var(--body);
+  }
+  button,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
+  button {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 2px solid var(--moss);
+    outline-offset: 2px;
+  }
+  .app {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    min-height: 100dvh;
+  }
+  .sky {
+    position: relative;
+    min-height: 420px;
+    overflow: hidden;
+    background: linear-gradient(var(--sky-top), var(--sky-low));
+  }
+  /* A slow aurora behind the stars: two soft ribbons, blurred, drifting. */
+  .aurora {
+    position: absolute;
+    left: -10%;
+    width: 120%;
+    height: 90px;
+    border-radius: 50%;
+    filter: blur(38px);
+    opacity: 0.3;
+    animation: aurora 16s ease-in-out infinite alternate;
+  }
+  .aurora.a1 {
+    top: 12%;
+    background: #5e8c66;
+    transform: rotate(-4deg);
+  }
+  .aurora.a2 {
+    top: 30%;
+    background: #4d8a90;
+    opacity: 0.2;
+    animation-delay: -7s;
+    transform: rotate(3deg);
+  }
+  @keyframes aurora {
+    to {
+      transform: translate(4%, 22px) rotate(2deg) scaleY(1.4);
+      opacity: 0.14;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .aurora {
+      animation: none;
+    }
+  }
+  .sky canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    cursor: crosshair;
+  }
+  .sky svg {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 90px;
+    pointer-events: none;
+  }
+  .sky svg path {
+    fill: var(--hill);
+  }
+  .sky svg path + path {
+    fill: var(--sky-top);
+  }
+  .tip {
+    position: absolute;
+    z-index: 2;
+    max-width: 260px;
+    padding: 8px 11px;
+    border-radius: 9px;
+    background: rgb(21 25 23 / 0.92);
+    border: 1px solid rgb(236 235 227 / 0.16);
+    color: #ecebe3;
+    font-size: 13.5px;
+    line-height: 1.4;
+    pointer-events: none;
+    transform: translate(-50%, calc(-100% - 16px));
+    transition: opacity 0.15s;
+  }
+  .tip[hidden] {
+    display: block;
+    opacity: 0;
+  }
+  .tip small {
+    display: block;
+    margin-top: 3px;
+    color: #a2a99e;
+    font: 500 10.5px var(--mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .said {
+    position: absolute;
+    left: max(18px, env(safe-area-inset-left, 0px));
+    bottom: 22px;
+    z-index: 2;
+    max-width: min(520px, calc(100% - 36px));
+    color: #ecebe3;
+    font: 400 clamp(17px, 2.2vw, 22px) / 1.3 var(--display);
+    text-wrap: balance;
+    transition: opacity 0.6s;
+  }
+  .said small {
+    display: block;
+    margin-top: 4px;
+    color: #a2a99e;
+    font: 500 11px var(--mono);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .panel {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 20px max(18px, env(safe-area-inset-right, 0px)) 28px 18px;
+    border-left: 1px solid var(--line);
+    overflow: auto;
+    max-height: 100dvh;
+  }
+  .panel h1 {
+    margin: 0;
+    font: 400 28px/1.1 var(--display);
+  }
+  .panel h1 b {
+    margin-left: 6px;
+    color: var(--ink-soft);
+    font: 500 13px var(--mono);
+  }
+  .label {
+    margin: 0 0 6px;
+    color: var(--ink-soft);
+    font: 500 10.5px var(--mono);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  form {
+    display: grid;
+    gap: 8px;
+  }
+  textarea {
+    width: 100%;
+    min-height: 74px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--raised);
+    resize: vertical;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .row span {
+    flex: 1;
+    color: var(--ink-soft);
+    font-size: 12.5px;
+  }
+  .add {
+    padding: 8px 16px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--ink);
+    color: var(--paper);
+    font-weight: 600;
+    transition: transform 0.3s var(--ease);
+  }
+  .add:hover {
+    transform: translateY(-1px);
+  }
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .chips button {
+    padding: 5px 10px;
+    border: 1px dashed var(--line);
+    border-radius: 999px;
+    background: none;
+    color: var(--ink-soft);
+    font-size: 12.5px;
+    text-align: left;
+  }
+  .chips button:hover {
+    border-color: var(--ink-soft);
+    color: var(--ink);
+  }
+  .card {
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--raised);
+  }
+  .card p {
+    margin: 0 0 10px;
+    font: 400 17px/1.35 var(--display);
+  }
+  .near {
+    display: grid;
+    gap: 7px;
+    margin: 0 0 12px;
+    padding: 0;
+    list-style: none;
+    font-size: 13px;
+  }
+  .near li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 46px;
+    align-items: center;
+    gap: 8px;
+  }
+  .near button {
+    padding: 0;
+    border: 0;
+    background: none;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .near button:hover {
+    color: var(--moss);
+  }
+  .near i {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--line);
+    overflow: hidden;
+  }
+  .near i::after {
+    display: block;
+    width: var(--w);
+    height: 100%;
+    background: var(--tint, var(--moss));
+    content: "";
+  }
+  .gather {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1.5px solid var(--ink);
+    border-radius: 999px;
+    background: none;
+    font-weight: 600;
+    font-size: 13.5px;
+  }
+  .gather:hover {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  details summary {
+    cursor: pointer;
+    color: var(--ink-soft);
+    font-size: 13px;
+  }
+  details ul {
+    margin: 8px 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 13.5px;
+  }
+  details li {
+    padding: 6px 0;
+    border-bottom: 1px dashed var(--line);
+  }
+  details li b {
+    display: block;
+    margin-top: 10px;
+    color: var(--ink-soft);
+    font: 500 10.5px var(--mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .note {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 12.5px;
+  }
+  @media (max-width: 820px) {
+    .app {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .sky {
+      height: 62dvh;
+    }
+    .panel {
+      max-height: none;
+      border-left: 0;
+      border-top: 1px solid var(--line);
+      padding-left: max(18px, env(safe-area-inset-left, 0px));
+    }
+  }
+</style>
+
+<div class="app">
+  <div class="sky" id="sky">
+    <div class="aurora a1"></div>
+    <div class="aurora a2"></div>
+    <canvas id="canvas" aria-hidden="true"></canvas>
+    <svg viewBox="0 0 1200 90" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0 62 Q 180 18 380 50 T 760 40 T 1200 58 V90 H0Z" />
+      <path d="M0 80 Q 300 52 600 78 T 1200 72 V90 H0Z" />
+    </svg>
+    <div class="tip" id="tip" hidden></div>
+    <div class="said" id="said" role="status"></div>
+  </div>
+
+  <aside class="panel">
+    <h1>Ideas <b id="count"></b></h1>
+    <form id="form">
+      <p class="label">A new idea</p>
+      <textarea id="box" placeholder="Type an idea. Press ↩ to add it." aria-label="New idea"></textarea>
+      <div class="row">
+        <span>It flies to the ideas it is closest to.</span>
+        <button class="add" type="submit">Add</button>
+      </div>
+      <div class="chips" id="chips" aria-label="Try one"></div>
+    </form>
+
+    <div id="chosen"></div>
+
+    <details>
+      <summary>All ideas as a list</summary>
+      <ul id="list"></ul>
+    </details>
+    <p class="note">
+      A sketch with made-up ideas. Closeness here is a stand-in worked out in the page from the words an idea uses; in
+      the app it would come from embeddings, and a group could become a Project in one step.
+    </p>
+  </aside>
+</div>
+
+<script>
+  // ---------- The ideas ----------
+  const seed = [
+    "A calmer first run with fewer steps before the first draft",
+    "Let the first run skip the model setup and start with a sample draft",
+    "Show a sample draft on first run so onboarding teaches by doing",
+    "Onboarding checklist that disappears after the first Update",
+    "Shorter onboarding: one screen, one sentence, one button",
+    "Comment on a sentence by selecting it, not the whole paragraph",
+    "Voice notes as comments on a paragraph",
+    "Quick marks for comments: keep, shorter, expand, delete",
+    "Let comments carry a suggested replacement sentence",
+    "Show which comments are still open beside each paragraph",
+    "Thread replies should collapse once a comment is agreed",
+    "Let the agent explain why it changed a sentence in an Update",
+    "A second agent that reviews the first agent's Update",
+    "Let each session choose which agent model writes the Update",
+    "Show what the agent's model cost for each Update",
+    "Agent proposes two options and I pick one",
+    "Export a Snapshot as a PDF to send",
+    "Share a Snapshot as a single link",
+    "Export the draft with its comments as an appendix",
+    "A weekly digest of what changed, exported as Markdown",
+    "Import an HTML page and keep its look",
+    "Import a PDF as a reference draft",
+    "Polar night theme with a slow aurora",
+    "A sound of wind when the theme changes to night",
+    "Animate the cab along the cable when a version lands",
+    "Stars for ideas, constellations for projects",
+    "Keyboard first: every action on a key",
+    "A map of the valley for the home page",
+    "Teach the app my writing voice from old drafts",
+    "Remind me of drafts I have not opened in a month",
+  ];
+  const tries = [
+    "Let the agent say what it was unsure about in an Update",
+    "Export a Snapshot as a slide deck",
+    "Comments by voice while reading on the phone",
+    "A first run that starts from my own file",
+    "Grow moss on the hills as a session ages",
+    "Bake sourdough on Sundays",
+  ];
+
+  // ---------- Closeness ----------
+  // A stand-in for embeddings, good enough to show the idea: each idea gets a small vector of how much it is
+  // about each of a few subjects (from the words it uses), and shared rare words count a little on top.
+  const subjects = {
+    start: "first run onboard sample setup start welcome checklist step screen begin tour teach new",
+    comment: "comment thread reply paragraph sentence select mark suggest replacement quote annotate note read",
+    agent: "agent model update explain cost option propose rewrite plan unsure second review why choose",
+    share: "export snapshot share pdf link send digest markdown import html slide deck appendix publish page",
+    look: "theme night polar aurora wind sound animate cab cable star constellation moss hill tundra color map valley",
+    habit: "keyboard key remind voice old month shortcut habit writing every action open",
+  };
+  const stop = new Set(
+    "a an and are as at be by for from i in is it its let me my not of on once or so that the this to what when which who with should each have has was were will can could just one two".split(
+      " ",
+    ),
+  );
+  const stem = (w) => w.replace(/(ing|ed|es|s)$/, "").replace(/(.)\1$/, "$1");
+  const words = (text) =>
+    text
+      .toLowerCase()
+      .split(/[^a-z]+/)
+      .filter((w) => w.length > 2 && !stop.has(w))
+      .map(stem);
+  const lexicon = Object.values(subjects).map((list) => new Set(list.split(" ").map(stem)));
+  const about = (ws) => lexicon.map((set) => ws.filter((w) => set.has(w)).length);
+  let ideas = [],
+    weight = new Map();
+  function reweigh() {
+    const seen = new Map();
+    for (const idea of ideas) for (const w of new Set(idea.words)) seen.set(w, (seen.get(w) ?? 0) + 1);
+    weight = new Map([...seen].map(([w, n]) => [w, Math.log(1 + ideas.length / n)]));
+  }
+  const cosine = (x, y) => {
+    let dot = 0,
+      nx = 0,
+      ny = 0;
+    for (let i = 0; i < x.length; i++) {
+      dot += x[i] * y[i];
+      nx += x[i] * x[i];
+      ny += y[i] * y[i];
+    }
+    return nx && ny ? dot / Math.sqrt(nx * ny) : 0;
+  };
+  function closeness(a, b) {
+    const shared = [...new Set(a.words)].filter((w) => b.words.includes(w)),
+      rare = shared.reduce((sum, w) => sum + (weight.get(w) ?? 1), 0),
+      all = [...new Set([...a.words, ...b.words])].reduce((sum, w) => sum + (weight.get(w) ?? 1), 0);
+    return 0.75 * cosine(a.about, b.about) + 0.25 * (all ? rare / all : 0) * 2.2;
+  }
+  const LINK = 0.5, // closer than this, two ideas may be joined by a line
+    LINES = 2; // each idea is joined to its closest few, so a group reads as a constellation, not a web
+
+  // ---------- The sky: where each star sits ----------
+  // A seeded shuffle, so the sky is the same sky every time it is opened.
+  let state = 20261111;
+  const rand = () => {
+    state |= 0;
+    state = (state + 0x6d2b79f5) | 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const tints = ["#a9bb8f", "#8fc0c4", "#d9b865", "#b06d89", "#e3936b", "#7fc29b"];
+  let links = [];
+  function relink() {
+    links = [];
+    const pair = new Map();
+    for (const a of ideas) {
+      const close = ideas
+        .filter((b) => b !== a)
+        .map((b) => ({ b, s: closeness(a, b) }))
+        .filter((k) => k.s >= LINK)
+        .sort((x, y) => y.s - x.s)
+        .slice(0, LINES);
+      for (const { b, s } of close) {
+        const key = [ideas.indexOf(a), ideas.indexOf(b)].sort((x, y) => x - y).join("-");
+        if (!pair.has(key)) pair.set(key, { a, b, s, born: 0 });
+      }
+    }
+    links = [...pair.values()];
+    // Constellations: ideas joined through lines, the largest first, each with its own tint and a name from
+    // the words its ideas share most.
+    const group = new Map(ideas.map((idea) => [idea, idea]));
+    const root = (n) => (group.get(n) === n ? n : (group.set(n, root(group.get(n))), group.get(n)));
+    for (const l of links) group.set(root(l.a), root(l.b));
+    const sets = new Map();
+    for (const idea of ideas) sets.set(root(idea), [...(sets.get(root(idea)) ?? []), idea]);
+    constellations = [...sets.values()]
+      .filter((set) => set.length > 1)
+      .sort((x, y) => y.length - x.length)
+      .map((set, i) => {
+        const tally = new Map();
+        for (const idea of set) for (const w of new Set(idea.words)) tally.set(w, (tally.get(w) ?? 0) + 1);
+        const name = [...tally]
+          .filter(([, n]) => n > 1)
+          .sort((x, y) => y[1] * (weight.get(y[0]) ?? 1) - x[1] * (weight.get(x[0]) ?? 1))
+          .slice(0, 2)
+          .map(([w]) => w)
+          .join(" · ");
+        return { set, tint: tints[i % tints.length], name: name || "kin" };
+      });
+    for (const idea of ideas) idea.home = undefined;
+    for (const c of constellations) for (const idea of c.set) idea.home = c;
+  }
+  let constellations = [],
+    now = 0;
+
+  function settle(rounds, only) {
+    // Every pair has a distance it wants: close ideas a short one, unlike ideas only "not too near".
+    for (let r = 0; r < rounds; r++) {
+      const step = 0.5 * (1 - r / rounds) + 0.05;
+      for (const p of ideas) {
+        p.fx = 0;
+        p.fy = 0;
+      }
+      for (let i = 0; i < ideas.length; i++)
+        for (let j = i + 1; j < ideas.length; j++) {
+          const a = ideas[i],
+            b = ideas[j],
+            s = closeness(a, b),
+            dx = b.x - a.x || 0.001,
+            dy = b.y - a.y || 0.001,
+            d = Math.hypot(dx, dy),
+            want = s >= LINK ? 0.2 + 0.3 * (1 - s) : 0.62,
+            off = d - want,
+            // Kin are held at their distance; strangers are only pushed off when they come too near.
+            pull = s >= LINK ? off * 0.12 : off < 0 ? off * 0.2 : off * 0.0015;
+          a.fx += (dx / d) * pull;
+          a.fy += (dy / d) * pull;
+          b.fx -= (dx / d) * pull;
+          b.fy -= (dy / d) * pull;
+        }
+      for (const p of only ?? ideas) {
+        p.x += Math.max(-0.06, Math.min(0.06, p.fx * step));
+        p.y += Math.max(-0.06, Math.min(0.06, p.fy * step));
+      }
+    }
+    if (only) return;
+    // Fit the whole sky into the frame, wider than it is tall.
+    const xs = ideas.map((p) => p.x),
+      ys = ideas.map((p) => p.y),
+      [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    for (const p of ideas) {
+      p.x = ((p.x - x0) / (x1 - x0 || 1)) * 1.72 - 0.86;
+      p.y = ((p.y - y0) / (y1 - y0 || 1)) * 1.3 - 0.74;
+    }
+  }
+  function star(text, born) {
+    const ws = words(text);
+    return {
+      text,
+      words: ws,
+      about: about(ws),
+      x: rand() * 1.6 - 0.8,
+      y: rand() * 1.3 - 0.7,
+      born,
+      size: 2.2 + rand() * 1.8,
+      beat: rand() * 6.28,
+      pace: 0.6 + rand() * 1.4,
+    };
+  }
+  ideas = seed.map((text) => star(text, 0));
+  reweigh();
+  relink();
+  settle(600);
+
+  // ---------- Drawing ----------
+  const sky = document.getElementById("sky"),
+    canvas = document.getElementById("canvas"),
+    ctx = canvas.getContext("2d"),
+    tip = document.getElementById("tip"),
+    said = document.getElementById("said"),
+    calm = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let W = 0,
+    H = 0,
+    hover,
+    chosen,
+    flights = [],
+    rings = [];
+  const dust = Array.from({ length: 150 }, () => ({
+    x: rand(),
+    y: rand() * 0.9,
+    r: rand() * 0.9 + 0.2,
+    beat: rand() * 6.28,
+  }));
+  function resize() {
+    const box = sky.getBoundingClientRect(),
+      dpr = Math.min(2, devicePixelRatio || 1);
+    W = box.width;
+    H = box.height;
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  new ResizeObserver(resize).observe(sky);
+  resize();
+  const at = (p) => [W / 2 + p.x * (W / 2 - 24), H / 2 - 20 + p.y * (H / 2 - 30)];
+  const tintOf = (idea) => idea.home?.tint ?? "#ecebe3";
+  const kin = (idea) =>
+    links
+      .filter((l) => l.a === idea || l.b === idea)
+      .map((l) => ({ idea: l.a === idea ? l.b : l.a, s: l.s }))
+      .sort((x, y) => y.s - x.s);
+
+  function draw(t) {
+    ctx.clearRect(0, 0, W, H);
+    // The far sky: dust that is not anybody's idea.
+    for (const d of dust) {
+      ctx.globalAlpha = 0.18 + 0.14 * Math.sin(t * 0.7 + d.beat);
+      ctx.fillStyle = "#ecebe3";
+      ctx.fillRect(d.x * W, d.y * H, d.r, d.r);
+    }
+    ctx.globalAlpha = 1;
+    const lit = hover ?? chosen,
+      near = lit ? new Set([lit, ...kin(lit).map((k) => k.idea)]) : undefined;
+    // Lines between ideas that are close; a new line draws itself in.
+    for (const l of links) {
+      const [x1, y1] = at(l.a),
+        [x2, y2] = at(l.b),
+        grown = l.born ? Math.min(1, (t - l.born) / 0.7) : 1,
+        strong = near && near.has(l.a) && near.has(l.b) && (l.a === lit || l.b === lit);
+      if (grown <= 0) continue;
+      ctx.strokeStyle = tintOf(l.a);
+      ctx.globalAlpha = (near ? (strong ? 0.9 : hover ? 0.07 : 0.2) : 0.16 + l.s * 0.5) * grown;
+      ctx.lineWidth = strong ? 1.3 : 0.8;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x1 + (x2 - x1) * grown, y1 + (y2 - y1) * grown);
+      ctx.stroke();
+    }
+    // Each constellation is named by the words its ideas share.
+    ctx.font = "500 10px JetBrains Mono, monospace";
+    ctx.textAlign = "center";
+    for (const c of constellations) {
+      if (c.set.length < 3) continue;
+      const xs = c.set.map((i) => at(i)[0]),
+        ys = c.set.map((i) => at(i)[1]);
+      ctx.globalAlpha = near ? (c.set.includes(lit) ? 0.8 : hover ? 0.14 : 0.3) : 0.42;
+      ctx.fillStyle = c.tint;
+      ctx.fillText(c.name.toUpperCase(), xs.reduce((a, b) => a + b) / xs.length, Math.max(...ys) + 24);
+    }
+    // The stars.
+    for (const idea of ideas) {
+      if (idea.flying) continue;
+      const [x, y] = at(idea),
+        dim = near && !near.has(idea),
+        twinkle = calm ? 1 : 0.82 + 0.18 * Math.sin(t * idea.pace + idea.beat),
+        fresh = idea.born ? Math.max(0, 1 - (t - idea.landed) / 2.4) : 0,
+        r = idea.size * (idea === lit ? 1.7 : 1) * (1 + fresh * 0.4);
+      const glow = ctx.createRadialGradient(x, y, 0, x, y, r * 7);
+      glow.addColorStop(0, tintOf(idea));
+      glow.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.globalAlpha = (dim ? (hover ? 0.05 : 0.12) : 0.2 + fresh * 0.18) * twinkle;
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(x, y, r * 7, 0, 6.2832);
+      ctx.fill();
+      // Pointing at a star hushes the rest; a star only chosen leaves the sky readable.
+      ctx.globalAlpha = dim ? (hover ? 0.28 : 0.62) : twinkle;
+      ctx.fillStyle = idea === lit ? "#ffffff" : tintOf(idea);
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, 6.2832);
+      ctx.fill();
+    }
+    // A new idea crossing the sky, with its tail.
+    for (const f of flights) {
+      const tail = f.trail;
+      for (let i = 1; i < tail.length; i++) {
+        ctx.globalAlpha = (i / tail.length) ** 2 * 0.9;
+        ctx.strokeStyle = "#ecebe3";
+        ctx.lineWidth = (i / tail.length) * 2.6;
+        ctx.beginPath();
+        ctx.moveTo(tail[i - 1][0], tail[i - 1][1]);
+        ctx.lineTo(tail[i][0], tail[i][1]);
+        ctx.stroke();
+      }
+      const [x, y] = tail[tail.length - 1] ?? f.from,
+        bloom = ctx.createRadialGradient(x, y, 0, x, y, 26 + f.flash * 60);
+      bloom.addColorStop(0, "rgba(255,255,255,0.95)");
+      bloom.addColorStop(0.25, "rgba(236,235,227,0.5)");
+      bloom.addColorStop(1, "rgba(236,235,227,0)");
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = bloom;
+      ctx.beginPath();
+      ctx.arc(x, y, 26 + f.flash * 60, 0, 6.2832);
+      ctx.fill();
+    }
+    // Where it lands, a ring spreads and its kin answer.
+    for (const ring of rings) {
+      const k = (t - ring.at) / 1.1;
+      if (k < 0 || k > 1) continue;
+      ctx.globalAlpha = (1 - k) * 0.7;
+      ctx.strokeStyle = ring.tint;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.arc(ring.x, ring.y, 6 + k * ring.reach, 0, 6.2832);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ---------- A new idea: it appears, crosses the sky, and joins what it is closest to ----------
+  function add(text) {
+    const idea = star(text.trim(), 1);
+    if (!idea.text) return;
+    ideas.push(idea);
+    reweigh();
+    relink();
+    const friends = kin(idea).slice(0, 3);
+    if (friends.length) {
+      // Start beside its closest kin, then let it find its own room among them.
+      const sum = friends.reduce((a, k) => a + k.s, 0);
+      idea.x = friends.reduce((a, k) => a + k.idea.x * k.s, 0) / sum + (rand() - 0.5) * 0.08;
+      idea.y = friends.reduce((a, k) => a + k.idea.y * k.s, 0) / sum + (rand() - 0.5) * 0.08;
+      settle(90, [idea]);
+    } else {
+      // Nothing like it yet: it takes the emptiest patch of sky.
+      let best = -1;
+      for (let i = 0; i < 60; i++) {
+        const x = rand() * 1.7 - 0.85,
+          y = rand() * 1.3 - 0.75,
+          room = Math.min(...ideas.filter((o) => o !== idea).map((o) => Math.hypot(o.x - x, o.y - y)));
+        if (room > best) [best, idea.x, idea.y] = [room, x, y];
+      }
+    }
+    const to = at(idea),
+      // It appears somewhere along the top of the sky, away from where it is going.
+      from = [to[0] > W / 2 ? W * (0.06 + rand() * 0.3) : W * (0.64 + rand() * 0.3), H * (0.05 + rand() * 0.12)],
+      bend = (rand() < 0.5 ? -1 : 1) * (60 + rand() * 90),
+      mid = [
+        (from[0] + to[0]) / 2 - ((to[1] - from[1]) / Math.hypot(to[0] - from[0], to[1] - from[1])) * bend,
+        (from[1] + to[1]) / 2 + ((to[0] - from[0]) / Math.hypot(to[0] - from[0], to[1] - from[1])) * bend,
+      ];
+    idea.flying = !calm;
+    idea.landed = now;
+    if (calm) land(idea, to);
+    else flights.push({ idea, from, mid, to, t0: now, trail: [], flash: 1 });
+    for (const l of links) if (l.a === idea || l.b === idea) l.born = calm ? now : Infinity;
+    const home = idea.home,
+      first = friends[0];
+    said.innerHTML = "";
+    said.append(
+      first
+        ? home && home.set.length > 2
+          ? `It joins “${home.name}”.`
+          : "It found one that is close."
+        : "Nothing like it yet. It stands alone, for now.",
+    );
+    const small = document.createElement("small");
+    small.textContent = first ? `Closest: ${first.idea.text}` : "The next idea like it will join it.";
+    said.append(small);
+    said.style.opacity = 1;
+    clearTimeout(add.fade);
+    add.fade = setTimeout(() => (said.style.opacity = 0), 7000);
+    choose(idea);
+    lists();
+  }
+  function land(idea, to) {
+    idea.flying = false;
+    idea.landed = now;
+    rings.push({ x: to[0], y: to[1], at: now, tint: tintOf(idea), reach: 70 });
+    for (const k of kin(idea).slice(0, 4)) {
+      const [x, y] = at(k.idea);
+      rings.push({ x, y, at: now + 0.25, tint: tintOf(k.idea), reach: 26 });
+    }
+    for (const l of links) if (l.a === idea || l.b === idea) l.born = now + 0.15;
+  }
+
+  let last = performance.now();
+  function frame(time) {
+    const dt = Math.min(0.05, (time - last) / 1000);
+    last = time;
+    now += dt;
+    for (const f of flights) {
+      // Out of the flash slowly, fast across the sky, slow into its place.
+      const k = Math.min(1, (now - f.t0 - 0.3) / 1.5),
+        e = k <= 0 ? 0 : k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+      f.flash = Math.max(0, 1 - (now - f.t0) / 0.5);
+      const x = (1 - e) ** 2 * f.from[0] + 2 * e * (1 - e) * f.mid[0] + e * e * f.to[0],
+        y = (1 - e) ** 2 * f.from[1] + 2 * e * (1 - e) * f.mid[1] + e * e * f.to[1];
+      f.trail.push([x, y]);
+      if (f.trail.length > 26) f.trail.shift();
+      if (k >= 1 && !f.done) {
+        f.done = true;
+        land(f.idea, f.to);
+      }
+    }
+    flights = flights.filter((f) => !f.done);
+    rings = rings.filter((r) => now - r.at < 1.2);
+    draw(now);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // ---------- Pointing and choosing ----------
+  function nearest(event) {
+    const box = canvas.getBoundingClientRect(),
+      x = event.clientX - box.left,
+      y = event.clientY - box.top;
+    let best,
+      far = 18;
+    for (const idea of ideas) {
+      const [sx, sy] = at(idea),
+        d = Math.hypot(sx - x, sy - y);
+      if (d < far) [best, far] = [idea, d];
+    }
+    return best;
+  }
+  canvas.addEventListener("pointermove", (event) => {
+    hover = nearest(event);
+    tip.hidden = !hover;
+    if (!hover) return;
+    const [x, y] = at(hover);
+    tip.style.left = Math.max(140, Math.min(W - 140, x)) + "px";
+    tip.style.top = Math.max(70, y) + "px";
+    tip.textContent = hover.text;
+    const small = document.createElement("small");
+    small.textContent = hover.home ? hover.home.name : "alone, for now";
+    tip.append(small);
+  });
+  canvas.addEventListener("pointerleave", () => ((hover = undefined), (tip.hidden = true)));
+  canvas.addEventListener("click", (event) => choose(nearest(event)));
+
+  const chosenEl = document.getElementById("chosen");
+  function choose(idea) {
+    chosen = idea;
+    chosenEl.replaceChildren();
+    if (!idea) return;
+    const card = document.createElement("div"),
+      close = kin(idea).slice(0, 4);
+    card.className = "card";
+    const label = document.createElement("p");
+    label.className = "label";
+    label.textContent = idea.home ? idea.home.name : "alone, for now";
+    const text = document.createElement("p");
+    text.textContent = idea.text;
+    card.append(label, text);
+    if (close.length) {
+      const list = document.createElement("ul");
+      list.className = "near";
+      for (const k of close) {
+        const li = document.createElement("li"),
+          go = document.createElement("button"),
+          bar = document.createElement("i");
+        go.type = "button";
+        go.textContent = k.idea.text;
+        go.title = k.idea.text;
+        go.onclick = () => choose(k.idea);
+        bar.style.setProperty("--w", Math.round(Math.min(1, k.s) * 100) + "%");
+        bar.style.setProperty("--tint", tintOf(k.idea));
+        li.append(go, bar);
+        list.append(li);
+      }
+      const gather = document.createElement("button");
+      gather.className = "gather";
+      gather.type = "button";
+      gather.textContent = `Gather these ${idea.home?.set.length ?? close.length + 1} into a Project`;
+      gather.onclick = () => (gather.textContent = "In the app, this makes the Project");
+      card.append(list, gather);
+    }
+    chosenEl.append(card);
+  }
+
+  // ---------- The panel ----------
+  const box = document.getElementById("box");
+  document.getElementById("form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    add(box.value);
+    box.value = "";
+    box.focus();
+  });
+  box.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      document.getElementById("form").requestSubmit();
+    }
+  });
+  for (const text of tries) {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.textContent = text;
+    chip.onclick = () => {
+      add(text);
+      chip.remove();
+    };
+    document.getElementById("chips").append(chip);
+  }
+  function lists() {
+    document.getElementById("count").textContent = ideas.length;
+    const list = document.getElementById("list");
+    list.replaceChildren();
+    const groups = [...constellations.map((c) => [c.name, c.set]), ["alone, for now", ideas.filter((i) => !i.home)]];
+    for (const [name, set] of groups) {
+      if (!set.length) continue;
+      const head = document.createElement("li"),
+        b = document.createElement("b");
+      b.textContent = name;
+      head.append(b);
+      list.append(head);
+      for (const idea of set) {
+        const li = document.createElement("li");
+        li.textContent = idea.text;
+        list.append(li);
+      }
+    }
+  }
+  lists();
+  // For looking at one moment of it by hand.
+  window.ideaSky = { add, ideas: () => ideas, links: () => links, constellations: () => constellations };
+</script>
