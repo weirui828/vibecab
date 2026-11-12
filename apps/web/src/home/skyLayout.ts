@@ -405,3 +405,11 @@ export class Sky {
     }
   }
 }
+
+const TIP_HALF = 140;
+
+/** Where a star's label goes: above the star, or below it when the star is in the upper half, so the label never leaves the sky. */
+export function tipPlace(at: readonly [number, number], size: { w: number; h: number }) {
+  const left = Math.max(TIP_HALF, Math.min(size.w - TIP_HALF, at[0]));
+  return { left, top: at[1], below: at[1] < size.h / 2 };
+}

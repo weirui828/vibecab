@@ -90,3 +90,29 @@ test("ideas are a sky of stars; a new one flies in and joins its kin; the list i
   await expect(page.getByRole("button", { name: "Voice notes as comments on a paragraph — edit" })).toBeVisible();
   await expect(page.locator(".vc-sky")).toHaveCount(0);
 });
+
+test("a star's label stays inside the sky, wherever the star is", async () => {
+  await page.goto(host.url + "/#/ideas");
+  await page.getByRole("group", { name: "Show as" }).getByRole("button", { name: "Sky" }).click();
+  const sky = page.locator(".vc-sky");
+  await expect.poll(drawn).toBeGreaterThan(400);
+  const box = await sky.boundingBox();
+  if (!box) throw new Error("no sky");
+  let seen = 0;
+  for (let y = 12; y < box.height; y += 24)
+    for (let x = 12; x < box.width; x += 40) {
+      await page.mouse.move(box.x + x, box.y + y);
+      const tip = await page.evaluate(async () => {
+        await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
+        const rect = document.querySelector(".vc-sky-tip")?.getBoundingClientRect();
+        return rect ? { x: rect.x, y: rect.y, width: rect.width, height: rect.height } : null;
+      });
+      if (!tip) continue;
+      seen++;
+      expect(tip.y).toBeGreaterThanOrEqual(box.y);
+      expect(tip.y + tip.height).toBeLessThanOrEqual(box.y + box.height);
+      expect(tip.x).toBeGreaterThanOrEqual(box.x);
+      expect(tip.x + tip.width).toBeLessThanOrEqual(box.x + box.width);
+    }
+  expect(seen).toBeGreaterThan(5);
+});

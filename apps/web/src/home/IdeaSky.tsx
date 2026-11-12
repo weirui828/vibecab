@@ -3,7 +3,7 @@ import type { Idea } from "../../../../contract/generated/index.js";
 import { terms } from "../copy/terms.js";
 import { plural } from "../ui/time.js";
 import { prefersCalm, useFrame } from "../ui/useFrame.js";
-import { Sky } from "./skyLayout.js";
+import { Sky, tipPlace } from "./skyLayout.js";
 import type { Star } from "./skyLayout.js";
 
 // Ideas as a night sky. Each idea is a star; ideas that are close are joined into constellations, named by the
@@ -344,7 +344,8 @@ export function IdeaSky({
       .map((s) => byId.get(s.id))
       .filter((i): i is Idea => i !== undefined),
     pointed = sky.stars.find((s) => s.id === hover),
-    tipAt = pointed ? at(pointed) : undefined;
+    tipAt = pointed ? at(pointed) : undefined,
+    tip = tipAt && tipPlace(tipAt, size.current);
   return (
     <div className="vc-sky-wrap">
       <div className="vc-sky" ref={box}>
@@ -362,12 +363,9 @@ export function IdeaSky({
           <path d="M0 62 Q 180 18 380 50 T 760 40 T 1200 58 V90 H0Z" />
           <path d="M0 80 Q 300 52 600 78 T 1200 72 V90 H0Z" />
         </svg>
-        {pointed && tipAt && (
-          <div
-            className="vc-sky-tip"
-            style={{ left: Math.max(140, Math.min(size.current.w - 140, tipAt[0])), top: Math.max(70, tipAt[1]) }}
-          >
-            {pointed.text}
+        {pointed && tip && (
+          <div className="vc-sky-tip" data-below={tip.below || undefined} style={{ left: tip.left, top: tip.top }}>
+            <span>{pointed.text}</span>
             <small>{pointed.home?.name || (pointed.home ? "close ones" : "alone, for now")}</small>
           </div>
         )}

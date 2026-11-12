@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { Sky, tokens } from "../src/home/skyLayout.js";
+import { Sky, tipPlace, tokens } from "../src/home/skyLayout.js";
 import type { Star } from "../src/home/skyLayout.js";
 
 // The sky of ideas as numbers: what joins what, and whether the picture it makes is a clean one.
@@ -126,4 +126,12 @@ it("puts a new idea beside its kin, leaves the others where they were, and lets 
   // An idea that is removed leaves the sky.
   sky.set(ideas.slice(0, 5));
   expect(sky.stars).toHaveLength(5);
+});
+
+it("puts a star's label below it when the star is near the top, and keeps it inside the sides", () => {
+  const size = { w: 800, h: 400 };
+  expect(tipPlace([400, 30], size)).toEqual({ left: 400, top: 30, below: true });
+  expect(tipPlace([400, 300], size)).toEqual({ left: 400, top: 300, below: false });
+  expect(tipPlace([10, 300], size).left).toBe(140);
+  expect(tipPlace([795, 300], size).left).toBe(660);
 });
