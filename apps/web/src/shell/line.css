@@ -872,6 +872,15 @@
   pointer-events: none;
   transform: translate(-50%, calc(-100% - 16px));
 }
+.vc-sky-tip[data-below] {
+  transform: translate(-50%, 16px);
+}
+.vc-sky-tip span {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+}
 .vc-sky-tip small,
 .vc-sky-said small {
   display: block;
