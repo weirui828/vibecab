@@ -1018,3 +1018,44 @@
 .vc-page > .vc-header .vc-actions {
   margin-top: 8px;
 }
+
+/* A station is a way to its version. */
+.vc-sign[role="button"] {
+  cursor: pointer;
+  transition: transform 0.3s var(--vc-spring);
+  transform-box: fill-box;
+  transform-origin: center bottom;
+}
+.vc-sign[role="button"]:hover,
+.vc-sign[role="button"]:focus-visible {
+  transform: translateY(-2px) scale(1.08);
+  outline: none;
+}
+.vc-sign[role="button"]:focus-visible rect {
+  stroke: var(--color-accent-default);
+  stroke-width: 2;
+}
+/* A light in the cab's window while the agent is at work. The window's brightness is a number the cab's drawing
+   inherits, so it can be moved from here. */
+@property --vc-glass {
+  syntax: "<number>";
+  inherits: true;
+  initial-value: 0.22;
+}
+.vc-cab[data-working] {
+  --vc-glass: 0.75;
+  animation: vc-cab-lit 1.5s ease-in-out infinite alternate;
+}
+@keyframes vc-cab-lit {
+  from {
+    --vc-glass: 0.3;
+  }
+  to {
+    --vc-glass: 0.95;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vc-cab[data-working] {
+    animation: none;
+  }
+}

@@ -140,6 +140,16 @@ test("comment on words, the agent answers with options, agree, and an Update wri
   await expect(page.locator(".vc-doc h1")).toHaveText("Covibe: shaping one piece of work together");
   // The line above the Draft has reached version 2: its station is no longer the faint one ahead.
   await expect(page.locator(".vc-cable-scene .vc-station:not(.ahead) .vc-sign text").last()).toHaveText("v2");
+  // A station is a way to its version: version 1 opens as it was, and the latest station comes back.
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.getByRole("button", { name: "v1: show this version" }).click({ timeout: 8000 });
+  await expect(page.locator(".vc-strip")).toContainText("Viewing version 1");
+  await expect(page.locator(".vc-doc h1")).toHaveText("Field notes");
+  // Back by the keyboard: a station takes the focus and Enter, like any button.
+  await page.getByRole("button", { name: "v2: the latest version" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator(".vc-doc h1")).toHaveText("Covibe: shaping one piece of work together");
+  await expect(page).toHaveTitle(/Field notes — VibeCab$/);
   await page.locator(".vc-strip").getByRole("button", { name: "Show changes" }).click();
   await expect(page.locator(".vc-changes .vc-changed")).toHaveCount(1);
   await expect(page.locator(".vc-changes ins")).toContainText("shaping");

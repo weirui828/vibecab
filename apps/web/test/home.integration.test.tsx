@@ -234,6 +234,8 @@ it("gets around from one bar: what needs you, a jump box for everything else, an
   expect(tl.screen.queryByRole("dialog", { name: "Jump to" })).toBeNull();
   const here = await tl.screen.findByRole("navigation", { name: "You are here" });
   expect(here.textContent).toContain("Tundra walk");
+  // The browser tab says where you are (and, when something waits, how many sessions do).
+  await tl.waitFor(() => expect(document.title).toMatch(/^(\(\d+\) )?Tundra walk — VibeCab$/));
   // Settings is a page like any other: one click from the bar, and listed in the jump box.
   expect(bar.getByRole("link", { name: "Settings" }).getAttribute("href")).toBe("#/settings");
 });

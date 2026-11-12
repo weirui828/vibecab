@@ -17,7 +17,15 @@ const farCable = FAR.map(
   ([x0, y0, x1, y1, dip], i) => `${i ? "" : `M${x0} ${y0}`}Q${(x0 + x1) / 2} ${(y0 + y1) / 2 + dip} ${x1} ${y1}`,
 ).join("");
 
-export function HomeScene({ children }: { children: ReactNode }) {
+/** Where the n-th idea's star stands over Home: always the same place for the same n, spread across the sky. */
+export function starPlace(n: number): { x: number; y: number; r: number; delay: number } {
+  const turn = (n * 0.61803398875) % 1, // the golden ratio spreads points evenly
+    rise = (n * 0.754877666) % 1;
+  return { x: 30 + turn * 1140, y: 12 + rise * 88, r: 0.9 + ((n * 7) % 5) * 0.2, delay: (n % 7) * 0.45 };
+}
+const MOST_STARS = 60;
+
+export function HomeScene({ children, ideas = 0 }: { children: ReactNode; ideas?: number }) {
   const [now, setNow] = useState(() => new Date()),
     cab = useRef<SVGGElement>(null);
   useEffect(() => {
@@ -38,11 +46,12 @@ export function HomeScene({ children }: { children: ReactNode }) {
   return (
     <header className="vc-scene vc-home-scene" data-sky={body}>
       <svg viewBox="0 0 1200 240" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
-        <g className="vc-stars">
-          <circle cx="140" cy="40" r="1.6" />
-          <circle cx="470" cy="22" r="1.3" style={{ animationDelay: "1s" }} />
-          <circle cx="760" cy="50" r="1.6" style={{ animationDelay: "2s" }} />
-          <circle cx="1040" cy="30" r="1.3" style={{ animationDelay: "0.5s" }} />
+        {/* Every idea is a star over the tundra: the night sky here has as many as there are ideas. */}
+        <g className="vc-stars" data-ideas={Math.min(ideas, MOST_STARS)}>
+          {Array.from({ length: Math.min(ideas, MOST_STARS) }, (_, n) => {
+            const star = starPlace(n);
+            return <circle key={n} cx={star.x} cy={star.y} r={star.r} style={{ animationDelay: `${star.delay}s` }} />;
+          })}
         </g>
         <path className="vc-aurora a1" d="M-40 70 C 200 10, 420 110, 660 46 S 1040 30, 1260 84" />
         <path className="vc-aurora a2" d="M-40 104 C 240 50, 460 136, 720 80 S 1060 70, 1260 116" />

@@ -109,6 +109,26 @@ it("hangs the cab on the cable, sends it out with an Update, and lands it on the
   expect(arrived.reached).toEqual(["v1", "v2"]);
 });
 
+it("makes each station a way to its version, and lights the cab's window while the agent works", async () => {
+  const { CableScene, VIEW_VERSION } = await import("../src/session/CableScene.js");
+  const asked: number[] = [];
+  const onAsk = (event: Event) => asked.push((event as CustomEvent<{ version: number }>).detail.version);
+  window.addEventListener(VIEW_VERSION, onAsk);
+  const view = tl.render(<CableScene session={session} head={3} running={false} open={0} agreed={0} working />);
+  frames(5);
+  // Versions 1 to 3 are stations to go to; the one ahead is not there yet.
+  const names = tl.screen.getAllByRole("button").map((sign) => sign.getAttribute("aria-label"));
+  expect(names).toEqual(["v1: show this version", "v2: show this version", "v3: the latest version"]);
+  tl.fireEvent.click(tl.screen.getByRole("button", { name: "v2: show this version" }));
+  tl.fireEvent.keyDown(tl.screen.getByRole("button", { name: "v3: the latest version" }), { key: "Enter" });
+  expect(asked).toEqual([2, 3]);
+  window.removeEventListener(VIEW_VERSION, onAsk);
+  // The light is on only while there is work.
+  expect(view.container.querySelector(".vc-cab")?.hasAttribute("data-working")).toBe(true);
+  view.rerender(<CableScene session={session} head={3} running={false} open={0} agreed={0} />);
+  expect(view.container.querySelector(".vc-cab")?.hasAttribute("data-working")).toBe(false);
+});
+
 it("brings the cab back to its station when an Update stops without a new version", async () => {
   const { CableScene } = await import("../src/session/CableScene.js");
   const scene = (running: boolean) => <CableScene session={session} head={3} running={running} open={0} agreed={0} />;

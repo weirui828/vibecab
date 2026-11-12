@@ -124,6 +124,12 @@ function Shell({
   }, [firstRun, settings.data, workspace.sessions, workspace.drafts]);
   const sessionRoute = parseSessionRoute(route),
     session = sessionRoute ? workspace.sessions?.find((s) => s.sessionId === sessionRoute.sessionId) : undefined;
+  // The browser tab says where you are, and how many sessions wait for you, so it can be read from another tab.
+  const waiting = [...workspace.attention.values()].filter((items) => items.length > 0).length,
+    here = session?.title ?? pageName(route) ?? (route.startsWith("/p/") ? terms.project : undefined);
+  useEffect(() => {
+    document.title = (waiting ? `(${waiting}) ` : "") + (here ? here + " — " : "") + "VibeCab";
+  }, [waiting, here]);
   let page;
   if (!ready) page = <PageSkeleton />;
   else if (route === "/needs-you") page = <NeedsYouView workspace={workspace} />;
@@ -179,7 +185,7 @@ function Shell({
         <GondolaDefs />
         <TopBar
           route={route}
-          here={session?.title ?? pageName(route) ?? (route.startsWith("/p/") ? terms.project : undefined)}
+          here={here}
           sessions={workspace.sessions}
           drafts={workspace.drafts}
           attention={workspace.attention}

@@ -46,6 +46,11 @@ interface Motion extends Pendulum {
 
 const smooth = (x: number) => x * x * (3 - 2 * x);
 
+/** Asks the Draft below to show one of its versions; the Draft listens for it (see DraftDocument). */
+export const VIEW_VERSION = "vibecab:view-version";
+const showVersion = (version: number) =>
+  window.dispatchEvent(new window.CustomEvent(VIEW_VERSION, { detail: { version } }));
+
 export function statusWord(state: SessionRow["state"], running: boolean, agreed: number, open: number): string {
   if (state === "ended") return "ENDED";
   if (state === "paused") return "PAUSED";
@@ -71,6 +76,7 @@ export function CableScene({
   running,
   open,
   agreed,
+  working = false,
 }: {
   session: SessionRow;
   /** The Draft's latest version; 0 while there is no Draft. */
@@ -78,6 +84,8 @@ export function CableScene({
   running: boolean;
   open: number;
   agreed: number;
+  /** The agent is replying or writing right now: the light in the cab's window. */
+  working?: boolean;
 }) {
   const { wind } = useWind(),
     signals = useCab(),
@@ -263,21 +271,23 @@ export function CableScene({
     where = shown > 0 ? `version ${shown}` : "no version yet";
   return (
     <div className="vc-scene vc-cable-scene">
-      <svg viewBox="0 0 1200 380" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
-        <g className="vc-stars">
+      <svg viewBox="0 0 1200 380" preserveAspectRatio="xMidYMax slice" role="group" aria-label="Versions">
+        <g className="vc-stars" aria-hidden="true">
           <circle cx="140" cy="50" r="1.6" />
           <circle cx="420" cy="28" r="1.3" style={{ animationDelay: "1s" }} />
           <circle cx="700" cy="60" r="1.6" style={{ animationDelay: "2s" }} />
           <circle cx="930" cy="34" r="1.2" style={{ animationDelay: "0.5s" }} />
           <circle cx="1110" cy="70" r="1.5" style={{ animationDelay: "1.6s" }} />
         </g>
-        <path className="vc-aurora a1" d="M-40 90 C 200 20, 420 130, 660 60 S 1040 40, 1260 100" />
-        <path className="vc-aurora a2" d="M-40 130 C 240 70, 460 160, 720 100 S 1060 90, 1260 140" />
-        <circle className="vc-orb-glow" cx="860" cy="222" r="46" />
-        <circle className="vc-orb" cx="860" cy="222" r="19" />
-        <path className="vc-hill far" d="M0 300 Q 150 214 330 276 T 640 258 T 930 250 T 1200 286 V380 H0Z" />
-        <path className="vc-hill mid" d="M0 334 Q 200 262 420 318 T 800 300 T 1200 322 V380 H0Z" />
-        <path className="vc-hill near" d="M0 360 Q 260 314 520 356 T 1200 348 V380 H0Z" />
+        <g aria-hidden="true">
+          <path className="vc-aurora a1" d="M-40 90 C 200 20, 420 130, 660 60 S 1040 40, 1260 100" />
+          <path className="vc-aurora a2" d="M-40 130 C 240 70, 460 160, 720 100 S 1060 90, 1260 140" />
+          <circle className="vc-orb-glow" cx="860" cy="222" r="46" />
+          <circle className="vc-orb" cx="860" cy="222" r="19" />
+          <path className="vc-hill far" d="M0 300 Q 150 214 330 276 T 640 258 T 930 250 T 1200 286 V380 H0Z" />
+          <path className="vc-hill mid" d="M0 334 Q 200 262 420 318 T 800 300 T 1200 322 V380 H0Z" />
+          <path className="vc-hill near" d="M0 360 Q 260 314 520 356 T 1200 348 V380 H0Z" />
+        </g>
         <g ref={stations}>
           {STEPS.map((step) => {
             const version = shown + step,
@@ -298,26 +308,52 @@ export function CableScene({
                   <circle className="vc-sheave" cx={x} cy={y + 5} r="5" />
                   <path className="vc-tower thin" d={`M${x - 4} ${y + 5}H${x + 4}M${x} ${y + 1}V${y + 9}`} />
                 </g>
-                <g className="vc-sign">
-                  <rect x={x - 19} y={y - 36} width="38" height="19" rx="4" />
-                  <text x={x} y={y - 22.5}>
-                    v{version}
-                  </text>
-                </g>
+                {version > shown ? (
+                  <g className="vc-sign" aria-hidden="true">
+                    <rect x={x - 19} y={y - 36} width="38" height="19" rx="4" />
+                    <text x={x} y={y - 22.5}>
+                      v{version}
+                    </text>
+                  </g>
+                ) : (
+                  // A station is a way to its version: an earlier one opens it, the latest one comes back.
+                  <g
+                    className="vc-sign"
+                    role="button"
+                    tabIndex={0}
+                    // The name starts with the words on the sign, so saying what is seen finds it.
+                    aria-label={
+                      version === shown ? `v${version}: the latest version` : `v${version}: show this version`
+                    }
+                    onClick={() => showVersion(version)}
+                    onKeyDown={(event) => (event.key === "Enter" || event.key === " ") && showVersion(version)}
+                  >
+                    <rect x={x - 19} y={y - 36} width="38" height="19" rx="4" />
+                    <text x={x} y={y - 22.5}>
+                      v{version}
+                    </text>
+                  </g>
+                )}
               </g>
             );
           })}
         </g>
-        <path ref={tail} className="vc-cable tail" />
-        <path ref={cable} className="vc-cable" />
+        <path ref={tail} className="vc-cable tail" aria-hidden="true" />
+        <path ref={cable} className="vc-cable" aria-hidden="true" />
         {[0, 1].map((i) => (
-          <line key={i} className="vc-rod" ref={(node) => void (rods.current[i] = node)} />
+          <line key={i} className="vc-rod" aria-hidden="true" ref={(node) => void (rods.current[i] = node)} />
         ))}
-        <g ref={car} className="vc-cab">
+        <g ref={car} className="vc-cab" data-working={working || undefined} aria-hidden="true">
           <use href="#vc-gondola" transform={gondolaTransform(SCALE)} />
         </g>
         {[0, 1].map((i) => (
-          <circle key={i} className="vc-grip" r="3.1" ref={(node) => void (grips.current[i] = node)} />
+          <circle
+            key={i}
+            className="vc-grip"
+            r="3.1"
+            aria-hidden="true"
+            ref={(node) => void (grips.current[i] = node)}
+          />
         ))}
       </svg>
       <div className="vc-board" role="status">

@@ -64,7 +64,7 @@ export function HomeView({ workspace, tab = "sessions" }: { workspace: Workspace
   };
   return (
     <div className="vc-home">
-      <HomeScene>
+      <HomeScene ideas={ideas.data?.length ?? 0}>
         <h1 className="vc-display">{greeting()}</h1>
         <p className="vc-facts">{facts}</p>
       </HomeScene>
