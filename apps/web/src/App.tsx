@@ -10,18 +10,18 @@ import { ToastProvider } from "./ui/Toast.js";
 import { GondolaDefs } from "./ui/Gondola.js";
 import { PageBoundary } from "./ui/PageBoundary.js";
 import { useRoute, useTheme } from "./shell/prefs.js";
-import { TopBar, pageName } from "./shell/TopBar.js";
+import { TopBar, homeRoutes, pageName } from "./shell/TopBar.js";
 import type { BarProps } from "./shell/TopBar.js";
 import { WindProvider } from "./shell/wind.js";
 import { DialogHost } from "./home/DialogHost.js";
-import { DraftsView, HomeView, LaterView, NeedsYouView, PageSkeleton } from "./home/Views.js";
+import { HomeView, LaterView, NeedsYouView, PageSkeleton } from "./home/Views.js";
 import { SessionView, parseSessionRoute } from "./session/SessionView.js";
 import { SettingsView } from "./settings/SettingsView.js";
 import { FirstRun } from "./settings/FirstRun.js";
 import type { SettingsShape } from "./settings/ModelForm.js";
 import { useLiveQuery } from "./live/LiveStore.js";
 import { TrashView } from "./home/TrashView.js";
-import { IdeasView, ProjectView, ProjectsView } from "./home/IdeasProjects.js";
+import { ProjectView, ProjectsView } from "./home/IdeasProjects.js";
 import { SessionsView } from "./home/SessionsView.js";
 
 type Access = "checking" | "ready";
@@ -127,7 +127,7 @@ function Shell({
   let page;
   if (!ready) page = <PageSkeleton />;
   else if (route === "/needs-you") page = <NeedsYouView workspace={workspace} />;
-  else if (route === "/drafts") page = <DraftsView workspace={workspace} />;
+  else if (route === "/drafts") page = <HomeView workspace={workspace} tab="drafts" />;
   else if (route === "/sessions") page = <SessionsView workspace={workspace} />;
   else if (route === "/sessions/ended") page = <SessionsView workspace={workspace} show="ended" key="ended" />;
   else if (sessionRoute)
@@ -148,7 +148,7 @@ function Shell({
       />
     );
   else if (route === "/trash") page = <TrashView />;
-  else if (route === "/ideas") page = <IdeasView sessions={workspace.sessions ?? []} />;
+  else if (route === "/ideas") page = <HomeView workspace={workspace} tab="ideas" />;
   else if (route === "/projects") page = <ProjectsView />;
   else if (route.startsWith("/p/"))
     page = (
@@ -189,7 +189,8 @@ function Shell({
         />
         <main className="vc-main">
           {banner}
-          <PageBoundary key={route}>{page}</PageBoundary>
+          {/* Home's tabs are one page: moving between them must not start it again. */}
+          <PageBoundary key={homeRoutes.includes(route) ? "/" : route}>{page}</PageBoundary>
         </main>
       </div>
     </DialogHost>

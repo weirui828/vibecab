@@ -30,8 +30,8 @@ const pages: Array<{ path: string; label: string; hint: string }> = [
   { path: "/", label: "Home", hint: `Every ${terms.session.toLowerCase()}, and what needs you` },
   { path: "/needs-you", label: "Needs you", hint: "What is waiting for an answer" },
   { path: "/sessions", label: `${terms.session}s`, hint: "Active, paused and ended" },
-  { path: "/drafts", label: `${terms.draft}s`, hint: "All of them, newest first" },
-  { path: "/ideas", label: `${terms.idea}s`, hint: "Notes that are not being worked on yet" },
+  { path: "/drafts", label: `${terms.draft}s`, hint: "A tab of Home: all of them, newest first" },
+  { path: "/ideas", label: `${terms.idea}s`, hint: "A tab of Home: notes to work on later" },
   {
     path: "/projects",
     label: `${terms.project}s`,
@@ -41,9 +41,12 @@ const pages: Array<{ path: string; label: string; hint: string }> = [
   { path: "/trash", label: "Trash", hint: "What you removed" },
 ];
 
+/** Home and its tabs: one place with three addresses. */
+export const homeRoutes = ["/", "/drafts", "/ideas"];
+
 /** The page's name for the bar, from its route (sessions and projects name themselves). */
 export function pageName(route: string): string | undefined {
-  if (route === "/") return undefined;
+  if (homeRoutes.includes(route)) return undefined;
   if (route === "/sessions/ended") return `${terms.ended} ${terms.session.toLowerCase()}s`;
   return pages.find((p) => p.path !== "/" && (route === p.path || route.startsWith(p.path + "/")))?.label;
 }
@@ -86,7 +89,7 @@ export function TopBar({ route, here, sessions, drafts, attention, connection, t
       <a className="vc-top-mark" href="#/" aria-label="Home" title="Home">
         <Mark height={22} />
       </a>
-      {route === "/" ? (
+      {homeRoutes.includes(route) ? (
         <small className="vc-top-tagline">Thinking. Vibing. Building.</small>
       ) : (
         <nav className="vc-crumb" aria-label="You are here">

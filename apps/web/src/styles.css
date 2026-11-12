@@ -548,7 +548,65 @@
   color: var(--color-fg-muted);
   font-size: 13px;
 }
-.vc-file {
+/* New Draft: the file is the way in, so its place is the largest thing in the dialog. */
+.vc-drop {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 26px 16px 22px;
+  border: 1.5px dashed var(--color-border-strong);
+  border-radius: var(--vc-radius);
+  background: var(--color-surface-raised);
+  color: var(--color-fg-muted);
+  text-align: center;
+  transition:
+    border-color var(--vc-fast) var(--vc-ease),
+    background var(--vc-fast) var(--vc-ease),
+    opacity var(--vc-fast) var(--vc-ease);
+}
+.vc-drop strong {
+  color: var(--color-fg-default);
+  font-size: 15.5px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.vc-drop > span {
+  font-size: 13px;
+}
+.vc-drop > button {
+  margin-top: 8px;
+}
+.vc-drop[data-over],
+.vc-drop[data-filled] {
+  border-color: var(--color-accent-default);
+  background: var(--color-accent-subtle);
+}
+.vc-drop[data-filled] {
+  border-style: solid;
+}
+.vc-drop[data-off] {
+  opacity: 0.45;
+}
+.vc-drop-error {
+  margin: 6px 0 0;
+  color: var(--color-danger-fg);
+  font-size: 13px;
+}
+.vc-empty-start {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 14px;
+}
+.vc-empty-start input {
+  width: 16px;
+  height: 16px;
+  margin-top: 3px;
+  accent-color: var(--color-accent-default);
+}
+.vc-empty-start small {
+  display: block;
   color: var(--color-fg-muted);
   font-size: 13px;
 }

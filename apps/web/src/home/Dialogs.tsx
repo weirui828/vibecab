@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Button, Field, Input } from "@wei/design-system";
+import { useEffect, useRef, useState } from "react";
+import { Button, Field, Icon, Input } from "@wei/design-system";
 import { terms } from "../copy/terms.js";
 import { Dialog } from "../ui/Dialog.js";
 import type { DraftRow, SessionRow } from "../live/workspace.js";
@@ -21,33 +21,42 @@ export function NewDraftDialog({
   onClose(): void;
   onCreate(draft: NewDraft): Promise<boolean>;
 }) {
-  const [mode, setMode] = useState<"blank" | "import" | "html">("blank"),
+  const [empty, setEmpty] = useState(false),
     [title, setTitle] = useState(""),
     [file, setFile] = useState<{ name: string; text: string }>(),
+    [over, setOver] = useState(false),
     [sessionId, setSessionId] = useState(NEW_SESSION),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState<string>();
+    [error, setError] = useState<{ on: "file" | "title"; text: string }>(),
+    chooser = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (!open) return;
-    setMode("blank");
+    setEmpty(false);
     setTitle("");
     setFile(undefined);
+    setOver(false);
     setSessionId(NEW_SESSION);
     setError(undefined);
   }, [open]);
-  const active = sessions.filter((s) => s.state === "active");
+  const active = sessions.filter((s) => s.state === "active"),
+    isHtml = file !== undefined && /\.html?$/i.test(file.name),
+    fromName = file?.name.replace(/\.(md|markdown|txt|html?)$/i, "") ?? "";
+  const take = (chosen: File | undefined) => {
+    if (!chosen) return;
+    setError(undefined);
+    setEmpty(false);
+    void chosen.text().then((text) => setFile({ name: chosen.name, text }));
+  };
   async function submit() {
-    const name = title.trim() || file?.name.replace(/\.(md|markdown|txt|html?)$/i, "") || "";
-    if (!name) return setError("Give it a title.");
-    if (mode !== "blank" && !file)
-      return setError(mode === "html" ? "Choose an HTML file." : "Choose a Markdown file.");
+    if (!empty && !file) return setError({ on: "file", text: "Choose a file, or start with an empty page." });
+    const name = title.trim() || (empty ? "" : fromName);
+    if (!name) return setError({ on: "title", text: "Give it a title." });
     setBusy(true);
     const target = fixedSession ?? sessions.find((s) => s.sessionId === sessionId);
     const ok = await onCreate({
       title: name,
       role: target && target.artifactIds.length > 0 ? "reference" : "primary",
-      ...(mode === "import" && file ? { markdown: file.text } : {}),
-      ...(mode === "html" && file ? { html: file.text } : {}),
+      ...(!empty && file ? (isHtml ? { html: file.text } : { markdown: file.text }) : {}),
       ...(fixedSession ? { sessionId: fixedSession.sessionId } : sessionId !== NEW_SESSION ? { sessionId } : {}),
       ...(fixedSession?.state === "paused" ? { resume: true } : {}),
     });
@@ -60,8 +69,8 @@ export function NewDraftDialog({
       title={fixedSession ? `Add a ${terms.draft.toLowerCase()}` : `New ${terms.draft.toLowerCase()}`}
       lede={
         fixedSession
-          ? `To “${fixedSession.title}”${fixedSession.state === "paused" ? `, which resumes` : ""}. Start from a blank page, or import a Markdown or HTML file.`
-          : "Start from a blank page, or import a Markdown or HTML file."
+          ? `To “${fixedSession.title}”${fixedSession.state === "paused" ? `, which resumes` : ""}. From a file on this computer.`
+          : "From a file on this computer."
       }
       onClose={onClose}
       onSubmit={() => void submit()}
@@ -76,70 +85,77 @@ export function NewDraftDialog({
         </>
       }
     >
-      <div className="vc-choice" role="radiogroup" aria-label="Start from">
-        <label>
-          <input
-            type="radio"
-            name="mode"
-            checked={mode === "blank"}
-            onChange={() => {
-              setMode("blank");
-              setError(undefined);
-            }}
-          />
-          <strong>Blank {terms.document.toLowerCase()}</strong>
-          <span>An empty page to comment on with the agent.</span>
-        </label>
-        <label>
-          <input
-            type="radio"
-            name="mode"
-            checked={mode === "import"}
-            onChange={() => {
-              setMode("import");
-              setError(undefined);
-            }}
-          />
-          <strong>Import Markdown</strong>
-          <span>A .md or .txt file from this computer.</span>
-        </label>
-        <label>
-          <input
-            type="radio"
-            name="mode"
-            checked={mode === "html"}
-            onChange={() => {
-              setMode("html");
-              setFile(undefined);
-              setError(undefined);
-            }}
-          />
-          <strong>Import HTML</strong>
-          <span>An .html file, kept as it is. It is shown in a closed frame with no network.</span>
-        </label>
+      {/* The file is the way in, so it is the largest thing here: drop one on it, or press the button. */}
+      <div
+        className="vc-drop"
+        data-over={over || undefined}
+        data-filled={file !== undefined || undefined}
+        data-off={empty || undefined}
+        onDragOver={(event) => {
+          event.preventDefault();
+          setOver(true);
+        }}
+        onDragLeave={() => setOver(false)}
+        onDrop={(event) => {
+          event.preventDefault();
+          setOver(false);
+          take(event.dataTransfer.files[0]);
+        }}
+      >
+        <input
+          ref={chooser}
+          className="sr-only"
+          type="file"
+          aria-label="File"
+          tabIndex={-1}
+          accept=".md,.markdown,.txt,.html,.htm,text/markdown,text/plain,text/html"
+          onChange={(event) => take(event.target.files?.[0])}
+        />
+        <Icon name={file ? "document-text" : "arrow-up-tray"} size={24} />
+        {file ? (
+          <>
+            <strong>{file.name}</strong>
+            <span>
+              {isHtml
+                ? "HTML. It is kept as it is, and shown in a closed frame with no network."
+                : "Markdown or plain text."}
+            </span>
+          </>
+        ) : (
+          <>
+            <strong>Drop a file here</strong>
+            <span>Markdown, plain text or HTML</span>
+          </>
+        )}
+        <Button type="button" size="sm" variant="secondary" onClick={() => chooser.current?.click()}>
+          {file ? "Choose another file" : "Choose a file"}
+        </Button>
+        {error?.on === "file" && (
+          <p className="vc-drop-error" role="alert">
+            {error.text}
+          </p>
+        )}
       </div>
-      {mode !== "blank" && (
-        <Field label="File">
-          <input
-            className="vc-file"
-            type="file"
-            key={mode}
-            accept={mode === "html" ? ".html,.htm,text/html" : ".md,.markdown,.txt,text/markdown,text/plain"}
-            onChange={(event) => {
-              const chosen = event.target.files?.[0];
-              if (!chosen) return setFile(undefined);
-              setError(undefined);
-              void chosen.text().then((text) => setFile({ name: chosen.name, text }));
-            }}
-          />
-        </Field>
-      )}
-      <Field label="Title" error={error}>
+      <label className="vc-empty-start">
+        <input
+          type="checkbox"
+          checked={empty}
+          onChange={(event) => {
+            setEmpty(event.target.checked);
+            setError(undefined);
+          }}
+        />
+        <span>
+          Start with an empty page
+          <small>No file: ask the agent in a comment to write the first version.</small>
+        </span>
+      </label>
+      <Field label="Title" error={error?.on === "title" ? error.text : undefined}>
         <Input
           inputSize="lg"
           autoFocus
           value={title}
-          placeholder={mode !== "blank" && file ? file.name.replace(/\.(md|markdown|txt|html?)$/i, "") : "Untitled"}
+          placeholder={!empty && fromName ? fromName : "Untitled"}
           onChange={(event) => {
             setTitle(event.target.value);
             setError(undefined);
