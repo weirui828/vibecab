@@ -153,6 +153,40 @@ describe("importing an HTML file", () => {
       f.store.close();
     }
   });
+  it("splits a wrapper that mixes links, loose words and blocks, so each part can be commented on", () => {
+    // A page as assistants write them: one wrapper around everything, with a link and some words among the blocks.
+    const f = htmlFixture(
+      `<!doctype html><title>T</title><body><div class="container"><a class="logo" href="#top">Home</a>
+        <h1>Report</h1> Written <em>today</em> by hand. <p>First.</p><div class="card"><h3>Card</h3><p>In a card.</p>
+        <button>More</button></div><br><small>The end</small></div></body>`,
+    );
+    try {
+      const elements = f.elements();
+      expect(typed(elements, "html_node").map((n) => [n.props.tag, n.props.attrs])).toEqual([
+        ["div", [["class", "container"]]],
+        ["div", [["class", "card"]]],
+      ]);
+      expect(typed(elements, "html_block").map((b) => b.html)).toEqual([
+        '<a class="logo" href="#top">Home</a>',
+        "<h1>Report</h1>",
+        // Words and inline marks that stand together between blocks stay together, in the plainest wrapper.
+        "<span> Written <em>today</em> by hand. </span>",
+        "<p>First.</p>",
+        "<h3>Card</h3>",
+        "<p>In a card.</p>",
+        "<button>More</button>",
+        "<span><br><small>The end</small></span>",
+      ]);
+      // Nothing is lost: every word of the page is in some block.
+      const words = typed(elements, "html_block")
+        .map((b) => htmlPlainText(b.html))
+        .join(" ");
+      for (const word of ["Home", "Report", "Written", "today", "First.", "Card", "In a card.", "More", "The end"])
+        expect(words).toContain(word);
+    } finally {
+      f.store.close();
+    }
+  });
   it("takes the title it is given before the file's own, and Untitled when there is none", () => {
     const named = htmlFixture(page, "Mine"),
       bare = htmlFixture("<p>Just this</p>");

@@ -19,8 +19,8 @@ An artifact has `mediaKind: "doc" | "html"`. An `html` artifact holds only these
 | `html_block` | — | `html`: exactly one element, with everything inside it | — |
 
 - `html_head` is top-level and there is at most one. Styles and scripts in the head are kept whole inside it.
-- A source element becomes an `html_node` when it only groups blocks: its tag is a grouping tag (`div`, `main`, `section`, `article`, `header`, `footer`, `aside`, `nav`), it has no text of its own, and every child is a block-level element. Everything else is an `html_block`, kept as its own markup. So wrappers and their classes survive, and a paragraph, a table, a list, a `<script>` or a `<style>` in the body is one block.
-- Loose text directly in `<body>` or in a grouping element makes that element an `html_block` (for `<body>`: the loose text is wrapped in a `<span>` block). Comments in the source between blocks are dropped.
+- A source element becomes an `html_node` when it is a wrapper that holds blocks: its tag is a grouping tag (`div`, `main`, `section`, `article`, `header`, `footer`, `aside`, `nav`) and at least one child is a block-level element. Everything else is an `html_block`, kept as its own markup. So wrappers and their classes survive, and a paragraph, a table, a list, a `<script>` or a `<style>` in the body is one block.
+- Inside a wrapper (and directly in `<body>`), words, links and inline marks that stand together between two blocks are one run. A run that is exactly one element is a block as it is; any other run is wrapped in a `<span>` to be a block. (Revised 2026-11-11: before, one link or a few loose words among the blocks made the whole wrapper a single block, so a page with one outer wrapper could only be commented on as a whole.) Comments in the source between blocks are dropped.
 - `html_block.html` is validated at every boundary: it must parse to exactly one element. It is stored as given; there is no second canonical form.
 - Element ids, order, versions, write sets and "untouched means untouched" work as for `doc`.
 

@@ -11,7 +11,7 @@ import { HomeScene } from "./HomeScene.js";
 import { SessionLines } from "./SessionLines.js";
 import { greeting, plural } from "../ui/time.js";
 import { AttentionRows, DraftRows } from "./Rows.js";
-import { IdeasView } from "./IdeasProjects.js";
+import { IdeasView, ProjectsView } from "./IdeasProjects.js";
 import { Glider } from "../ui/Glider.js";
 import { navigate } from "../shell/prefs.js";
 import { useDialogs } from "./DialogHost.js";
@@ -20,10 +20,10 @@ type Workspace = ReturnType<typeof useWorkspace>;
 
 const byNewest = <T extends { createdAt: string }>(a: T, b: T) => b.createdAt.localeCompare(a.createdAt);
 
-export type HomeTab = "sessions" | "drafts" | "ideas";
-const tabPath: Record<HomeTab, string> = { sessions: "/", drafts: "/drafts", ideas: "/ideas" };
+export type HomeTab = "sessions" | "drafts" | "ideas" | "projects";
+const tabPath: Record<HomeTab, string> = { sessions: "/", drafts: "/drafts", ideas: "/ideas", projects: "/projects" };
 
-/** Home: the tundra, then one of three tabs. Each tab has its own address, so Back and a reload keep it. */
+/** Home: the tundra, then one of four tabs. Each tab has its own address, so Back and a reload keep it. */
 export function HomeView({ workspace, tab = "sessions" }: { workspace: Workspace; tab?: HomeTab }) {
   const dialogs = useDialogs(),
     projects = useLiveQuery<Project[]>("vc.Projects", {}),
@@ -51,6 +51,7 @@ export function HomeView({ workspace, tab = "sessions" }: { workspace: Workspace
     ["sessions", `${terms.session}s`, live.length],
     ["drafts", `${terms.draft}s`, drafts.length],
     ["ideas", `${terms.idea}s`, ideas.data?.length ?? 0],
+    ["projects", `${terms.project}s`, projects.data?.length ?? 0],
   ];
   const onKey = (event: KeyboardEvent) => {
     const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
@@ -86,6 +87,11 @@ export function HomeView({ workspace, tab = "sessions" }: { workspace: Workspace
             ))}
           </div>
           <span className="vc-top-space" />
+          {/* What was removed is kept for a while; the way to it is here, beside what there is. */}
+          <a className="vc-trash-link" href="#/trash">
+            <Icon name="trash" size={16} />
+            Trash
+          </a>
           <Button variant="ghost" onClick={dialogs.newSession}>
             New {terms.session.toLowerCase()}
           </Button>
@@ -124,6 +130,7 @@ export function HomeView({ workspace, tab = "sessions" }: { workspace: Workspace
           )}
           {tab === "drafts" && <DraftsView workspace={workspace} bare />}
           {tab === "ideas" && <IdeasView sessions={workspace.sessions ?? []} bare />}
+          {tab === "projects" && <ProjectsView bare />}
         </div>
       </div>
     </div>

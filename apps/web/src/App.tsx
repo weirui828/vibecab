@@ -21,7 +21,7 @@ import { FirstRun } from "./settings/FirstRun.js";
 import type { SettingsShape } from "./settings/ModelForm.js";
 import { useLiveQuery } from "./live/LiveStore.js";
 import { TrashView } from "./home/TrashView.js";
-import { ProjectView, ProjectsView } from "./home/IdeasProjects.js";
+import { ProjectView } from "./home/IdeasProjects.js";
 import { SessionsView } from "./home/SessionsView.js";
 
 type Access = "checking" | "ready";
@@ -149,7 +149,7 @@ function Shell({
     );
   else if (route === "/trash") page = <TrashView />;
   else if (route === "/ideas") page = <HomeView workspace={workspace} tab="ideas" />;
-  else if (route === "/projects") page = <ProjectsView />;
+  else if (route === "/projects") page = <HomeView workspace={workspace} tab="projects" />;
   else if (route.startsWith("/p/"))
     page = (
       <ProjectView projectId={route.slice(3)} sessions={workspace.sessions ?? []} drafts={workspace.drafts ?? []} />

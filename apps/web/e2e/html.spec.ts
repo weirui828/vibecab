@@ -121,14 +121,28 @@ test("New Draft takes an HTML file from this computer", async () => {
   await dialog.locator('input[type="file"]').setInputFiles({
     name: "second-page.html",
     mimeType: "text/html",
-    buffer: Buffer.from("<!doctype html><title>Second page</title><h1>Second page</h1><p>Short and plain.</p>"),
+    // One wrapper around everything, with a link among the blocks: the way assistants write a page.
+    buffer: Buffer.from(
+      '<!doctype html><title>Second page</title><div class="container"><a href="#top">Top</a>' +
+        "<h1>Second page</h1><p>Short and plain.</p></div>",
+    ),
   });
   // The file's name is offered as the title.
   await expect(dialog.getByText("second-page.html")).toBeVisible();
   await expect(dialog.getByRole("textbox", { name: "Title" })).toHaveAttribute("placeholder", "second-page");
   await dialog.getByRole("button", { name: "Create" }).click();
   await expect(page.frameLocator("iframe.vc-html-frame").locator("h1")).toHaveText("Second page");
-  await expect(page.locator(".vc-html-block")).toHaveCount(2);
+  // The link, the heading and the paragraph each have their own box, so each can be commented on by itself.
+  await expect(page.locator(".vc-html-block")).toHaveCount(3);
+  await page.frameLocator("iframe.vc-html-frame").locator("p").hover();
+  await page.getByRole("button", { name: "Comment on this block" }).click();
+  await page.getByRole("textbox").first().fill("Only this paragraph.");
+  await page.keyboard.press("ControlOrMeta+Enter");
+  await expect(page.locator(".vc-thread", { hasText: "Only this paragraph." })).toBeVisible();
+  const marked = await page.locator(".vc-html-block[data-mark]").boundingBox(),
+    paragraph = await page.frameLocator("iframe.vc-html-frame").locator("p").boundingBox();
+  expect(Math.abs((marked?.y ?? -99) - (paragraph?.y ?? 0))).toBeLessThan(2);
+  expect(Math.abs((marked?.height ?? -99) - (paragraph?.height ?? 0))).toBeLessThan(2);
   // Both Drafts are in the session, each under its own tab.
   await expect(page.locator(".vc-draft-tabs a")).toHaveCount(2);
 });
