@@ -71,6 +71,8 @@ it("creates a blank Draft in a new Session and opens it", async () => {
   const [button] = await tl.screen.findAllByRole("button", { name: /New draft/ });
   tl.fireEvent.click(button!);
   const title = await tl.screen.findByLabelText("Title");
+  // A Draft comes from a file; an empty one is asked for in so many words.
+  tl.fireEvent.click(tl.screen.getByRole("checkbox", { name: /Start with an empty page/ }));
   tl.fireEvent.change(title, { target: { value: "Letter to the editor" } });
   tl.fireEvent.click(tl.screen.getByRole("button", { name: "Create" }));
   await tl.waitFor(() => expect(window.location.hash).toMatch(/^#\/s\/session_/), { timeout: 5000 });
@@ -122,14 +124,55 @@ it("brings a Draft into a paused session by resuming it, and says so first", asy
   expect(window.location.hash).toBe(`#/s/${sessionId}/d/${extra}`);
 });
 
-it("clears “Give it a title.” once a file is chosen or the kind of Draft changes", async () => {
+it("New Draft asks for a file in one clear place, and says what is missing", async () => {
   await renderApp();
   tl.fireEvent.click(await tl.screen.findByRole("button", { name: "New draft" }));
-  const dialog = await tl.screen.findByRole("dialog", { name: "New draft" });
-  tl.fireEvent.click(tl.within(dialog).getByRole("button", { name: "Create" }));
-  expect(await tl.within(dialog).findByText("Give it a title.")).toBeTruthy();
-  tl.fireEvent.click(tl.within(dialog).getByText("Import Markdown"));
-  expect(tl.within(dialog).queryByText("Give it a title.")).toBeNull();
+  const dialog = tl.within(await tl.screen.findByRole("dialog", { name: "New draft" }));
+  // The file's place says what it takes and has a button of its own; nothing is chosen for the person.
+  expect(dialog.getByText("Drop a file here")).toBeTruthy();
+  expect(dialog.getByText("Markdown, plain text or HTML")).toBeTruthy();
+  expect(dialog.getByRole("button", { name: "Choose a file" })).toBeTruthy();
+  tl.fireEvent.click(dialog.getByRole("button", { name: "Create" }));
+  expect((await dialog.findByRole("alert")).textContent).toBe("Choose a file, or start with an empty page.");
+  // With an empty page chosen, the only thing missing is its title; the first message is gone.
+  tl.fireEvent.click(dialog.getByRole("checkbox", { name: /Start with an empty page/ }));
+  expect(dialog.queryByRole("alert")).toBeNull();
+  tl.fireEvent.click(dialog.getByRole("button", { name: "Create" }));
+  expect(await dialog.findByText("Give it a title.")).toBeTruthy();
+  // A chosen file is named where it was dropped, with its kind, and gives the Draft its title.
+  const file = new window.File(["<!doctype html><h1>Hi</h1>"], "Field report.html", { type: "text/html" });
+  Object.defineProperty(file, "text", { value: () => Promise.resolve("<!doctype html><h1>Hi</h1>") });
+  tl.fireEvent.change(dialog.getByLabelText("File"), { target: { files: [file] } });
+  expect(await dialog.findByText("Field report.html")).toBeTruthy();
+  expect(dialog.getByText(/^HTML\. It is kept as it is/)).toBeTruthy();
+  expect(dialog.queryByText("Give it a title.")).toBeNull();
+  expect(dialog.getByLabelText("Title").getAttribute("placeholder")).toBe("Field report");
+  expect((dialog.getByRole("checkbox", { name: /Start with an empty page/ }) as HTMLInputElement).checked).toBe(false);
+  expect(dialog.getByRole("button", { name: "Choose another file" })).toBeTruthy();
+});
+
+it("keeps Sessions, Drafts and Ideas on Home as three tabs, each with its own address", async () => {
+  await renderApp();
+  const tabs = tl.within(await tl.screen.findByRole("tablist", { name: "Home" }));
+  const selected = () => tabs.getAllByRole("tab").filter((tab) => tab.getAttribute("aria-selected") === "true");
+  expect(selected().map((tab) => tab.textContent?.replace(/\s*\d+$/, ""))).toEqual(["Sessions"]);
+  // One panel at a time: the session lines now, and no list of Drafts under them.
+  const panel = () => tl.screen.getByRole("tabpanel");
+  expect(panel().querySelector(".vc-line")).not.toBeNull();
+  expect(panel().querySelector(".vc-list")).toBeNull();
+  tl.fireEvent.click(tabs.getByRole("tab", { name: /^Drafts/ }));
+  window.location.hash = "/drafts";
+  await tl.waitFor(() => expect(selected().map((tab) => tab.id)).toEqual(["home-tab-drafts"]));
+  expect(panel().querySelector(".vc-line")).toBeNull();
+  expect(tl.within(panel()).getAllByText("Field notes").length).toBeGreaterThan(0);
+  // The greeting stays the page's heading, and the bar still says this is Home.
+  expect(tl.screen.getByRole("heading", { level: 1 }).textContent).toMatch(/^Good /);
+  expect(tl.screen.getByText("Thinking. Vibing. Building.")).toBeTruthy();
+  // Arrow keys move along the tabs, as tabs do.
+  tl.fireEvent.keyDown(tabs.getByRole("tab", { name: /^Drafts/ }), { key: "ArrowRight" });
+  await tl.waitFor(() => expect(window.location.hash).toBe("#/ideas"));
+  await tl.waitFor(() => expect(selected().map((tab) => tab.id)).toEqual(["home-tab-ideas"]));
+  expect(await tl.within(panel()).findByRole("textbox", { name: "New idea" })).toBeTruthy();
 });
 
 it("shows a session's state, pauses and resumes it, asks before ending, and lists ended ones", async () => {

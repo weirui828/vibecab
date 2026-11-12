@@ -414,32 +414,75 @@
   border-bottom: 1px solid var(--color-border-subtle);
   background: var(--color-surface-base);
 }
-.vc-anchors > button[type="button"]:not([class]) {
-  padding: 4px 0;
-  border: 0;
-  background: none;
+/* Home's three tabs: real tabs, one panel at a time, the current one underlined by the glider. */
+.vc-home-tabs {
+  position: relative;
+  display: flex;
+  gap: 22px;
+}
+.vc-home-tabs [role="tab"] {
+  position: relative;
+  z-index: 1;
+  padding: 6px 0;
   color: var(--color-fg-muted);
   font-weight: 500;
-  cursor: pointer;
+  text-decoration: none;
 }
-.vc-anchors > button[type="button"]:not([class]):hover {
+.vc-home-tabs [role="tab"]:hover,
+.vc-home-tabs [role="tab"][aria-selected="true"] {
   color: var(--color-fg-default);
 }
-.vc-anchors b {
+.vc-home-tabs [role="tab"][aria-selected="true"]::after {
+  position: absolute;
+  right: 0;
+  bottom: -11px;
+  left: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--color-fg-default);
+  content: "";
+}
+/* Once the glider is in place it is the underline, and it slides between tabs. */
+.vc-home-tabs:has(> .vc-glider[data-on]) [role="tab"][aria-selected="true"]::after {
+  display: none;
+}
+.vc-home-tabs > .vc-glider {
+  background: none;
+}
+.vc-home-tabs > .vc-glider::after {
+  position: absolute;
+  right: 0;
+  bottom: -11px;
+  left: 0;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--color-fg-default);
+  content: "";
+}
+.vc-home-tabs b {
   margin-left: 4px;
   font-family: var(--font-mono);
   font-size: 12px;
   font-weight: 500;
   opacity: 0.6;
 }
-.vc-line-group h3 {
+.vc-home-panel {
+  padding-top: 18px;
+  animation: vc-rise 0.4s var(--vc-spring);
+}
+.vc-panel-note {
+  display: flex;
+  justify-content: flex-end;
+  margin: 0;
+}
+.vc-line-group h2 {
   margin: 26px 0 2px;
 }
-.vc-line-group h3 a {
+.vc-line-group h2 a {
   color: inherit;
   text-decoration: none;
 }
-.vc-line-group h3 a:hover {
+.vc-line-group h2 a:hover {
   color: var(--color-fg-default);
 }
 /* One session, one line. The title is the way in, and it covers the row. */
@@ -737,4 +780,10 @@
   .vc-plumb {
     left: -24px;
   }
+}
+
+/* A tab's content starts right under the tabs: the sections' usual air above is for a page with a header. */
+.vc-home-panel .vc-section:first-child,
+.vc-home-panel > div > .vc-section:first-of-type {
+  margin-top: 4px;
 }

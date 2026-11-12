@@ -10,8 +10,8 @@ import { anchorOf, threadState } from "./threads.js";
 import type { Thread } from "./threads.js";
 
 // The plumb line is place. It hangs beside the Document; a bead sits where each thread is: hollow while it is
-// open, filled once agreed, small once written in. It keeps still until the pointer passes a block with a thread
-// on it, and now and then a gust leans it.
+// open, filled once agreed, small once written in. It answers the pointer: coming onto a block plucks it there.
+// Left alone it shivers faintly now and then, and a rare gust leans it.
 
 export interface Bead {
   threadId: string;
@@ -64,8 +64,9 @@ export function PlumbLine({
     dots = useRef(new Map<string, SVGCircleElement>()),
     rising = useRef<{ from: number; part: number } | undefined>(undefined),
     before = useRef(new Map<string, Bead["state"]>()),
-    lastPluck = useRef(0),
-    clockNow = useRef(0);
+    lastPluck = useRef(-1),
+    clockNow = useRef(0),
+    shiver = useRef(4);
   const key = beads.map((b) => b.threadId + b.elementId).join(" ");
 
   // Where each bead sits: beside the first line of its block. Measured again whenever the surface changes size.
@@ -102,20 +103,25 @@ export function PlumbLine({
     if (points !== line.current.n) line.current = makeString(points);
   }, [layout.height]);
 
-  // A touch: the pointer passing over a block that has a thread plucks the line there.
+  // A touch: the pointer coming onto a block plucks the line beside it, a little harder where a thread sits.
+  // (An HTML Draft's blocks are inside its frame; the frame's view passes the move on to the block's box.)
   useEffect(() => {
     const surface = host.current;
     if (!surface) return;
-    const over = (event: PointerEvent) => {
+    let on = "";
+    const move = (event: Event) => {
       const block = (event.target as HTMLElement).closest?.<HTMLElement>("[data-element-id]"),
-        bead = beads.find((b) => b.elementId === block?.dataset.elementId && b.state !== "applied"),
-        y = bead ? layout.at[bead.threadId] : undefined;
-      if (y === undefined || layout.height === 0 || clockNow.current - lastPluck.current < 0.45) return;
+        id = block?.dataset.elementId ?? "";
+      if (!block || !id) return void (on = "");
+      if (id === on || layout.height === 0 || clockNow.current - lastPluck.current < 0.18) return;
+      on = id;
       lastPluck.current = clockNow.current;
-      pluck(line.current, y / layout.height, 4);
+      const y = block.getBoundingClientRect().top - surface.getBoundingClientRect().top + 14,
+        threaded = beads.some((b) => b.elementId === id && b.state !== "applied");
+      pluck(line.current, Math.min(Math.max(y / layout.height, 0.02), 0.98), threaded ? 4.5 : 2.4);
     };
-    surface.addEventListener("pointerover", over);
-    return () => surface.removeEventListener("pointerover", over);
+    surface.addEventListener("mousemove", move);
+    return () => surface.removeEventListener("mousemove", move);
   }, [host, beads, layout]);
 
   // Agreeing: the bead rings once, and its change goes up the line to the cab.
@@ -137,6 +143,11 @@ export function PlumbLine({
       const s = line.current,
         h = layout.height;
       if (h === 0) return;
+      // Left alone, the line still stirs now and then: a faint shiver somewhere along it, never a swing.
+      if (clock >= shiver.current) {
+        shiver.current = clock + 7 + Math.random() * 11;
+        pluck(s, 0.15 + Math.random() * 0.7, (Math.random() < 0.5 ? -1 : 1) * (0.9 + Math.random() * 0.9));
+      }
       if (!isStill(s)) stepString(s);
       // Where the line is at height y: its own ringing plus the lean of the gust.
       const side = (y: number) => X + waveAt(s, y / h) + 5 * lean(wind, y / h);

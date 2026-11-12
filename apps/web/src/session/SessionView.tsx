@@ -256,7 +256,7 @@ function EmptySession({ session }: { session: SessionRow }) {
 
 function DocSkeleton() {
   return (
-    <div aria-busy="true" aria-label="Loading">
+    <div role="status" aria-busy="true" aria-label="Loading">
       <div className="vc-skeleton-line" style={{ width: "70%", height: 40 }} />
       {[92, 100, 84, 96, 60].map((w, i) => (
         <div key={i} className="vc-skeleton-line" style={{ width: `${w}%`, marginTop: i === 0 ? 40 : 14 }} />

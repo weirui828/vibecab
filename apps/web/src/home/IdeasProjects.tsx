@@ -28,7 +28,8 @@ import type { ItemKind } from "./ideaParts.js";
 
 export { markdownFromIdeas, titleFromIdeas } from "./ideaParts.js";
 
-export function IdeasView({ sessions }: { sessions: SessionRow[] }) {
+/** Every Idea. `bare` is the same page as a tab of Home: no header of its own. */
+export function IdeasView({ sessions, bare = false }: { sessions: SessionRow[]; bare?: boolean }) {
   const ideas = useLiveQuery<Idea[]>("vc.Ideas", {}),
     projects = useLiveQuery<Project[]>("vc.Projects", {}),
     act = useIdeaActions(),
@@ -89,13 +90,15 @@ export function IdeasView({ sessions }: { sessions: SessionRow[] }) {
         ].filter((g) => g.ideas.length)
       : [{ key: "all", title: "", ideas: list }];
   return (
-    <div className="vc-page">
-      <header className="vc-header">
-        <h1 className="vc-display">{terms.idea}s</h1>
-        <p className="vc-facts">
-          {list.length ? plural(list.length, ideaWord) : "Save ideas here before you forget them."}
-        </p>
-      </header>
+    <div className={bare ? undefined : "vc-page"}>
+      {!bare && (
+        <header className="vc-header">
+          <h1 className="vc-display">{terms.idea}s</h1>
+          <p className="vc-facts">
+            {list.length ? plural(list.length, ideaWord) : "Save ideas here before you forget them."}
+          </p>
+        </header>
+      )}
       <Capture
         label={`Type an ${ideaWord}. Press ↩ to save it.`}
         onSave={async (text) => (await act.run("vc.CaptureIdea", { text })) !== undefined}

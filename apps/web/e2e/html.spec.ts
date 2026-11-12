@@ -116,13 +116,15 @@ test("New Draft takes an HTML file from this computer", async () => {
   await page.getByRole("button", { name: "Session actions" }).click();
   await page.getByRole("menuitem", { name: "Add a draft" }).click();
   const dialog = page.getByRole("dialog", { name: "Add a draft" });
-  await dialog.getByText("Import HTML").click();
+  // The file's place takes HTML like any other file; there is no kind to pick first.
+  await expect(dialog.getByRole("button", { name: "Choose a file" })).toBeVisible();
   await dialog.locator('input[type="file"]').setInputFiles({
     name: "second-page.html",
     mimeType: "text/html",
     buffer: Buffer.from("<!doctype html><title>Second page</title><h1>Second page</h1><p>Short and plain.</p>"),
   });
   // The file's name is offered as the title.
+  await expect(dialog.getByText("second-page.html")).toBeVisible();
   await expect(dialog.getByRole("textbox", { name: "Title" })).toHaveAttribute("placeholder", "second-page");
   await dialog.getByRole("button", { name: "Create" }).click();
   await expect(page.frameLocator("iframe.vc-html-frame").locator("h1")).toHaveText("Second page");

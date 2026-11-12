@@ -97,7 +97,6 @@ test("Settings: the key is saved and never shown; the agent replies quickly", as
 test("a Draft from a Markdown file opens in its own session", async () => {
   await page.goto(host.url + "/#/");
   await page.getByRole("button", { name: "New draft" }).click();
-  await page.getByText("Import Markdown").click();
   await page.locator('input[type="file"]').setInputFiles({
     name: "Field notes.md",
     mimeType: "text/markdown",
@@ -162,11 +161,19 @@ test("save a Snapshot and find it in history", async () => {
 });
 
 test("the other screens are accessible", async () => {
-  for (const [path, heading] of [
-    ["/#/", /^Good (morning|afternoon|evening)\./],
+  // Home is one place with three tabs; each tab has its own address and keeps the greeting as the heading.
+  for (const [path, tab] of [
+    ["/#/", "Sessions"],
     ["/#/drafts", "Drafts"],
-    ["/#/sessions", "Sessions"],
     ["/#/ideas", "Ideas"],
+  ] as const) {
+    await page.goto(host.url + path);
+    await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)\./ })).toBeVisible();
+    await expect(page.getByRole("tab", { selected: true })).toContainText(tab);
+    await accessible(path);
+  }
+  for (const [path, heading] of [
+    ["/#/sessions", "Sessions"],
     ["/#/projects", "Projects"],
     ["/#/trash", "Trash"],
   ] as const) {
