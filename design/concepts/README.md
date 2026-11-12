@@ -26,3 +26,12 @@ These are sketches, not app code: nothing here is wired to the engine.
     thread sits, hollow while open, moss once agreed. It is still until the pointer passes a paragraph; now and
     then a slow gust leans it, with a low wind sound that can be switched off.
   - Colours are Tundra palette steps only.
+
+## Ideas as a night sky
+
+- `idea-sky.html` — the Ideas tab as a sky. Each idea is a star; ideas that are close are joined by lines into
+  constellations, each named by the words its ideas share. A new idea is typed in the panel beside it: it flashes
+  into the sky, crosses it with a tail, and joins the ideas it is closest to (or stands alone if nothing is like
+  it). Pointing at a star shows its words and lights its kin; choosing one lists its closest ideas and offers to
+  gather the group into a Project. Closeness here is a stand-in worked out in the page; the app would use
+  embeddings. Canvas 2D, no libraries.

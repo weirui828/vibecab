@@ -787,3 +787,193 @@
 .vc-home-panel > div > .vc-section:first-of-type {
   margin-top: 4px;
 }
+
+/* ---------- Ideas as a night sky ----------
+   The sky is the polar night in both themes (it is a night sky). The canvas reads its colours from here. */
+.vc-sky {
+  --sky-star: var(--color-basalt-50);
+  --sky-tint-0: var(--color-tundra-300);
+  --sky-tint-1: var(--color-glacier-300);
+  --sky-tint-2: var(--color-sedge-300);
+  --sky-tint-3: var(--color-heather-500);
+  --sky-tint-4: var(--color-rust-500);
+  --sky-tint-5: var(--color-juniper-500);
+  position: relative;
+  height: clamp(360px, 58vh, 620px);
+  overflow: hidden;
+  border-radius: 14px;
+  background: linear-gradient(
+    color-mix(in srgb, var(--color-basalt-950) 82%, black),
+    color-mix(in srgb, var(--color-glacier-800) 42%, var(--color-basalt-950))
+  );
+}
+.vc-sky canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+.vc-sky-aurora {
+  position: absolute;
+  left: -10%;
+  width: 120%;
+  height: 90px;
+  border-radius: 50%;
+  filter: blur(38px);
+  opacity: 0.3;
+  animation: vc-sky-aurora 16s ease-in-out infinite alternate;
+}
+.vc-sky-aurora.a1 {
+  top: 12%;
+  background: var(--color-juniper-500);
+  transform: rotate(-4deg);
+}
+.vc-sky-aurora.a2 {
+  top: 30%;
+  background: var(--color-glacier-500);
+  opacity: 0.2;
+  animation-delay: -7s;
+  transform: rotate(3deg);
+}
+@keyframes vc-sky-aurora {
+  to {
+    transform: translate(4%, 22px) rotate(2deg) scaleY(1.4);
+    opacity: 0.14;
+  }
+}
+.vc-sky-hills {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 70px;
+  pointer-events: none;
+}
+.vc-sky-hills path {
+  fill: color-mix(in srgb, var(--color-tundra-900) 70%, var(--color-basalt-950));
+}
+.vc-sky-hills path + path {
+  fill: color-mix(in srgb, var(--color-basalt-950) 82%, black);
+}
+.vc-sky-tip {
+  position: absolute;
+  z-index: 2;
+  max-width: 260px;
+  padding: 8px 11px;
+  border: 1px solid color-mix(in srgb, var(--color-basalt-50) 16%, transparent);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--color-basalt-950) 92%, transparent);
+  color: var(--color-basalt-50);
+  font-size: 13.5px;
+  line-height: 1.4;
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 16px));
+}
+.vc-sky-tip small,
+.vc-sky-said small {
+  display: block;
+  margin-top: 3px;
+  color: var(--color-basalt-400);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.vc-sky-said {
+  position: absolute;
+  bottom: 18px;
+  left: 18px;
+  z-index: 2;
+  max-width: min(520px, calc(100% - 36px));
+  margin: 0;
+  color: var(--color-basalt-50);
+  font-family: var(--font-display);
+  font-size: clamp(17px, 2.2vw, 22px);
+  line-height: 1.3;
+  text-wrap: balance;
+  animation: vc-rise 0.5s var(--vc-spring);
+}
+.vc-sky-card {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 16px 18px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: 12px;
+  background: var(--color-surface-raised);
+  animation: vc-rise 0.4s var(--vc-spring);
+}
+.vc-sky-card p {
+  margin: 0;
+}
+.vc-sky-card .text {
+  font-family: var(--font-display);
+  font-size: 18px;
+  line-height: 1.35;
+}
+.vc-sky-card .near {
+  display: grid;
+  gap: 7px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13.5px;
+}
+.vc-sky-card .near li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 56px;
+  align-items: center;
+  gap: 10px;
+}
+.vc-sky-card .near button {
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.vc-sky-card .near button:hover {
+  color: var(--color-accent-fg);
+}
+.vc-sky-card .near i {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--color-border-subtle);
+}
+.vc-sky-card .near i::after {
+  display: block;
+  width: var(--w);
+  height: 100%;
+  background: var(--color-accent-default);
+  content: "";
+}
+.vc-sky-card .actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-top: 6px;
+}
+.vc-sky-go {
+  padding: 7px 14px;
+  border: 1.5px solid var(--color-fg-default);
+  border-radius: 999px;
+  background: none;
+  color: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.vc-sky-go:hover {
+  background: var(--color-fg-default);
+  color: var(--color-surface-base);
+}
