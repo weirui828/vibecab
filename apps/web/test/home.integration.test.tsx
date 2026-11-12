@@ -151,10 +151,18 @@ it("New Draft asks for a file in one clear place, and says what is missing", asy
   expect(dialog.getByRole("button", { name: "Choose another file" })).toBeTruthy();
 });
 
-it("keeps Sessions, Drafts and Ideas on Home as three tabs, each with its own address", async () => {
+it("keeps Sessions, Drafts, Ideas and Projects on Home as tabs, each with its own address, and Trash beside them", async () => {
   await renderApp();
   const tabs = tl.within(await tl.screen.findByRole("tablist", { name: "Home" }));
   const selected = () => tabs.getAllByRole("tab").filter((tab) => tab.getAttribute("aria-selected") === "true");
+  expect(tabs.getAllByRole("tab").map((tab) => tab.textContent?.replace(/\s*\d+$/, ""))).toEqual([
+    "Sessions",
+    "Drafts",
+    "Ideas",
+    "Projects",
+  ]);
+  // What was removed is one click away, beside the tabs.
+  expect(tl.screen.getByRole("link", { name: "Trash" }).getAttribute("href")).toBe("#/trash");
   expect(selected().map((tab) => tab.textContent?.replace(/\s*\d+$/, ""))).toEqual(["Sessions"]);
   // One panel at a time: the session lines now, and no list of Drafts under them.
   const panel = () => tl.screen.getByRole("tabpanel");

@@ -41,8 +41,8 @@ const pages: Array<{ path: string; label: string; hint: string }> = [
   { path: "/trash", label: "Trash", hint: "What you removed" },
 ];
 
-/** Home and its tabs: one place with three addresses. */
-export const homeRoutes = ["/", "/drafts", "/ideas"];
+/** Home and its tabs: one place with four addresses. */
+export const homeRoutes = ["/", "/drafts", "/ideas", "/projects"];
 
 /** The page's name for the bar, from its route (sessions and projects name themselves). */
 export function pageName(route: string): string | undefined {

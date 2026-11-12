@@ -207,22 +207,31 @@ export function IdeasView({ sessions, bare = false }: { sessions: SessionRow[]; 
   );
 }
 
-export function ProjectsView() {
+/** Every Project. `bare` is the same page as a tab of Home: no header of its own. */
+export function ProjectsView({ bare = false }: { bare?: boolean }) {
   const projects = useLiveQuery<Project[]>("vc.Projects", {}),
     [creating, setCreating] = useState(false);
   if (projects.loading) return <PageSkeleton />;
   const list = [...(projects.data ?? [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   return (
-    <div className="vc-page">
-      <header className="vc-header">
-        <h1 className="vc-display">{terms.project}s</h1>
-        <p className="vc-facts">{list.length ? plural(list.length, projectWord) : "No projects."}</p>
-        <div className="vc-actions">
-          <Button variant="primary" leadingIcon={<Icon name="plus" />} onClick={() => setCreating(true)}>
+    <div className={bare ? undefined : "vc-page"}>
+      {bare ? (
+        <div className="vc-panel-note">
+          <Button variant="ghost" leadingIcon={<Icon name="plus" />} onClick={() => setCreating(true)}>
             New {projectWord}
           </Button>
         </div>
-      </header>
+      ) : (
+        <header className="vc-header">
+          <h1 className="vc-display">{terms.project}s</h1>
+          <p className="vc-facts">{list.length ? plural(list.length, projectWord) : "No projects."}</p>
+          <div className="vc-actions">
+            <Button variant="primary" leadingIcon={<Icon name="plus" />} onClick={() => setCreating(true)}>
+              New {projectWord}
+            </Button>
+          </div>
+        </header>
+      )}
       {list.length === 0 && (
         <div className="vc-empty-note">
           <Hills />

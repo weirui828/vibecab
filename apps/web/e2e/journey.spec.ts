@@ -161,11 +161,12 @@ test("save a Snapshot and find it in history", async () => {
 });
 
 test("the other screens are accessible", async () => {
-  // Home is one place with three tabs; each tab has its own address and keeps the greeting as the heading.
+  // Home is one place with four tabs; each tab has its own address and keeps the greeting as the heading.
   for (const [path, tab] of [
     ["/#/", "Sessions"],
     ["/#/drafts", "Drafts"],
     ["/#/ideas", "Ideas"],
+    ["/#/projects", "Projects"],
   ] as const) {
     await page.goto(host.url + path);
     await expect(page.getByRole("heading", { level: 1, name: /^Good (morning|afternoon|evening)\./ })).toBeVisible();
@@ -174,13 +175,20 @@ test("the other screens are accessible", async () => {
   }
   for (const [path, heading] of [
     ["/#/sessions", "Sessions"],
-    ["/#/projects", "Projects"],
     ["/#/trash", "Trash"],
   ] as const) {
     await page.goto(host.url + path);
     await expect(page.getByRole("heading", { level: 1, name: heading })).toBeVisible();
     await accessible(path);
   }
+  // Trash is one click from Home, and every page stands on the same tundra.
+  await page.goto(host.url + "/#/");
+  await page.getByRole("link", { name: "Trash" }).click();
+  await expect(page.getByRole("heading", { level: 1, name: "Trash" })).toBeVisible();
+  await page.screenshot({ path: "test-results/screens/trash.png" });
+  await page.goto(host.url + "/#/settings");
+  await expect(page.getByRole("heading", { level: 1, name: "Settings" })).toBeVisible();
+  await page.screenshot({ path: "test-results/screens/settings-band.png" });
   await page.goto(host.url + "/#/");
   await screens("home");
 });

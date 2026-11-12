@@ -977,3 +977,44 @@
   background: var(--color-fg-default);
   color: var(--color-surface-base);
 }
+
+/* The way to what was removed: quiet, beside the tabs. */
+.vc-trash-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-fg-muted);
+  font-size: 13.5px;
+  text-decoration: none;
+}
+.vc-trash-link:hover {
+  color: var(--color-fg-default);
+}
+
+/* ---------- Every page starts on the tundra ----------
+   A page's header is a low band of sky and hills, edge to edge, so Settings, Trash and the rest stand in the same
+   place as Home and a session. The hills are drawn with gradients, so they take the theme's colours. */
+.vc-main {
+  overflow-x: clip;
+}
+.vc-page:has(> .vc-header) {
+  padding-top: 0;
+}
+.vc-page > .vc-header {
+  position: relative;
+  margin: 0 calc(50% - 50vw) 28px;
+  padding: 34px calc(50vw - 50%) 74px;
+  background:
+    radial-gradient(ellipse 34% 120px at 16% calc(100% + 62px), var(--vc-hill-near) 99.5%, transparent 100%),
+    radial-gradient(ellipse 30% 110px at 88% calc(100% + 58px), var(--vc-hill-near) 99.5%, transparent 100%),
+    radial-gradient(ellipse 46% 150px at 58% calc(100% + 86px), var(--vc-hill-mid) 99.5%, transparent 100%),
+    radial-gradient(ellipse 38% 150px at 30% calc(100% + 70px), var(--vc-hill-far) 99.5%, transparent 100%),
+    radial-gradient(ellipse 40% 140px at 84% calc(100% + 72px), var(--vc-hill-far) 99.5%, transparent 100%),
+    linear-gradient(var(--vc-sky), var(--color-surface-base) 82%);
+}
+.vc-page > .vc-header .vc-display {
+  font-size: clamp(30px, 4.4vw, 42px);
+}
+.vc-page > .vc-header .vc-actions {
+  margin-top: 8px;
+}
