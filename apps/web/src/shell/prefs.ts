@@ -64,3 +64,14 @@ export function useCommentPlace(): [CommentPlace, (place: CommentPlace) => void]
   }, []);
   return [place, set];
 }
+
+/** How Ideas are shown: as a sky of stars, or as a list. Remembered per browser. */
+export type IdeasViewChoice = "sky" | "list";
+export function useIdeasView(): [IdeasViewChoice, (view: IdeasViewChoice) => void] {
+  const [view, setView] = useState<IdeasViewChoice>(() => (read("vc-ideas-view") === "list" ? "list" : "sky"));
+  const set = useCallback((next: IdeasViewChoice) => {
+    write("vc-ideas-view", next);
+    setView(next);
+  }, []);
+  return [view, set];
+}

@@ -25,6 +25,8 @@ import {
   useIdeaActions,
 } from "./ideaParts.js";
 import type { ItemKind } from "./ideaParts.js";
+import { IdeaSky, canDrawSky } from "./IdeaSky.js";
+import { useIdeasView } from "../shell/prefs.js";
 
 export { markdownFromIdeas, titleFromIdeas } from "./ideaParts.js";
 
@@ -37,7 +39,8 @@ export function IdeasView({ sessions, bare = false }: { sessions: SessionRow[]; 
     [group, setGroup] = useState<"newest" | "project">("newest"),
     [drafting, setDrafting] = useState<Idea[]>(),
     [adding, setAdding] = useState<Idea[]>(),
-    [gathering, setGathering] = useState<Idea[]>();
+    [gathering, setGathering] = useState<Idea[]>(),
+    [view, setView] = useIdeasView();
   const sessionTitle = new Map(sessions.map((s) => [s.sessionId, s.title])),
     projectList = projects.data ?? [],
     projectTitle = new Map(projectList.map((p) => [p.projectId, p.title]));
@@ -51,6 +54,9 @@ export function IdeasView({ sessions, bare = false }: { sessions: SessionRow[]; 
     ];
     return places.length ? "In " + places.join(", ") : "Not used yet";
   };
+  // The sky needs a few stars to be a sky, and a browser that can draw; otherwise the list is all there is.
+  const skyOffered = list.length >= 3 && canDrawSky(),
+    sky = skyOffered && view === "sky";
   const row = (idea: Idea) => (
     <IdeaRow
       key={idea.ideaId}
@@ -104,12 +110,25 @@ export function IdeasView({ sessions, bare = false }: { sessions: SessionRow[]; 
         onSave={async (text) => (await act.run("vc.CaptureIdea", { text })) !== undefined}
       />
       {list.length > 0 && (
-        // How to use the list, and how to arrange it: both about the list, so both sit right above it.
+        // How to use what is shown, and how to arrange it: both about it, so both sit right above it.
         <div className="vc-list-head">
           <p className="vc-hint">
-            Click an {ideaWord} to change its words. Tick a few to make a {draftWord} or a {projectWord} from them.
+            {sky
+              ? `Each ${ideaWord} is a star. Close ones are joined. Choose one to see what it is close to.`
+              : `Click an ${ideaWord} to change its words. Tick a few to make a ${draftWord} or a ${projectWord} from them.`}
           </p>
-          {projectList.length > 0 && (
+          {skyOffered && (
+            <div className="vc-segmented small" role="group" aria-label="Show as">
+              <Glider selector='[aria-pressed="true"],[aria-current="page"]' />
+              <button type="button" aria-pressed={sky} onClick={() => setView("sky")}>
+                Sky
+              </button>
+              <button type="button" aria-pressed={!sky} onClick={() => setView("list")}>
+                List
+              </button>
+            </div>
+          )}
+          {!sky && projectList.length > 0 && (
             <div className="vc-segmented small" role="group" aria-label="Arrange">
               <Glider selector='[aria-pressed="true"],[aria-current="page"]' />
               <button type="button" aria-pressed={group === "newest"} onClick={() => setGroup("newest")}>
@@ -122,12 +141,14 @@ export function IdeasView({ sessions, bare = false }: { sessions: SessionRow[]; 
           )}
         </div>
       )}
-      {groups.map((g) => (
-        <section key={g.key} className="vc-section" aria-label={g.title || `${terms.idea}s`}>
-          {g.title && <h2 className="vc-label">{g.title}</h2>}
-          <ul className="vc-list">{g.ideas.map(row)}</ul>
-        </section>
-      ))}
+      {sky && <IdeaSky ideas={list} where={where} onGather={setGathering} onDraft={setDrafting} />}
+      {!sky &&
+        groups.map((g) => (
+          <section key={g.key} className="vc-section" aria-label={g.title || `${terms.idea}s`}>
+            {g.title && <h2 className="vc-label">{g.title}</h2>}
+            <ul className="vc-list">{g.ideas.map(row)}</ul>
+          </section>
+        ))}
       <SelectionBar count={chosen.length} onClear={() => setSelected([])}>
         <button type="button" className="vc-bar-button labelled" onClick={() => setDrafting(chosen)}>
           Make a {draftWord}
